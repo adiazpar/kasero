@@ -76,7 +76,6 @@ apps/*/public/media/
 .worktrees/
 
 # Claude
-.claude/
 .superpowers/
 
 # Serwist (service worker build outputs)
