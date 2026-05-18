@@ -120,3 +120,19 @@ Prefer self-hosting assets where practical (smaller attack surface, no third-par
 | `npm run test` | Runs tests in every workspace. |
 
 Per-app scripts (`db:push`, `db:push:prod`, `db:studio`, `start:local`, `i18n:translate`, `splash:generate`, etc.) are documented in `tech-stack.md`.
+
+## Local secrets (`.env.local`)
+
+`.env.local` files are **gitignored** and **not** in any cloud-backed `.env.example`. The canonical copies live in **Bitwarden** as two Secure Notes:
+
+- `Kasero — apps/api/.env.local`
+- `Kasero — apps/web/.env.local`
+
+**After re-cloning the repo on a new (or wiped) machine**, before `npm run dev` will work end-to-end:
+
+1. Pull both Secure Notes from Bitwarden.
+2. Paste each into the matching path: `apps/api/.env.local` and `apps/web/.env.local`.
+3. `npm install` from the repo root.
+4. `npm run dev`.
+
+Whenever a value rotates (new Upstash creds, regenerated `AUTH_SECRET`, new Google OAuth client, etc.), update the corresponding Bitwarden note in the same PR-or-session that changes the value, so the canonical copy never drifts from the live config. The companion `.env.example` files document the *shape* (which keys are expected) — Bitwarden carries the *values*.
