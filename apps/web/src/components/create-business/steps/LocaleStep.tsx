@@ -68,7 +68,7 @@ export function LocaleStep() {
             <div className="wizard-hero__eyebrow">
               {t.formatMessage(
                 { id: 'createBusiness.step_indicator' },
-                { current: 3, total: 4 },
+                { current: 2, total: 3 },
               )}
             </div>
             <h1 className="wizard-hero__title">{titleNode}</h1>

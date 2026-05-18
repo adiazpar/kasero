@@ -72,7 +72,7 @@ export default defineConfig(({ mode }) => {
           // by the proxy) still says "<tailscale-host>:3000". The CSRF
           // middleware (apps/api/src/lib/api-middleware.ts → enforceSameOrigin)
           // compares `URL(request.url).origin` against the Origin header
-          // and rejects the mismatch with FORBIDDEN. Login/register/invite
+          // and rejects the mismatch with FORBIDDEN. Login/auth/invite
           // routes are bare `export async function POST` (no wrapper), so
           // they bypass the check — but every withAuth/withBusinessAuth
           // POST (sales sessions, products, providers, orders, etc.)

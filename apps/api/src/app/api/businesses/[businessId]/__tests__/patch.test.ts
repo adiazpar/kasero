@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { patchSchema as schema, BUSINESS_TYPE_VALUES } from '../schema'
+import { patchSchema as schema } from '../schema'
 
 // We test the schema directly; full route integration is verified manually.
 
@@ -17,16 +17,6 @@ describe('PATCH business schema', () => {
     const r = schema.safeParse({ name: '  Shop  ' })
     expect(r.success).toBe(true)
     expect(r.success && r.data.name).toBe('Shop')
-  })
-
-  it('rejects unknown business type', () => {
-    expect(schema.safeParse({ type: 'spaceship' }).success).toBe(false)
-  })
-
-  it('accepts each known business type', () => {
-    for (const t of BUSINESS_TYPE_VALUES) {
-      expect(schema.safeParse({ type: t }).success).toBe(true)
-    }
   })
 
   it('rejects removeLogo with non-true string', () => {

@@ -12,21 +12,21 @@ import { useRouter } from '@/lib/next-navigation-shim'
 import { useAuth } from '@/contexts/auth-context'
 import { APP_VERSION } from '@/lib/version'
 
-// Match the validator used by the legacy register-wizard EmailStep so the
-// pre-flight check on this screen and the wizard share the exact same
-// acceptance semantics. Intentionally permissive — better-auth's server
-// re-validates on the OTP send.
+// Match the validator used by the auth-wizard EmailStep so the pre-flight
+// check on this screen and the wizard share the exact same acceptance
+// semantics. Intentionally permissive — better-auth's server re-validates
+// on the OTP send.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
  * Unified passwordless entry. Single screen, two methods:
  *  - Continue with Google (handled by OAuthButtons; redirects away)
- *  - Continue with email — sends an OTP and forwards into the register
+ *  - Continue with email — sends an OTP and forwards into the auth
  *    wizard's verify step. The wizard handles new vs returning users
  *    based on whether the verified account has a name set.
  *
- * Replaces the old /login + /register split. Mounted at `/` by
- * HubPage's unauthenticated branch.
+ * Replaces the old /login + /register split (now `/` + `/auth`).
+ * Mounted at `/` by HubPage's unauthenticated branch.
  */
 export function EntryPage() {
   const intl = useIntl()
@@ -75,12 +75,11 @@ export function EntryPage() {
         setIsLoading(false)
         return
       }
-      // Hand off to the register wizard at the verify step with the
-      // email pre-set on the query string. B4 wires RegisterNavContext
-      // to read these params; until then the wizard mounts at its
-      // default first step (harmless — EntryPage is not yet routed).
+      // Hand off to the auth wizard at the verify step with the email
+      // pre-set on the query string. WizardNavContext reads these
+      // params to resume at the verify step.
       router.push(
-        `/register?email=${encodeURIComponent(trimmed)}&step=verify`,
+        `/auth?email=${encodeURIComponent(trimmed)}&step=verify`,
       )
     },
     [canSubmit, intl, router, sendOtp, trimmed],

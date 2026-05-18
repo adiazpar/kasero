@@ -9,7 +9,6 @@ import { ModalShell } from '@/components/ui/modal-shell'
 import { LottiePlayerDynamic as LottiePlayer } from '@/components/animations'
 import { useBusiness } from '@/contexts/business-context'
 import { useUpdateBusiness } from '@/hooks/useUpdateBusiness'
-import { BUSINESS_TYPE_ICONS } from '@/components/businesses/shared'
 import { MAX_UPLOAD_SIZE } from '@/lib/storage-client'
 
 interface Props { isOpen: boolean; onClose: () => void }
@@ -86,12 +85,11 @@ export function EditLogoModal({ isOpen, onClose }: Props) {
   const currentIcon = business?.icon ?? null
   const displayPreview =
     pendingPreview ?? (shouldRemove ? null : (currentIcon?.startsWith('data:image') ? currentIcon : null))
-  const TypeIcon = business?.type ? BUSINESS_TYPE_ICONS[business.type] : null
-  const fallbackEmoji = !TypeIcon && business?.icon && !business.icon.startsWith('data:image')
+  const fallbackEmoji = business?.icon && !business.icon.startsWith('data:image')
     ? business.icon
     : null
 
-  // Status pill above the medallion — Active / Trade fallback / Pending replacement / Pending removal.
+  // Status pill above the medallion — Active / Empty fallback / Pending replacement / Pending removal.
   const statusKey: 'active' | 'fallback' | 'pending' | 'remove' = pendingFile
     ? 'pending'
     : shouldRemove
@@ -207,10 +205,6 @@ export function EditLogoModal({ isOpen, onClose }: Props) {
                     className="w-full h-full object-cover"
                     unoptimized
                   />
-                ) : TypeIcon ? (
-                  <span className="edit-logo__fallback">
-                    <TypeIcon />
-                  </span>
                 ) : fallbackEmoji ? (
                   <span className="edit-logo__fallback-emoji">{fallbackEmoji}</span>
                 ) : null}

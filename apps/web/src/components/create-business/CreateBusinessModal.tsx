@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { ModalShell } from '@/components/ui'
 import type { UseCreateBusinessReturn } from '@/hooks'
 import { NameStep } from './steps/NameStep'
-import { TypeStep } from './steps/TypeStep'
 import { LocaleStep } from './steps/LocaleStep'
 import { LogoStep } from './steps/LogoStep'
 import { SuccessStep } from './steps/SuccessStep'
@@ -17,7 +16,7 @@ import { SuccessStep } from './steps/SuccessStep'
 // and the order-modal / product-modal references.
 // ---------------------------------------------------------------------------
 
-export type CreateBusinessStep = 'name' | 'type' | 'locale' | 'logo' | 'success'
+export type CreateBusinessStep = 'name' | 'locale' | 'logo' | 'success'
 
 export interface CreateBusinessNav {
   push: (step: CreateBusinessStep) => void
@@ -94,7 +93,6 @@ export function CreateBusinessModal({ createBusiness }: CreateBusinessModalProps
       <CreateBusinessNavContext.Provider value={nav}>
         <ModalShell isOpen={isOpen} onClose={onClose} rawContent>
           {current === 'name' && <NameStep />}
-          {current === 'type' && <TypeStep />}
           {current === 'locale' && <LocaleStep />}
           {current === 'logo' && <LogoStep />}
           {current === 'success' && <SuccessStep />}

@@ -45,6 +45,30 @@ export async function loadMessages(
     case 'ja':
       mod = await import('./messages/ja.json')
       break
+    case 'de':
+      mod = await import('./messages/de.json')
+      break
+    case 'fil':
+      mod = await import('./messages/fil.json')
+      break
+    case 'fr':
+      mod = await import('./messages/fr.json')
+      break
+    case 'it':
+      mod = await import('./messages/it.json')
+      break
+    case 'ko':
+      mod = await import('./messages/ko.json')
+      break
+    case 'pt':
+      mod = await import('./messages/pt.json')
+      break
+    case 'vi':
+      mod = await import('./messages/vi.json')
+      break
+    case 'zh':
+      mod = await import('./messages/zh.json')
+      break
     default: {
       // If a new locale is registered without a corresponding case here,
       // TypeScript fails the build. Better than a runtime "missing

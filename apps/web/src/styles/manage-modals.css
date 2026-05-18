@@ -1354,3 +1354,35 @@
 }
 .delete-business__check.is-met .delete-business__check-marker svg { color: #fff; }
 .delete-business__check.is-met { color: var(--color-text-primary); }
+
+/* ===== Success stage — trash Lottie + sign-off ===== */
+.delete-business__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-4) var(--space-2);
+  height: 100%;
+}
+.delete-business__success-heading {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 50;
+  font-size: 24px;
+  letter-spacing: -0.018em;
+  color: var(--color-text-primary);
+  margin-top: var(--space-3);
+}
+.delete-business__success-heading-em {
+  font-style: italic;
+  font-variation-settings: "SOFT" 100;
+  color: var(--color-error);
+}
+.delete-business__success-desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-2);
+}

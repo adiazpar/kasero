@@ -6,12 +6,12 @@ import { AuthLayout } from '../AuthLayout'
 import { AuthField } from '../AuthField'
 import { APP_VERSION } from '@/lib/version'
 import { useAuth } from '@/contexts/auth-context'
-import { useRegisterNav } from './RegisterNavContext'
+import { useWizardNav } from './WizardNavContext'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * First step of the 3-step passwordless register wizard. Sends a 6-digit
+ * First step of the 3-step passwordless auth wizard. Sends a 6-digit
  * OTP via better-auth's email-otp plugin in `sign-in` mode — that mode
  * is idempotent and creates the user on first verify, so this single
  * call handles both new and returning users. On success we advance to
@@ -22,7 +22,7 @@ export function EmailStep() {
   const intl = useIntl()
   const router = useRouter()
   const { sendOtp } = useAuth()
-  const { email, setEmail, goTo } = useRegisterNav()
+  const { email, setEmail, goTo } = useWizardNav()
 
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)

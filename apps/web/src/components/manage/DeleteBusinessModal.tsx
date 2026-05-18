@@ -6,11 +6,18 @@ import { AlertOctagon, Check } from 'lucide-react'
 import { IonButton, IonSpinner } from '@ionic/react'
 import { ModalShell } from '@/components/ui'
 import { AuthField } from '@/components/auth'
+import { LottiePlayerDynamic as LottiePlayer } from '@/components/animations'
 import { useBusiness } from '@/contexts/business-context'
 import { useDeleteBusiness } from '@/hooks/useDeleteBusiness'
 import { useGoBackTo } from '@/hooks'
 
 interface Props { isOpen: boolean; onClose: () => void }
+
+type Stage = 'form' | 'success'
+
+// Hold the success step long enough for the trash Lottie to play through
+// before we pop back to the hub. Matches DeleteAccountModal's beat.
+const SUCCESS_DISPLAY_MS = 1400
 
 /**
  * DeleteBusinessModal — most permanent action in the manage tab. Mirrors
@@ -28,11 +35,18 @@ export function DeleteBusinessModal({ isOpen, onClose }: Props) {
   const { business } = useBusiness()
   const { deleteBusiness, isSubmitting, error } = useDeleteBusiness()
   const [typed, setTyped] = useState('')
+  const [stage, setStage] = useState<Stage>('form')
+  const [deleted, setDeleted] = useState(false)
 
-  // Reset typed value after modal closes.
+  // Reset state after the dismissal animation plays so the contents
+  // don't flash back into view while the modal slides away.
   useEffect(() => {
     if (!isOpen) {
-      const timer = setTimeout(() => setTyped(''), 250)
+      const timer = setTimeout(() => {
+        setTyped('')
+        setStage('form')
+        setDeleted(false)
+      }, 250)
       return () => clearTimeout(timer)
     }
   }, [isOpen])
@@ -43,7 +57,17 @@ export function DeleteBusinessModal({ isOpen, onClose }: Props) {
   const handleDelete = async () => {
     if (!canDelete) return
     const ok = await deleteBusiness()
-    if (ok) { onClose(); goBackTo('/') }
+    if (!ok) return
+    // Move to the success stage so the trash Lottie plays; the modal
+    // owns the navigation timing so users get a visible confirmation
+    // beat before the business stack pops back to the hub. Mirrors
+    // DeleteAccountModal's flow.
+    setStage('success')
+    setDeleted(true)
+    window.setTimeout(() => {
+      onClose()
+      goBackTo('/')
+    }, SUCCESS_DISPLAY_MS)
   }
 
   const titleNode = useMemo(() => {
@@ -76,7 +100,7 @@ export function DeleteBusinessModal({ isOpen, onClose }: Props) {
     },
   ]
 
-  const footer = (
+  const footer = stage === 'success' ? undefined : (
     <IonButton
       color="danger"
       expand="block"
@@ -89,6 +113,45 @@ export function DeleteBusinessModal({ isOpen, onClose }: Props) {
         : intl.formatMessage({ id: 'manage.delete_business_button_long' })}
     </IonButton>
   )
+
+  if (stage === 'success') {
+    return (
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        title=""
+        footer={footer}
+        noSwipeDismiss
+      >
+        <div className="delete-business__success">
+          <div style={{ width: 160, height: 160 }}>
+            {deleted && (
+              <LottiePlayer
+                src="/animations/trash.json"
+                loop={false}
+                autoplay={true}
+                delay={120}
+                style={{ width: 160, height: 160 }}
+              />
+            )}
+          </div>
+          <p className="delete-business__success-heading">
+            {intl.formatMessage(
+              { id: 'manage.delete_business_success_heading' },
+              {
+                em: (chunks) => (
+                  <em className="delete-business__success-heading-em">{chunks}</em>
+                ),
+              },
+            )}
+          </p>
+          <p className="delete-business__success-desc">
+            {intl.formatMessage({ id: 'manage.delete_business_success_desc' })}
+          </p>
+        </div>
+      </ModalShell>
+    )
+  }
 
   return (
     <ModalShell

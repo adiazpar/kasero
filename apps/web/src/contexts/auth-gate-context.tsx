@@ -14,7 +14,7 @@ import { useRouter } from '@/lib/next-navigation-shim'
 import { LogoutConfirmModal } from '@/components/auth/LogoutConfirmModal'
 import { useAuth } from './auth-context'
 
-// Unified phase machine: both playEntry (entry-page/register -> hub) and
+// Unified phase machine: both playEntry (entry-page/auth -> hub) and
 // playExit (logout -> entry-page) use the same 5-phase choreography. The
 // "overlay" is conceptually a bidirectional entrance — it doesn't know
 // or care which direction you're going, only that it's covering a
@@ -95,7 +95,7 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
   // under the opaque overlay (logout clears user state safely). If work
   // is provided, navigation is deferred until after work completes so
   // the destination page mounts without a brief flash of the prior state.
-  // If work is absent (login/register), navigation fires at the start so
+  // If work is absent (login/auth wizard), navigation fires at the start so
   // the destination can start loading during the overlay-in phase.
   const runTransition = useCallback(
     async (
@@ -215,7 +215,7 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
       const hubReadyPromise = new Promise<void>((resolve) => {
         hubReadyResolverRef.current = resolve
       })
-      // replace=true: auth surface (entry/register) shouldn't remain in
+      // replace=true: auth surface (entry/auth) shouldn't remain in
       // history after a successful login — back-button must not walk
       // the user back into the verify step or the OAuth pre-redirect
       // page once they're authenticated.

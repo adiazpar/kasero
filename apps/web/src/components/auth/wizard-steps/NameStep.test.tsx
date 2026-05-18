@@ -5,7 +5,7 @@ import { IonApp } from '@ionic/react'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import enUS from '../../../i18n/messages/en-US.json'
-import { RegisterNavProvider, useRegisterNav } from './RegisterNavContext'
+import { WizardNavProvider, useWizardNav } from './WizardNavContext'
 import { NameStep } from './NameStep'
 
 // Stub the auth context. Each test overrides setName as needed.
@@ -29,19 +29,19 @@ import { useAuth } from '@/contexts/auth-context'
 // Mark the wizard as new-user so the NameStep's defensive
 // router.replace('/') guard doesn't fire during the test.
 function Seed() {
-  const nav = useRegisterNav()
+  const nav = useWizardNav()
   if (nav.isNewUser !== true) nav.setIsNewUser(true)
   return null
 }
 
 const wrap = (node: ReactNode) => (
   <IntlProvider locale="en" messages={enUS as Record<string, string>}>
-    <MemoryRouter initialEntries={['/register']}>
+    <MemoryRouter initialEntries={['/auth']}>
       <IonApp>
-        <RegisterNavProvider>
+        <WizardNavProvider>
           <Seed />
           {node}
-        </RegisterNavProvider>
+        </WizardNavProvider>
       </IonApp>
     </MemoryRouter>
   </IntlProvider>

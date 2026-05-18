@@ -124,7 +124,7 @@ Flags:
 }
 
 // ============================================================================
-// JSON flatten / unflatten
+// JSON flatten
 // ============================================================================
 
 function flatten(obj: NestedMap, prefix = ''): FlatMap {
@@ -136,23 +136,6 @@ function flatten(obj: NestedMap, prefix = ''): FlatMap {
     } else if (value && typeof value === 'object') {
       Object.assign(out, flatten(value, path))
     }
-  }
-  return out
-}
-
-function unflatten(flat: FlatMap): NestedMap {
-  const out: NestedMap = {}
-  for (const [path, value] of Object.entries(flat)) {
-    const parts = path.split('.')
-    let cursor: NestedMap = out
-    for (let i = 0; i < parts.length - 1; i++) {
-      const segment = parts[i]
-      if (!(segment in cursor) || typeof cursor[segment] === 'string') {
-        cursor[segment] = {}
-      }
-      cursor = cursor[segment] as NestedMap
-    }
-    cursor[parts[parts.length - 1]] = value
   }
   return out
 }
@@ -257,6 +240,10 @@ Hard rules:
 - Do NOT translate technical terms that are left in English on purpose: enum values like "pending", "received", "owner", "partner", "employee" when they appear as identifiers inside placeholder values.
 - Do NOT add trailing punctuation where the source had none.
 - Do NOT expand contractions or add flourishes. Match source length where reasonable.
+- Quotation marks inside string values: the output is JSON, so ANY raw ASCII " (U+0022) inside a translation MUST be written as the escape sequence \\" — never as a bare ". Two safe ways to handle quoted phrases:
+  (a) Use a locale-appropriate typographic pair consistently: German „…", French «…», Italian «…» or "…", Spanish "…" or «…», Japanese 「…」, Korean "…" or '…', Chinese "…", Vietnamese/Filipino/Portuguese "…". Never mix a typographic opening with an ASCII closing — that produces invalid JSON.
+  (b) OR keep the ASCII quote shape, but escape both: \\"…\\".
+  Never produce a translation that contains an unescaped ASCII " between the opening and closing JSON delimiters of a value.
 
 Output rules:
 - Return ONLY valid JSON matching the exact key structure of the input.
@@ -266,13 +253,67 @@ Output rules:
 - The output JSON must have the same number of keys as the input.`
 }
 
+/**
+ * Tolerant JSON extractor for Claude responses.
+ *
+ * Handles, in order:
+ *   1. Markdown fences (```json ... ```).
+ *   2. Preamble or trailing text — extracts the outermost {...} block
+ *      via brace-counting, ignoring braces inside JSON strings.
+ *   3. Raw newlines inside string values — re-escapes them if the
+ *      first JSON.parse attempt fails. This is the most common shape
+ *      of malformed JSON Claude produces for translation tasks
+ *      (multi-line target strings without escaped \n).
+ */
 function extractJsonFromResponse(raw: string): unknown {
-  // Strip markdown fences if Claude wraps the JSON in them
-  const cleaned = raw
+  const fenceless = raw
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```\s*$/, '')
     .trim()
-  return JSON.parse(cleaned)
+
+  // Locate the outermost {...} block, accounting for braces inside
+  // JSON strings (which can legitimately contain `{` / `}`).
+  const start = fenceless.indexOf('{')
+  if (start === -1) return JSON.parse(fenceless)
+
+  let depth = 0
+  let inString = false
+  let escape = false
+  let end = -1
+  for (let i = start; i < fenceless.length; i++) {
+    const c = fenceless[i]
+    if (escape) { escape = false; continue }
+    if (inString) {
+      if (c === '\\') escape = true
+      else if (c === '"') inString = false
+      continue
+    }
+    if (c === '"') { inString = true; continue }
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) { end = i; break }
+    }
+  }
+  const block = end === -1 ? fenceless.slice(start) : fenceless.slice(start, end + 1)
+
+  try {
+    return JSON.parse(block)
+  } catch (firstErr) {
+    // Repair: escape literal newlines / CRs inside string values.
+    // Claude occasionally returns multi-line translations without
+    // escaping the embedded newlines — JSON.parse rejects those.
+    const repaired = block.replace(
+      /"((?:\\.|[^"\\])*?)"/g,
+      (_match, body: string) =>
+        '"' + body.replace(/\r/g, '\\r').replace(/\n/g, '\\n') + '"',
+    )
+    try {
+      return JSON.parse(repaired)
+    } catch {
+      throw firstErr
+    }
+  }
 }
 
 async function translateBatch(
@@ -298,7 +339,16 @@ async function translateBatch(
             cache_control: { type: 'ephemeral' },
           },
         ],
-        messages: [{ role: 'user', content: userContent }],
+        messages: [
+          { role: 'user', content: userContent },
+          // Prefill the assistant turn with `{` so the model is forced
+          // to continue with JSON content rather than a prose preamble
+          // ("Here is the translation:", "Sure! ..."). The response
+          // text picks up AFTER the prefill, so we re-add the leading
+          // `{` before parsing. This is Anthropic's recommended
+          // technique for constraining responses to structured JSON.
+          { role: 'assistant', content: '{' },
+        ],
       })
 
       const firstBlock = response.content[0]
@@ -306,7 +356,7 @@ async function translateBatch(
         throw new Error('Unexpected response: no text block')
       }
 
-      const parsed = extractJsonFromResponse(firstBlock.text)
+      const parsed = extractJsonFromResponse('{' + firstBlock.text)
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
         throw new Error('Response is not a JSON object')
       }
@@ -455,9 +505,8 @@ async function main(): Promise<void> {
   // Merge translated into the target. Persist as a flat dot-key map —
   // that's what apps/web/src/i18n/loadMessages.ts feeds to react-intl
   // (a Record<string, string>); writing nested would break message
-  // lookups in the app even though the JSON parses fine. unflatten()
-  // is still kept for input handling so legacy nested files re-flatten
-  // correctly on the next run.
+  // lookups in the app even though the JSON parses fine. Legacy nested
+  // input files still re-flatten on read via flatten() above.
   const mergedFlat: FlatMap = { ...targetFlat, ...translated }
   writeJsonFileAtomic(targetFile, mergedFlat)
 

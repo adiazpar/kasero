@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-// Shared body shell for the / (EntryPage) and /register wizard steps.
+// Shared body shell for the / (EntryPage) and /auth wizard steps.
 // Renders a vertically-stacked main slot (hero + form) and an optional
 // footer slot pinned to the bottom.
 //

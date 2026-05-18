@@ -44,7 +44,6 @@ export const GET = withBusinessAuth(async (_request, access) => {
     business: {
       id: row.id,
       name: row.name,
-      type: row.type,
       icon: row.icon,
       locale: row.locale,
       currency: row.currency,
@@ -55,7 +54,7 @@ export const GET = withBusinessAuth(async (_request, access) => {
 /**
  * PATCH /api/businesses/[businessId]
  * Update business details. Owner or partner only.
- * Accepts FormData with any subset of: name, type, locale, logo (File), removeLogo=true.
+ * Accepts FormData with any subset of: name, locale, logo (File), removeLogo=true.
  * Currency is derived server-side from locale.
  */
 // Business logo is capped at MAX_UPLOAD_SIZE (2 MB decoded); 5 MB Content-Length
@@ -63,7 +62,7 @@ export const GET = withBusinessAuth(async (_request, access) => {
 const PATCH_MAX_BODY_BYTES = 5 * 1024 * 1024
 
 export const PATCH = withBusinessAuth(async (request, access) => {
-  // Identity edits (name, icon, type, locale, currency) are owner-only.
+  // Identity edits (name, icon, locale, currency) are owner-only.
   // Functional settings (defaultCategoryId, sortPreference) live on a
   // separate route and remain manager-level.
   if (!isOwner(access.role)) {
@@ -91,7 +90,7 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     return validationError(validation)
   }
 
-  const { name, type, locale, removeLogo } = validation.data
+  const { name, locale, removeLogo } = validation.data
 
   // Validate locale — getLocaleConfig returns undefined for unknown locales
   let currency: string | undefined
@@ -144,7 +143,6 @@ export const PATCH = withBusinessAuth(async (request, access) => {
   // Build update object
   const update: Partial<typeof businesses.$inferInsert> = {}
   if (name !== undefined) update.name = name
-  if (type !== undefined) update.type = type as typeof update.type
   if (locale !== undefined) { update.locale = locale; update.currency = currency }
   if (removeLogo === 'true') update.icon = null
   if (logoFile && logoBuffer && sniffedLogoType) {
@@ -157,7 +155,7 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     if (!row) return errorResponse(ApiMessageCode.BUSINESS_NOT_FOUND, 404)
     return successResponse({
       business: {
-        id: row.id, name: row.name, type: row.type, icon: row.icon,
+        id: row.id, name: row.name, icon: row.icon,
         locale: row.locale, currency: row.currency,
       },
     }, ApiMessageCode.BUSINESS_UPDATE_SUCCESS)
@@ -173,7 +171,7 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     invalidateAccessCacheForBusiness(access.businessId)
     return successResponse({
       business: {
-        id: row.id, name: row.name, type: row.type, icon: row.icon,
+        id: row.id, name: row.name, icon: row.icon,
         locale: row.locale, currency: row.currency,
       },
     }, ApiMessageCode.BUSINESS_UPDATE_SUCCESS)

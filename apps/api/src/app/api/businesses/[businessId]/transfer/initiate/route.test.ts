@@ -128,7 +128,6 @@ const OWNER_ACCESS = {
   userId: CALLER_ID,
   businessId: BUSINESS_ID,
   businessName: 'My Shop',
-  businessType: 'retail' as const,
   businessIcon: null,
   businessLocale: 'en-US',
   businessCurrency: 'USD',

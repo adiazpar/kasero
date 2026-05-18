@@ -7,10 +7,10 @@ import { AuthField } from '../AuthField'
 import { APP_VERSION } from '@/lib/version'
 import { useAuth } from '@/contexts/auth-context'
 import { useAuthGate } from '@/contexts/auth-gate-context'
-import { useRegisterNav } from './RegisterNavContext'
+import { useWizardNav } from './WizardNavContext'
 
 /**
- * Final step of the 3-step passwordless register wizard. Only mounts
+ * Final step of the 3-step passwordless auth wizard. Only mounts
  * when the OTP verify reported `isNewUser: true` — the brand-new user
  * has a session but no name yet. Submitting calls `setName`, which
  * PATCHes the name onto the user row via better-auth's updateUser, then
@@ -26,7 +26,7 @@ import { useRegisterNav } from './RegisterNavContext'
 export function NameStep() {
   const intl = useIntl()
   const router = useRouter()
-  const { name, setName: setWizardName, isNewUser } = useRegisterNav()
+  const { name, setName: setWizardName, isNewUser } = useWizardNav()
   const { setName: persistName } = useAuth()
   const { playEntry } = useAuthGate()
 

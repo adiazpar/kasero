@@ -8,7 +8,6 @@ import { clearHubBusinessesCache } from './useSessionCache'
 
 interface UpdateBusinessPayload {
   name?: string
-  type?: string
   locale?: string
   logoFile?: File | null
   removeLogo?: boolean
@@ -36,15 +35,14 @@ export function useUpdateBusiness(): UseUpdateBusinessReturn {
     try {
       const fd = new FormData()
       if (payload.name !== undefined) fd.set('name', payload.name)
-      if (payload.type !== undefined) fd.set('type', payload.type)
       if (payload.locale !== undefined) fd.set('locale', payload.locale)
       if (payload.removeLogo) fd.set('removeLogo', 'true')
       if (payload.logoFile) fd.set('logo', payload.logoFile)
 
       await apiPatchForm(`/api/businesses/${businessId}`, fd)
       await refreshBusiness()
-      // The hub list caches name/icon/locale/type for every business;
-      // any of those could have just changed. Drop the hub cache so
+      // The hub list caches name/icon/locale for every business; any of
+      // those could have just changed. Drop the hub cache so
       // the next hub render refetches fresh data instead of showing
       // the stale pre-edit values until the session ends.
       clearHubBusinessesCache()

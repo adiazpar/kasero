@@ -212,11 +212,11 @@ export function DeleteAccountModal({
       })
       setStage('success')
       // Give the Lottie a beat to play, then clear local auth and route
-      // to the registration entry. The success animation reads as a
+      // to the unified entry page. The success animation reads as a
       // confirmation receipt; jumping immediately feels like a crash.
       window.setTimeout(async () => {
         await logout()
-        goBackTo('/register')
+        goBackTo('/')
       }, 1400)
     } catch (err) {
       if (err instanceof ApiError) {

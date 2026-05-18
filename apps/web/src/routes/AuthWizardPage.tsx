@@ -10,15 +10,15 @@ import {
 } from '@ionic/react'
 import { chevronBack } from 'ionicons/icons'
 import {
-  RegisterNavProvider,
-  useRegisterNav,
-} from '@/components/auth/register-steps/RegisterNavContext'
-import { EmailStep } from '@/components/auth/register-steps/EmailStep'
-import { VerifyStep } from '@/components/auth/register-steps/VerifyStep'
-import { NameStep } from '@/components/auth/register-steps/NameStep'
+  WizardNavProvider,
+  useWizardNav,
+} from '@/components/auth/wizard-steps/WizardNavContext'
+import { EmailStep } from '@/components/auth/wizard-steps/EmailStep'
+import { VerifyStep } from '@/components/auth/wizard-steps/VerifyStep'
+import { NameStep } from '@/components/auth/wizard-steps/NameStep'
 
 /**
- * 3-step passwordless register wizard: email -> verify -> name.
+ * 3-step passwordless auth wizard: email -> verify -> name.
  *
  * - email: collects the address and sends an OTP (sign-in mode, so
  *   first-time verify creates the user record server-side).
@@ -31,15 +31,15 @@ import { NameStep } from '@/components/auth/register-steps/NameStep'
  * The wizard also accepts ?email=...&step=verify on mount — EntryPage
  * uses that contract to hand off after its own OTP send.
  */
-export function RegisterPage() {
+export function AuthWizardPage() {
   return (
     <IonPage>
-      <RegisterNavProvider>
-        <RegisterHeader />
+      <WizardNavProvider>
+        <WizardHeader />
         <IonContent>
           <CurrentStep />
         </IonContent>
-      </RegisterNavProvider>
+      </WizardNavProvider>
     </IonPage>
   )
 }
@@ -49,9 +49,9 @@ export function RegisterPage() {
 // name step is terminal (the new user has a verified session), so
 // neither needs a header bar. Branding intentionally absent from the
 // auth surface.
-function RegisterHeader() {
+function WizardHeader() {
   const intl = useIntl()
-  const { current, goTo } = useRegisterNav()
+  const { current, goTo } = useWizardNav()
   if (current !== 'verify') return null
   return (
     <IonHeader>
@@ -74,7 +74,7 @@ function RegisterHeader() {
 // direct child of IonContent, preserving the min-height:100% chain that
 // pins the footer to the bottom.
 function CurrentStep() {
-  const { current } = useRegisterNav()
+  const { current } = useWizardNav()
   switch (current) {
     case 'email':
       return <EmailStep />

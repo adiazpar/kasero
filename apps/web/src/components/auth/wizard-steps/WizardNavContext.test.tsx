@@ -2,21 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { RegisterNavProvider, useRegisterNav } from './RegisterNavContext'
+import { WizardNavProvider, useWizardNav } from './WizardNavContext'
 
 const makeWrapper = (initialEntry: string) =>
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter initialEntries={[initialEntry]}>
-        <RegisterNavProvider>{children}</RegisterNavProvider>
+        <WizardNavProvider>{children}</WizardNavProvider>
       </MemoryRouter>
     )
   }
 
-describe('RegisterNavContext', () => {
+describe('WizardNavContext', () => {
   it('starts on the email step with empty fields when no URL params are present', () => {
-    const { result } = renderHook(() => useRegisterNav(), {
-      wrapper: makeWrapper('/register'),
+    const { result } = renderHook(() => useWizardNav(), {
+      wrapper: makeWrapper('/auth'),
     })
     expect(result.current.current).toBe('email')
     expect(result.current.email).toBe('')
@@ -25,9 +25,9 @@ describe('RegisterNavContext', () => {
   })
 
   it('starts on the verify step when ?email=...&step=verify is set', () => {
-    const { result } = renderHook(() => useRegisterNav(), {
+    const { result } = renderHook(() => useWizardNav(), {
       wrapper: makeWrapper(
-        `/register?email=${encodeURIComponent('a@b.co')}&step=verify`,
+        `/auth?email=${encodeURIComponent('a@b.co')}&step=verify`,
       ),
     })
     expect(result.current.current).toBe('verify')
@@ -35,24 +35,24 @@ describe('RegisterNavContext', () => {
   })
 
   it('ignores step=verify when no email param is present', () => {
-    const { result } = renderHook(() => useRegisterNav(), {
-      wrapper: makeWrapper('/register?step=verify'),
+    const { result } = renderHook(() => useWizardNav(), {
+      wrapper: makeWrapper('/auth?step=verify'),
     })
     expect(result.current.current).toBe('email')
     expect(result.current.email).toBe('')
   })
 
   it('ignores a malformed email param and stays on the email step', () => {
-    const { result } = renderHook(() => useRegisterNav(), {
-      wrapper: makeWrapper('/register?email=not-an-email&step=verify'),
+    const { result } = renderHook(() => useWizardNav(), {
+      wrapper: makeWrapper('/auth?email=not-an-email&step=verify'),
     })
     expect(result.current.current).toBe('email')
     expect(result.current.email).toBe('')
   })
 
   it('goTo moves between steps without losing field values', () => {
-    const { result } = renderHook(() => useRegisterNav(), {
-      wrapper: makeWrapper('/register'),
+    const { result } = renderHook(() => useWizardNav(), {
+      wrapper: makeWrapper('/auth'),
     })
 
     act(() => result.current.setEmail('a@b.co'))
@@ -70,11 +70,11 @@ describe('RegisterNavContext', () => {
     expect(result.current.email).toBe('a@b.co')
   })
 
-  it('useRegisterNav throws when used outside the provider', () => {
+  it('useWizardNav throws when used outside the provider', () => {
     const orig = console.error
     console.error = () => {}
     try {
-      expect(() => renderHook(() => useRegisterNav())).toThrow()
+      expect(() => renderHook(() => useWizardNav())).toThrow()
     } finally {
       console.error = orig
     }

@@ -14,7 +14,6 @@ interface CachedBusiness {
   isOwner: boolean
   locale: string
   currency: string
-  type: string | null
   icon: string | null
 }
 
@@ -35,7 +34,7 @@ interface PageTransitionContextValue {
   // Business cache for instant display and access validation
   getCachedBusiness: (businessId: string) => CachedBusiness | null
   setCachedBusiness: (businessId: string, data: CachedBusiness) => void
-  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; type: string | null; icon: string | null }>) => void
+  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; icon: string | null }>) => void
   clearCachedBusiness: (businessId: string) => void
 }
 
@@ -127,7 +126,7 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
     }
   }, [])
 
-  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; type: string | null; icon: string | null }>) => {
+  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; icon: string | null }>) => {
     businesses.forEach(b => {
       businessCacheRef.current[b.id] = {
         name: b.name,
@@ -135,7 +134,6 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
         isOwner: b.isOwner,
         locale: b.locale,
         currency: b.currency,
-        type: b.type ?? null,
         icon: b.icon ?? null,
       }
     })

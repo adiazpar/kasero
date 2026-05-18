@@ -117,11 +117,6 @@ export const Schemas = {
   role: () => z.enum(['owner', 'partner', 'employee']),
 
   /**
-   * Business type field.
-   */
-  businessType: () => z.enum(['food', 'retail', 'services', 'wholesale', 'manufacturing', 'other']),
-
-  /**
    * Locale code (e.g., 'en-US', 'es-MX').
    */
   locale: () => z.string().regex(/^[a-z]{2}-[A-Z]{2}$/),

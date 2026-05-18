@@ -26,7 +26,6 @@ export type { BusinessRole }
 export interface Business {
   id: string
   name: string
-  type: 'food' | 'retail' | 'services' | 'wholesale' | 'manufacturing' | 'other' | null
   icon: string | null
   locale: string
   currency: string
@@ -77,7 +76,6 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
       const data = await apiRequest<{
         businessId: string
         businessName: string
-        businessType?: Business['type']
         businessIcon?: string | null
         businessLocale?: string
         businessCurrency?: string
@@ -86,7 +84,6 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
       setBusiness({
         id: data.businessId,
         name: data.businessName,
-        type: data.businessType ?? null,
         icon: data.businessIcon ?? null,
         locale: data.businessLocale ?? 'en-US',
         currency: data.businessCurrency ?? 'USD',
@@ -94,7 +91,6 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
       setRole(data.role as BusinessRole)
       setCachedBusiness(data.businessId, {
         name: data.businessName,
-        type: data.businessType ?? null,
         icon: data.businessIcon ?? null,
         locale: data.businessLocale ?? 'en-US',
         currency: data.businessCurrency ?? 'USD',
@@ -135,7 +131,6 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
       setBusiness({
         id: businessId,
         name: cached.name,
-        type: (cached.type ?? null) as Business['type'],
         icon: cached.icon ?? null,
         locale: cached.locale,
         currency: cached.currency,

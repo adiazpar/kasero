@@ -13,28 +13,8 @@ import {
 import { close, chevronBack } from 'ionicons/icons'
 import { Upload, X } from 'lucide-react'
 import Image from '@/lib/Image'
-import {
-  BUSINESS_TYPE_ICONS,
-  BUSINESS_TYPE_FALLBACK_EMOJIS,
-} from '@/components/businesses/shared'
 import { MAX_UPLOAD_SIZE } from '@/lib/storage-client'
-import type { BusinessType } from '@/hooks'
 import { useCreateBusinessCtx, useCreateBusinessNav } from '../CreateBusinessModal'
-
-function getDefaultIconForType(businessType: BusinessType | null) {
-  if (!businessType) return <span className="text-5xl">💼</span>
-
-  const IconComponent = BUSINESS_TYPE_ICONS[businessType]
-  if (IconComponent) {
-    return <IconComponent className="w-16 h-16 text-brand" />
-  }
-
-  return (
-    <span className="text-5xl">
-      {BUSINESS_TYPE_FALLBACK_EMOJIS[businessType] || '💼'}
-    </span>
-  )
-}
 
 export function LogoStep() {
   const t = useIntl()
@@ -131,7 +111,7 @@ export function LogoStep() {
             <div className="wizard-hero__eyebrow">
               {t.formatMessage(
                 { id: 'createBusiness.step_indicator' },
-                { current: 4, total: 4 },
+                { current: 3, total: 3 },
               )}
             </div>
             <h1 className="wizard-hero__title">{titleNode}</h1>
@@ -141,7 +121,7 @@ export function LogoStep() {
           </header>
 
           {/* Medallion preview — the "stage" for the logo. Falls back to
-              the business-type icon when no image is uploaded yet. */}
+              a neutral briefcase emoji when no image is uploaded yet. */}
           <div className="create-business__logo-stage">
             <span className="create-business__logo-stage-label">
               {t.formatMessage({ id: 'createBusiness.logo_preview_label' })}
@@ -158,7 +138,7 @@ export function LogoStep() {
                     unoptimized
                   />
                 ) : (
-                  getDefaultIconForType(formData.type)
+                  <span className="text-5xl">💼</span>
                 )}
               </div>
               {hasLogo && (

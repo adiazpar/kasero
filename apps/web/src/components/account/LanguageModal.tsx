@@ -28,8 +28,16 @@ export interface LanguageModalProps {
  */
 const FLAGS: Partial<Record<SupportedLocale, string>> = {
   'en-US': '\u{1F1FA}\u{1F1F8}', // US
-  es: '\u{1F1EA}\u{1F1F8}',      // Spain
-  ja: '\u{1F1EF}\u{1F1F5}',      // Japan
+  es:      '\u{1F1EA}\u{1F1F8}', // Spain
+  ja:      '\u{1F1EF}\u{1F1F5}', // Japan
+  de:      '\u{1F1E9}\u{1F1EA}', // Germany
+  fil:     '\u{1F1F5}\u{1F1ED}', // Philippines
+  fr:      '\u{1F1EB}\u{1F1F7}', // France
+  it:      '\u{1F1EE}\u{1F1F9}', // Italy
+  ko:      '\u{1F1F0}\u{1F1F7}', // South Korea
+  pt:      '\u{1F1E7}\u{1F1F7}', // Brazil (pt-BR target)
+  vi:      '\u{1F1FB}\u{1F1F3}', // Vietnam
+  zh:      '\u{1F1E8}\u{1F1F3}', // China (Simplified)
 }
 
 /**

@@ -12,7 +12,6 @@ import {
   ArrowRightLeft,
   LogOut,
   Trash2,
-  Briefcase,
   ChevronRight,
   Clock,
   ImageIcon,
@@ -31,10 +30,6 @@ import {
 // code out of the initial manage-page chunk until the user opens one.
 const EditNameModal = dynamic(
   () => import('@/components/manage/EditNameModal').then(m => m.EditNameModal),
-  { ssr: false },
-)
-const EditTypeModal = dynamic(
-  () => import('@/components/manage/EditTypeModal').then(m => m.EditTypeModal),
   { ssr: false },
 )
 const EditLocationModal = dynamic(
@@ -66,15 +61,6 @@ const IncomingTransferModal = dynamic(
   { ssr: false },
 )
 
-const KNOWN_BUSINESS_TYPES = new Set([
-  'food',
-  'retail',
-  'services',
-  'wholesale',
-  'manufacturing',
-  'other',
-])
-
 export function ManageView() {
   const intl = useIntl()
   const { business, businessId, isOwner } = useBusiness()
@@ -83,7 +69,6 @@ export function ManageView() {
   const { transfer: incomingTransfer } = useIncomingTransferContext()
 
   const [nameOpen, setNameOpen] = useState(false)
-  const [typeOpen, setTypeOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [logoOpen, setLogoOpen] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
@@ -120,10 +105,6 @@ export function ManageView() {
 
   const slideTo = (href: string) => navigate(href)
 
-  const typeLabel = business.type && KNOWN_BUSINESS_TYPES.has(business.type)
-    ? intl.formatMessage({ id: `createBusiness.business_type_${business.type}` })
-    : null
-
   const localeLabel = `${business.locale} · ${business.currency}`
 
   return (
@@ -154,7 +135,6 @@ export function ManageView() {
           <span className="manage-hero__body">
             <span className="manage-hero__name">{business.name}</span>
             <span className="manage-hero__pills">
-              {typeLabel ? <span className="manage-pill">{typeLabel}</span> : null}
               <span className="manage-pill">{localeLabel}</span>
             </span>
           </span>
@@ -248,19 +228,6 @@ export function ManageView() {
           <IonItem
             button={isOwner}
             detail={isOwner}
-            onClick={isOwner ? () => setTypeOpen(true) : undefined}
-          >
-            <Briefcase slot="start" className="text-text-secondary w-5 h-5" />
-            <IonLabel>
-              <h3>{intl.formatMessage({ id: 'manage.row_type' })}</h3>
-            </IonLabel>
-            <IonNote slot="end">
-              {typeLabel ?? '—'}
-            </IonNote>
-          </IonItem>
-          <IonItem
-            button={isOwner}
-            detail={isOwner}
             onClick={isOwner ? () => setLocationOpen(true) : undefined}
           >
             <MapPin slot="start" className="text-text-secondary w-5 h-5" />
@@ -336,7 +303,6 @@ export function ManageView() {
       </div>
 
       <EditNameModal isOpen={nameOpen} onClose={() => setNameOpen(false)} />
-      <EditTypeModal isOpen={typeOpen} onClose={() => setTypeOpen(false)} />
       <EditLocationModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />
       <EditLogoModal isOpen={logoOpen} onClose={() => setLogoOpen(false)} />
       <TransferOwnershipModal isOpen={transferOpen} onClose={() => setTransferOpen(false)} />

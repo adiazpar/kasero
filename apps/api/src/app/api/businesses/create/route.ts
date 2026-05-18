@@ -16,7 +16,6 @@ import { logServerError } from '@/lib/server-logger'
 
 const createBusinessSchema = z.object({
   name: Schemas.name().max(100),
-  type: Schemas.businessType(),
   locale: Schemas.locale(),
   currency: Schemas.currency().optional(), // Auto-set from locale if not provided
   icon: Schemas.businessIcon(),
@@ -75,7 +74,7 @@ export const POST = withAuth(async (request, user) => {
       return validationError(validation)
     }
 
-    const { name, type, locale, currency, icon } = validation.data
+    const { name, locale, currency, icon } = validation.data
     const now = new Date()
 
     // Auto-derive currency from locale if the client didn't specify it.
@@ -88,7 +87,6 @@ export const POST = withAuth(async (request, user) => {
       db.insert(businesses).values({
         id: businessId,
         name: name.trim(),
-        type,
         locale,
         currency: finalCurrency,
         icon: icon || null,

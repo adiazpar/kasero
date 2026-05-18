@@ -2,6 +2,7 @@
 
 import { useIntl } from 'react-intl'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useIonViewWillEnter } from '@ionic/react'
 import { useRouter } from '@/lib/next-navigation-shim'
 import { Building2, SearchX, X } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
@@ -15,21 +16,12 @@ import { FeatureCard, GroupLabel, PageSpinner } from '@/components/ui'
 import { BusinessRow } from '@/components/businesses/shared'
 import type { MessageId } from '@/i18n/messageIds'
 
-type BusinessType =
-  | 'food'
-  | 'retail'
-  | 'services'
-  | 'wholesale'
-  | 'manufacturing'
-  | 'other'
-
 interface Business {
   id: string
   name: string
   role: string
   isOwner: boolean
   memberCount: number
-  type: BusinessType | null
   icon: string | null
   locale: string
   currency: string
@@ -118,6 +110,18 @@ function HubHomeBody() {
   useEffect(() => {
     if (createdBusiness) fetchBusinesses()
   }, [createdBusiness, fetchBusinesses])
+
+  // Refetch whenever the hub becomes the active view. `goBackTo('/')`
+  // pops the business stack back to this page rather than remounting
+  // it, so a delete/edit/leave inside a business would otherwise leave
+  // the React state holding the pre-mutation list. clearHubBusinessesCache()
+  // wipes sessionStorage but can't reach this component's state directly.
+  // `useIonViewWillEnter` is the idiomatic pop-back refresh hook;
+  // `fetchDeduped` collapses the duplicate fetch on initial activation.
+  useIonViewWillEnter(() => {
+    if (authLoading || !userId) return
+    fetchBusinesses()
+  }, [authLoading, userId, fetchBusinesses])
 
   const handleEnterBusiness = (businessId: string) => {
     navigate(`/${businessId}/home`)

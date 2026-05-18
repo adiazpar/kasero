@@ -32,21 +32,6 @@ interface CurrencyConfig {
   symbolPosition: 'before' | 'after' // Symbol position relative to amount
 }
 
-interface BusinessTypeConfig {
-  value: string
-  label: string
-}
-
-// Business types
-export const BUSINESS_TYPES: BusinessTypeConfig[] = [
-  { value: 'food', label: 'Culinary' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'services', label: 'Services' },
-  { value: 'wholesale', label: 'Wholesale' },
-  { value: 'manufacturing', label: 'Maker' },
-  { value: 'other', label: 'Other' },
-]
-
 // Supported locales with their defaults
 const LOCALES: LocaleConfig[] = [
   // North America

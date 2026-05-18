@@ -10,7 +10,7 @@ import { AuthGateProvider } from '@/contexts/auth-gate-context'
 import { AuthProvider } from '@/contexts/auth-context'
 import { AppIntlProvider } from '@/i18n/AppIntlProvider'
 import { AuthenticatedShell } from '@/routes/AuthenticatedShell'
-import { RegisterPage } from '@/routes/RegisterPage'
+import { AuthWizardPage } from '@/routes/AuthWizardPage'
 
 // Provider order:
 //   - IonReactRouter wraps everything: AuthContext calls useRouter() (via the
@@ -37,8 +37,8 @@ export function App() {
                 <AuthGateOverlay />
                 <OfflineBadge />
                 <Switch>
-                  <Route exact path="/register">
-                    <RegisterPage />
+                  <Route exact path="/auth">
+                    <AuthWizardPage />
                   </Route>
                   <Route>
                     <AuthenticatedShell />

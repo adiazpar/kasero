@@ -13,11 +13,8 @@ interface CreateBusinessResponse extends ApiResponse {
   }
 }
 
-export type BusinessType = 'food' | 'retail' | 'services' | 'wholesale' | 'manufacturing' | 'other'
-
 interface BusinessFormData {
   name: string
-  type: BusinessType | null
   locale: string
   currency: string
   icon: string | null
@@ -35,7 +32,6 @@ export interface UseCreateBusinessReturn {
   // Form data
   formData: BusinessFormData
   setName: (name: string) => void
-  setType: (type: BusinessType) => void
   setLocale: (locale: string) => void
   setIcon: (icon: string | null) => void
   setLogoFile: (file: File | null) => void
@@ -49,9 +45,7 @@ export interface UseCreateBusinessReturn {
 
   // Validation
   isNameValid: boolean
-  isTypeValid: boolean
-  isStep1Valid: boolean
-  isStep2Valid: boolean
+  isLocaleValid: boolean
 
   // Actions
   handleCreateBusiness: () => Promise<boolean>
@@ -60,7 +54,6 @@ export interface UseCreateBusinessReturn {
 function getInitialFormData(): BusinessFormData {
   return {
     name: '',
-    type: null,
     locale: 'en-US',
     currency: 'USD',
     icon: null,
@@ -98,9 +91,7 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
 
   // Validation
   const isNameValid = formData.name.trim().length > 0
-  const isTypeValid = formData.type !== null
-  const isStep1Valid = isNameValid && isTypeValid
-  const isStep2Valid = formData.locale.length > 0 && formData.currency.length > 0
+  const isLocaleValid = formData.locale.length > 0 && formData.currency.length > 0
 
   const resetState = useCallback(() => {
     setFormData(getInitialFormData())
@@ -151,13 +142,6 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
     setFormData(prev => ({ ...prev, name }))
   }, [])
 
-  const setType = useCallback((type: BusinessType) => {
-    setFormData(prev => ({
-      ...prev,
-      type,
-    }))
-  }, [])
-
   const setLocale = useCallback((locale: string) => {
     setFormData(prev => ({ ...prev, locale }))
     // Currency will auto-update via useEffect
@@ -206,7 +190,7 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
   }, [])
 
   const handleCreateBusiness = useCallback(async (): Promise<boolean> => {
-    if (!isStep1Valid || !isStep2Valid) {
+    if (!isNameValid || !isLocaleValid) {
       setError(t.formatMessage({
         id: 'createBusiness.error_all_fields_required'
       }))
@@ -219,7 +203,6 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
     try {
       const data = await apiPost<CreateBusinessResponse>('/api/businesses/create', {
         name: formData.name.trim(),
-        type: formData.type,
         locale: formData.locale,
         currency: formData.currency,
         icon: formData.icon,
@@ -248,7 +231,7 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
       setIsCreating(false)
       return false
     }
-  }, [formData, isStep1Valid, isStep2Valid, t, translateApiMessage])
+  }, [formData, isNameValid, isLocaleValid, t, translateApiMessage])
 
   return {
     // Modal state
@@ -260,7 +243,6 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
     // Form data
     formData,
     setName,
-    setType,
     setLocale,
     setIcon,
     setLogoFile,
@@ -274,9 +256,7 @@ export function useCreateBusiness(): UseCreateBusinessReturn {
 
     // Validation
     isNameValid,
-    isTypeValid,
-    isStep1Valid,
-    isStep2Valid,
+    isLocaleValid,
 
     // Actions
     handleCreateBusiness,

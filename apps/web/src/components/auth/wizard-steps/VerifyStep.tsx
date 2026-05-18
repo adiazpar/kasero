@@ -4,13 +4,13 @@ import { IonButton } from '@ionic/react'
 import { useAuth } from '@/contexts/auth-context'
 import { useAuthGate } from '@/contexts/auth-gate-context'
 import { OTPInput } from '@/components/OTPInput'
-import { useRegisterNav } from './RegisterNavContext'
+import { useWizardNav } from './WizardNavContext'
 import './VerifyStep.css'
 
 const RESEND_COOLDOWN_SECONDS = 30
 
 /**
- * Middle step of the 3-step passwordless register wizard. The user has
+ * Middle step of the 3-step passwordless auth wizard. The user has
  * just received a 6-digit OTP (sent either by EntryPage or the
  * preceding EmailStep). Submitting calls `verifyOtp`, which creates
  * the session and reports whether the resolved user is brand-new
@@ -19,7 +19,7 @@ const RESEND_COOLDOWN_SECONDS = 30
  */
 export function VerifyStep() {
   const intl = useIntl()
-  const { email, goTo, setIsNewUser } = useRegisterNav()
+  const { email, goTo, setIsNewUser } = useWizardNav()
   const { sendOtp, verifyOtp } = useAuth()
   const { playEntry } = useAuthGate()
 

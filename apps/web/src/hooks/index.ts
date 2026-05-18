@@ -33,7 +33,7 @@ export { useJoinBusiness } from './useJoinBusiness'
 export type { UseJoinBusinessReturn, CodeType } from './useJoinBusiness'
 
 export { useCreateBusiness } from './useCreateBusiness'
-export type { UseCreateBusinessReturn, BusinessType } from './useCreateBusiness'
+export type { UseCreateBusinessReturn } from './useCreateBusiness'
 
 export { useBusinessFormat } from './useBusinessFormat'
 

@@ -24,7 +24,7 @@ export function NameStep() {
   }
 
   function handleNext() {
-    nav.push('type')
+    nav.push('locale')
   }
 
   // Title with one italic-terracotta accent word. The emphasis term is
@@ -66,7 +66,7 @@ export function NameStep() {
             <div className="wizard-hero__eyebrow">
               {t.formatMessage(
                 { id: 'createBusiness.step_indicator' },
-                { current: 1, total: 4 },
+                { current: 1, total: 3 },
               )}
             </div>
             <h1 className="wizard-hero__title">{titleNode}</h1>

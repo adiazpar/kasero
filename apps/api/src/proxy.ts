@@ -26,7 +26,7 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = [
   '/',
-  '/register',
+  '/auth',
   '/join',
 ]
 
@@ -71,7 +71,7 @@ export async function proxy(request: NextRequest) {
   const segments = pathname.split('/').filter(Boolean)
   if (segments.length > 0) {
     const first = segments[0]
-    const knownRoutes = ['account', 'business', 'register', 'join']
+    const knownRoutes = ['account', 'business', 'auth', 'join']
     if (!knownRoutes.includes(first) && !BUSINESS_ID_RE.test(first)) {
       return NextResponse.redirect(new URL('/', request.url))
     }

@@ -7,10 +7,6 @@ import { relations, sql } from 'drizzle-orm'
 export const businesses = sqliteTable('businesses', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  // Business profile
-  type: text('type', {
-    enum: ['food', 'retail', 'services', 'wholesale', 'manufacturing', 'other']
-  }),
   icon: text('icon'), // Emoji or base64 image
   // Localization
   locale: text('locale').default('en-US'), // e.g., 'en-US', 'es-MX', 'fr-FR'
