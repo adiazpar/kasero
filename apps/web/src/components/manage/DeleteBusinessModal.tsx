@@ -17,7 +17,7 @@ type Stage = 'form' | 'success'
 
 // Hold the success step long enough for the trash Lottie to play through
 // before we pop back to the hub. Matches DeleteAccountModal's beat.
-const SUCCESS_DISPLAY_MS = 1400
+const SUCCESS_DISPLAY_MS = 2400
 
 /**
  * DeleteBusinessModal — most permanent action in the manage tab. Mirrors
