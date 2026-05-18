@@ -587,7 +587,16 @@ Map these into Vercel Production env vars (do **not** add to Preview):
 | `.p8` file contents (multi-line PEM) | `APPLE_PRIVATE_KEY` |
 | iOS Bundle ID | `APPLE_APP_BUNDLE_IDENTIFIER` (only when native iOS ships) |
 
-`APPLE_PRIVATE_KEY` is multi-line. Vercel preserves newlines when pasted via the dashboard. Local `.env.local` would need double-quoted multi-line syntax — but for local dev we leave it empty (Apple requires HTTPS so the round-trip can't be tested from `localhost`).
+`APPLE_PRIVATE_KEY` is multi-line. Vercel preserves newlines when pasted via the dashboard.
+
+**OAuth round-trips don't complete in local dev.** Both providers reject our dev URLs (`localhost`, Tailscale tunnels) because only the production `kasero.app` callbacks are whitelisted upstream:
+
+- **Google** — only `https://kasero.app/api/auth/callback/google` is registered as an Authorized redirect URI on the OAuth 2.0 Client. Any other URL fails with `redirect_uri_mismatch` on Google's side.
+- **Apple** — Services ID return URLs cap at 10 per ID and disallow non-standard ports, `.ts.net` private DNS, and `localhost`. Only `kasero.app` is registered; any other URL fails with `invalid_redirect_uri`.
+
+Use email-OTP as the local sign-in path while iterating — it works fully against the dev SQLite + a real email-sender. To exercise OAuth, deploy to production (`kasero.app`) or to a stable preview whose URL you've whitelisted with each provider.
+
+Leave the four `APPLE_*` and two `GOOGLE_*` env vars unset in `apps/api/.env.local` — the conditional registration in `auth.ts` skips each provider entirely, and the social buttons no-op harmlessly on click. (Setting them locally won't make sign-in work upstream, and a partially-pasted `.p8` previously took down email-OTP and Google routes alongside Apple. `auth.ts` now soft-fails the Apple block in non-prod — see commit `e3ffd41c` — but the cleanest dev config is still "unset".)
 
 **Rate limiting (auth surface).** `rateLimit.storage: 'secondary-storage'` — cross-instance counters live in Upstash Redis via a `secondaryStorage` adapter defined at the top of `apps/api/src/lib/auth.ts` (a ~25-line wrapper around `@upstash/redis` gated on `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`). Keys are prefixed with `kasero:ba:` to keep them distinct from the `@upstash/ratelimit` SDK's `kasero:` prefix used by `apps/api/src/lib/rate-limit.ts`. In dev without Upstash creds, `secondaryStorage` is `undefined` and better-auth silently falls back to in-memory rate-limiting (acceptable locally). Sessions and `verification` rows intentionally stay in Turso — they're not moved to secondary storage because of open better-auth bugs around secondary-storage handling of those models (#8893 / #4721 / #1368), and our change-email route queries `verification` directly via Drizzle. Custom per-path rules:
 
