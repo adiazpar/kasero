@@ -162,14 +162,49 @@ function unflatten(flat: FlatMap): NestedMap {
 // ============================================================================
 
 /**
- * Extract the set of placeholder identifiers from an ICU-style string.
- * Matches `{name`, `{count, plural, ...}`, `{min, number}`, etc.
- * Returns just the identifier names, not the full placeholder syntax.
+ * Extract placeholder identifiers from an ICU message string.
+ *
+ * A "placeholder identifier" is the variable name inside a `{name}` or
+ * `{name, type, ...}` block. The literal text inside plural/select arm
+ * bodies is NOT a placeholder — `{count, plural, one {product} other
+ * {products}}` has exactly one identifier: `count`. The words inside
+ * the arm bodies (`product`, `products`) legitimately get translated,
+ * and the old naive regex `/\{(\w+)/g` flagged them as identifier
+ * mismatches, blocking every locale where any arm body diverged from
+ * the English text.
+ *
+ * Implementation: walk the string. At each `{`, peek at what follows.
+ *   - `{<id>}`           → bare placeholder, record id, skip past `}`.
+ *   - `{<id>,`           → complex placeholder, record id, then skip
+ *                          forward until the matching close-brace,
+ *                          counting nesting depth. Arm bodies are
+ *                          consumed silently.
+ *   - otherwise          → it's not a placeholder opening; ignore.
+ *
+ * Trade-off: placeholders nested inside arm bodies (e.g.
+ * `{count, plural, one {{name}} other {{name}s}}`) are NOT validated.
+ * Catching those would require a real ICU parser; for a dependency-
+ * free script we accept that gap.
  */
 function getPlaceholderIdentifiers(str: string): Set<string> {
   const identifiers = new Set<string>()
-  for (const match of str.matchAll(/\{(\w+)/g)) {
-    identifiers.add(match[1])
+  let i = 0
+  while (i < str.length) {
+    if (str[i] !== '{') { i++; continue }
+    const m = str.slice(i + 1).match(/^(\w+)(\s*[,}])/)
+    if (!m) { i++; continue }
+    identifiers.add(m[1])
+    if (m[2].trim() === '}') {
+      i += 1 + m[0].length
+      continue
+    }
+    let depth = 1
+    i += 1 + m[1].length
+    while (i < str.length && depth > 0) {
+      if (str[i] === '{') depth++
+      else if (str[i] === '}') depth--
+      i++
+    }
   }
   return identifiers
 }
