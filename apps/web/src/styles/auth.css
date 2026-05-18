@@ -20,9 +20,7 @@
     var(--page-padding)
     var(--space-6);
   gap: var(--space-6);
-  background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
+  background: var(--color-bg-base);
 }
 
 /* Login variant — drop the absent-toolbar offset (the page no longer

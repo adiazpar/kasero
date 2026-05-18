@@ -106,43 +106,16 @@
    ========================================================================== */
 
 /* ==========================================================================
-   Paper grain — printed-paper feel applied to every Ionic surface
+   Ionic surface backgrounds
    ==========================================================================
-   The --grain token (defined in base.css) is a low-alpha warm dot in
-   light mode (rgba ~5%) and a low-alpha cream dot in dark mode. We
-   layer it over the page bg via Ionic's --background CSS variable so
-   the texture comes for free on every page, header, and footer without
-   per-component opt-in.
-
-   Pattern: 1px-radius dot, 3px grid, anchored to top-left. CSS
-   background shorthand allows multi-layer values; the dot layer paints
-   on top of the solid base color underneath.
-
-   Why not body::before with mix-blend-mode? IonApp / IonContent paint
-   their own solid backgrounds that cover anything in the body's
-   stacking context. Working through Ionic's --background variable is
-   the only seam. Trade-off: no mix-blend-mode (background-blend-mode
-   on the host doesn't apply through the shadow DOM consistently across
-   browsers), so we use a slightly stronger dot alpha and trust the
-   token color to compose well over both paper and ink. */
+   IonContent / IonToolbar each paint their own background through the
+   shadow DOM; the only reliable seam to retint them is each element's
+   own --background CSS variable. */
 ion-content {
-  --background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
+  --background: var(--color-bg-base);
 }
 
 ion-toolbar {
-  --background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
-}
-
-/* IonHeader's toolbar matches the bottom IonTabBar look — translucent
- * paper, no grain texture. The grain pattern was reading as visual
- * noise behind crisp dynamic-island / status-bar text on iOS; the
- * tab-bar pattern (paper-translucent + backdrop blur) is calmer and
- * more on-brand for the top chrome too. */
-ion-header ion-toolbar {
   --background: var(--color-bg-base);
 }
 
@@ -150,9 +123,7 @@ ion-header ion-toolbar {
    surface tint, so the footer reads as part of the page rather than
    floating chrome. */
 ion-footer ion-toolbar {
-  --background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
+  --background: var(--color-bg-base);
 }
 
 /* ===== Header / toolbar =====

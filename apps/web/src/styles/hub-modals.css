@@ -10,9 +10,8 @@
    Shared step shell
    ==========================================================================
    Applied to the IonContent inner column for every wizard step. Caps width
-   so the editorial feel survives wide tablets, paints the page-base color
-   with a faint paper grain (matches auth.css), and keeps the hero +
-   form vertically rhythm'd. */
+   so the editorial feel survives wide tablets, paints the page-base color,
+   and keeps the hero + form vertically rhythm'd. */
 .wizard-step {
   display: flex;
   flex-direction: column;
@@ -38,9 +37,9 @@
   justify-content: center;
 }
 
-/* IonContent body for our wizard pages — paper-base + faint grain.
-   Padding mirrors .modal-content (in app.css) so wizard step bodies
-   align with regular ModalShell-wrapped modals. */
+/* IonContent body for our wizard pages. Padding mirrors .modal-content
+   (in app.css) so wizard step bodies align with regular ModalShell-wrapped
+   modals. */
 .wizard-content {
   --padding-start: var(--page-padding);
   --padding-end: var(--page-padding);
@@ -48,9 +47,7 @@
   --padding-bottom: var(--space-3);
 }
 .wizard-content::part(scroll) {
-  background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
+  background: var(--color-bg-base);
 }
 
 /* ==========================================================================
@@ -397,9 +394,7 @@
   height: 100%;
   padding: var(--space-6) var(--page-padding);
   gap: var(--space-3);
-  background:
-    radial-gradient(var(--grain) 1px, transparent 1.2px) 0 0 / 3px 3px,
-    var(--color-bg-base);
+  background: var(--color-bg-base);
 }
 
 .create-business__success-lottie {

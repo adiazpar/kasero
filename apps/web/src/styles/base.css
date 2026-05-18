@@ -84,11 +84,6 @@
   --glow-strong: rgba(181, 71, 31, 0.16);
   --glow-edge:   rgba(181, 71, 31, 0.22);
 
-  /* Paper grain (token only — surfaces opt in by referencing --grain).
-     Tuned at low alpha so the texture is a hint, not a pattern. */
-  --grain: rgba(86, 67, 40, 0.022);
-  --grain-blend: multiply;
-
   /* Translucent paper for sticky chrome (tab bar, modal footer). */
   --paper-translucent: rgba(246, 239, 223, 0.92);
   --surface-translucent: rgba(255, 252, 245, 0.88);
@@ -213,8 +208,7 @@
 /* ===== Dark Mode — Aged Ink =====
    Same identity, different lighting. Warm cream text on deep warm
    charcoal, terracotta brightened for AA contrast on dark surfaces.
-   Glow tokens shift to the brighter terracotta variant; grain inverts
-   from multiply (dark-on-light) to screen (light-on-dark). */
+   Glow tokens shift to the brighter terracotta variant. */
 .dark {
   /* Brand (lifted for contrast on dark surfaces) */
   --color-brand: #E27A4A;
@@ -257,10 +251,6 @@
   --glow-mid:    rgba(226, 122, 74, 0.18);
   --glow-strong: rgba(226, 122, 74, 0.24);
   --glow-edge:   rgba(226, 122, 74, 0.32);
-
-  /* Grain inverts: cream dots screened over deep ink */
-  --grain: rgba(255, 238, 210, 0.025);
-  --grain-blend: screen;
 
   --paper-translucent: rgba(22, 18, 15, 0.92);
   --surface-translucent: rgba(34, 28, 22, 0.88);

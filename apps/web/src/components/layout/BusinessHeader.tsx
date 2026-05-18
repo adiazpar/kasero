@@ -48,8 +48,8 @@ interface BusinessHeaderProps {
  *     the avatar trigger on the Hub — see `<UserMenu>`).
  *
  * The component is intentionally tiny — visual chrome (padding, border,
- * --background grain) is inherited from the existing ion-toolbar theme
- * bridge in ionic-theme.css. No new CSS lives here.
+ * --background) is inherited from the existing ion-toolbar theme bridge
+ * in ionic-theme.css. No new CSS lives here.
  */
 export function BusinessHeader({ title, backHref, backLabel }: BusinessHeaderProps) {
   const intl = useIntl()

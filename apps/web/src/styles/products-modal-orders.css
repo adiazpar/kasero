@@ -60,7 +60,7 @@
 /* =====================================================================
  * Shared shell — every order step is an IonNav page rendering
  * <IonContent className="wizard-content"> + <div className="wizard-step">
- * (for the standard padding/grain). The toolbar uses .wizard-toolbar so
+ * (for the standard padding). The toolbar uses .wizard-toolbar so
  * the hero IS the title.
  * ===================================================================== */
 
