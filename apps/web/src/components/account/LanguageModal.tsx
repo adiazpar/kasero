@@ -85,15 +85,18 @@ export function LanguageModal({ isOpen, onClose }: LanguageModalProps) {
 
   const currentLanguage = user ? resolveTranslationLocale(user.language) : null
 
-  // Focus the active row when the modal opens so keyboard navigation
-  // starts from the user's current language. The IonModal animation
-  // takes ~300ms — defer the focus call until after it settles or the
-  // browser swallows it (focus on a transitioning element is a no-op
-  // on iOS Safari). 320ms matches the IonModal default enter duration.
+  // Once the modal animation settles, smooth-scroll the active row into
+  // view and move focus there (with `preventScroll` so focus doesn't
+  // re-trigger an instant jump on top of the smooth scroll). 320ms
+  // matches the IonModal default enter duration — focusing earlier is
+  // a no-op on iOS Safari because the element is still transitioning.
   useEffect(() => {
     if (!isOpen) return
     const timeout = window.setTimeout(() => {
-      activeButtonRef.current?.focus()
+      const button = activeButtonRef.current
+      if (!button) return
+      button.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      button.focus({ preventScroll: true })
     }, 320)
     return () => window.clearTimeout(timeout)
   }, [isOpen])
