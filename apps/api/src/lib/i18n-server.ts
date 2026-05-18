@@ -20,9 +20,17 @@ import {
   type SupportedLocale,
 } from '@kasero/shared/locales'
 
+import de from '../../../web/src/i18n/messages/de.json' with { type: 'json' }
 import enUS from '../../../web/src/i18n/messages/en-US.json' with { type: 'json' }
 import es from '../../../web/src/i18n/messages/es.json' with { type: 'json' }
+import fil from '../../../web/src/i18n/messages/fil.json' with { type: 'json' }
+import fr from '../../../web/src/i18n/messages/fr.json' with { type: 'json' }
+import it from '../../../web/src/i18n/messages/it.json' with { type: 'json' }
 import ja from '../../../web/src/i18n/messages/ja.json' with { type: 'json' }
+import ko from '../../../web/src/i18n/messages/ko.json' with { type: 'json' }
+import pt from '../../../web/src/i18n/messages/pt.json' with { type: 'json' }
+import vi from '../../../web/src/i18n/messages/vi.json' with { type: 'json' }
+import zh from '../../../web/src/i18n/messages/zh.json' with { type: 'json' }
 
 type MessageBundle = Record<string, string>
 
@@ -30,6 +38,14 @@ const bundles: Record<SupportedLocale, MessageBundle> = {
   'en-US': enUS as MessageBundle,
   es: es as MessageBundle,
   ja: ja as MessageBundle,
+  de: de as MessageBundle,
+  fil: fil as MessageBundle,
+  fr: fr as MessageBundle,
+  it: it as MessageBundle,
+  ko: ko as MessageBundle,
+  pt: pt as MessageBundle,
+  vi: vi as MessageBundle,
+  zh: zh as MessageBundle,
 }
 
 const PLACEHOLDER_RE = /\{(\w+)\}/g
