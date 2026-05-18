@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "Verify it's really you",
   "account.delete_otp_hero_subtitle": "We sent a 6-digit code to {email}. Enter it below to confirm.",
   "account.delete_otp_target_eyebrow": "Code sent to",
-  "account.delete_otp_label": "6-digit code",
   "account.delete_otp_resend": "Didn't get the code? Resend",
   "account.delete_otp_resend_cooldown": "Resend in {seconds}s",
   "account.delete_success_heading": "Account <em>retired</em>",

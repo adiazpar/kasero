@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "验证是你本人",
   "account.delete_otp_hero_subtitle": "我们已向{email}发送了一个6位数验证码。请在下方输入以确认。",
   "account.delete_otp_target_eyebrow": "验证码已发送至",
-  "account.delete_otp_label": "6位数验证码",
   "account.delete_otp_resend": "没收到验证码？重新发送",
   "account.delete_otp_resend_cooldown": "{seconds}秒后重新发送",
   "account.delete_success_heading": "账户<em>已注销</em>",

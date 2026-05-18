@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "Verifique que é realmente você",
   "account.delete_otp_hero_subtitle": "Enviamos um código de 6 dígitos para {email}. Digite abaixo para confirmar.",
   "account.delete_otp_target_eyebrow": "Código enviado para",
-  "account.delete_otp_label": "Código de 6 dígitos",
   "account.delete_otp_resend": "Não recebeu o código? Reenviar",
   "account.delete_otp_resend_cooldown": "Reenviar em {seconds}s",
   "account.delete_success_heading": "Conta <em>encerrada</em>",

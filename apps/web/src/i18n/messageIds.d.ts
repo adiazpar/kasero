@@ -35,7 +35,6 @@ export type MessageId =
   | 'account.delete_otp_hero_eyebrow'
   | 'account.delete_otp_hero_subtitle'
   | 'account.delete_otp_hero_title'
-  | 'account.delete_otp_label'
   | 'account.delete_otp_resend'
   | 'account.delete_otp_resend_cooldown'
   | 'account.delete_otp_target_eyebrow'

@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "Xác minh đúng là bạn",
   "account.delete_otp_hero_subtitle": "Chúng tôi đã gửi mã 6 chữ số đến {email}. Nhập mã bên dưới để xác nhận.",
   "account.delete_otp_target_eyebrow": "Mã đã gửi đến",
-  "account.delete_otp_label": "Mã 6 chữ số",
   "account.delete_otp_resend": "Chưa nhận được mã? Gửi lại",
   "account.delete_otp_resend_cooldown": "Gửi lại sau {seconds}s",
   "account.delete_success_heading": "Đã đóng tài khoản",

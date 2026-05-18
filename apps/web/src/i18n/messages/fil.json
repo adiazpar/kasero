@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "I-verify na ikaw nga",
   "account.delete_otp_hero_subtitle": "Nagpadala kami ng 6-digit code sa {email}. Ilagay ito sa ibaba para kumpirmahin.",
   "account.delete_otp_target_eyebrow": "Code na pinadala sa",
-  "account.delete_otp_label": "6-digit code",
   "account.delete_otp_resend": "Hindi natanggap ang code? Resend",
   "account.delete_otp_resend_cooldown": "Resend sa {seconds}s",
   "account.delete_success_heading": "Account <em>naka-retire</em>",

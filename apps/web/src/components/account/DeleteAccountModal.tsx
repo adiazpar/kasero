@@ -6,6 +6,7 @@ import { Check, AlertOctagon, ChevronLeft } from 'lucide-react'
 import { IonButton, IonSpinner } from '@ionic/react'
 import { ModalShell } from '@/components/ui'
 import { AuthField } from '@/components/auth'
+import { OTPInput } from '@/components/OTPInput'
 import { LottiePlayerDynamic as LottiePlayer } from '@/components/animations'
 import { useAuth } from '@/contexts/auth-context'
 import { useApiMessage } from '@/hooks/useApiMessage'
@@ -60,6 +61,7 @@ export function DeleteAccountModal({
   const [ownedBusinesses, setOwnedBusinesses] = useState<OwnedBusiness[]>([])
   const [confirmEmail, setConfirmEmail] = useState('')
   const [otp, setOtp] = useState('')
+  const [otpError, setOtpError] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -116,6 +118,7 @@ export function DeleteAccountModal({
         setOwnedBusinesses([])
         setConfirmEmail('')
         setOtp('')
+        setOtpError(false)
         setIsSendingOtp(false)
         setIsDeleting(false)
         setResendCooldown(0)
@@ -176,6 +179,7 @@ export function DeleteAccountModal({
   const handleResend = useCallback(async () => {
     if (resendCooldown > 0 || isDeleting) return
     setError('')
+    setOtpError(false)
     setResendCooldown(RESEND_COOLDOWN_SECONDS)
     const ok = await sendOtp()
     if (!ok) {
@@ -189,6 +193,7 @@ export function DeleteAccountModal({
   const handleBackToWarning = useCallback(() => {
     if (isDeleting) return
     setOtp('')
+    setOtpError(false)
     setError('')
     setStage('warning')
   }, [isDeleting])
@@ -198,6 +203,7 @@ export function DeleteAccountModal({
     if (!canDelete || !user) return
     setIsDeleting(true)
     setError('')
+    setOtpError(false)
     try {
       // The server consumes the OTP via auth.api.verifyEmailOTP, so a
       // captured code can't be replayed. confirmEmail mirrors the legacy
@@ -232,11 +238,14 @@ export function DeleteAccountModal({
         if (err.statusCode === 409 && Array.isArray(data.ownedBusinesses)) {
           setOwnedBusinesses(data.ownedBusinesses)
           setStage('blocked')
+        } else {
+          setOtpError(true)
         }
         return
       }
       console.error('Delete account error:', err)
       setError(intl.formatMessage({ id: 'common.error' }))
+      setOtpError(true)
     } finally {
       setIsDeleting(false)
     }
@@ -367,7 +376,11 @@ export function DeleteAccountModal({
         <VerifyOtpView
           email={user?.email ?? ''}
           otp={otp}
-          onOtpChange={setOtp}
+          onOtpChange={(v) => {
+            setOtpError(false)
+            setOtp(v)
+          }}
+          otpError={otpError}
           onResend={handleResend}
           resendCooldown={resendCooldown}
           isResending={isSendingOtp}
@@ -493,6 +506,7 @@ interface VerifyOtpViewProps {
   email: string
   otp: string
   onOtpChange: (v: string) => void
+  otpError: boolean
   onResend: () => void
   resendCooldown: number
   isResending: boolean
@@ -503,6 +517,7 @@ function VerifyOtpView({
   email,
   otp,
   onOtpChange,
+  otpError,
   onResend,
   resendCooldown,
   isResending,
@@ -535,30 +550,18 @@ function VerifyOtpView({
         <span className="delete-account__target-value">{email}</span>
       </div>
 
-      <div className="delete-account__form">
-        <AuthField
-          label={intl.formatMessage({ id: 'account.delete_otp_label' })}
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
+      <div className="modal-otp">
+        <OTPInput
           value={otp}
-          onChange={(e) => onOtpChange(e.target.value.replace(/\s+/g, ''))}
-          placeholder="000000"
-          autoCapitalize="characters"
-          spellCheck={false}
-          className="delete-account__otp-input"
+          onChange={onOtpChange}
           disabled={isDeleting}
-          required
+          error={otpError}
         />
-      </div>
-
-      <div className="delete-account__resend">
-        <button
-          type="button"
-          className="delete-account__resend-button"
-          onClick={onResend}
+        <IonButton
+          fill="clear"
           disabled={resendCooldown > 0 || isResending || isDeleting}
+          onClick={onResend}
+          className="modal-otp__resend"
         >
           {resendCooldown > 0
             ? intl.formatMessage(
@@ -566,7 +569,7 @@ function VerifyOtpView({
                 { seconds: resendCooldown },
               )
             : intl.formatMessage({ id: 'account.delete_otp_resend' })}
-        </button>
+        </IonButton>
       </div>
     </>
   )

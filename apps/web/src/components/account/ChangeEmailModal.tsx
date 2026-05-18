@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react'
 import { IonButton, IonSpinner } from '@ionic/react'
 import { ModalShell } from '@/components/ui'
 import { AuthField } from '@/components/auth'
+import { OTPInput } from '@/components/OTPInput'
 import { LottiePlayerDynamic as LottiePlayer } from '@/components/animations'
 import { useAuth } from '@/contexts/auth-context'
 import { useApiMessage } from '@/hooks/useApiMessage'
@@ -70,6 +71,7 @@ export function ChangeEmailModal({
   const [newEmail, setNewEmail] = useState('')
   const [oldOtp, setOldOtp] = useState('')
   const [newOtp, setNewOtp] = useState('')
+  const [otpError, setOtpError] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -84,6 +86,7 @@ export function ChangeEmailModal({
         setNewEmail('')
         setOldOtp('')
         setNewOtp('')
+        setOtpError(false)
         setIsSending(false)
         setIsConfirming(false)
         setResendCooldown(0)
@@ -150,6 +153,7 @@ export function ChangeEmailModal({
   const handleResend = useCallback(async () => {
     if (resendCooldown > 0 || isConfirming) return
     setError('')
+    setOtpError(false)
     // Optimistically start the cooldown — re-asking immediately would just
     // trip the server-side rate limiter again, so we want the same UX
     // whether or not the resend ultimately succeeds.
@@ -167,6 +171,7 @@ export function ChangeEmailModal({
     if (isConfirming) return
     setOldOtp('')
     setNewOtp('')
+    setOtpError(false)
     setError('')
     setStage('enter-new-email')
   }, [isConfirming])
@@ -175,6 +180,7 @@ export function ChangeEmailModal({
     if (!canConfirm) return
     setIsConfirming(true)
     setError('')
+    setOtpError(false)
     try {
       await apiPost<ChangeEmailConfirmResponse>('/api/account/change-email', {
         phase: 'confirm',
@@ -199,6 +205,7 @@ export function ChangeEmailModal({
         console.error('Change-email confirm error:', err)
         setError(intl.formatMessage({ id: 'common.error' }))
       }
+      setOtpError(true)
     } finally {
       setIsConfirming(false)
     }
@@ -324,8 +331,15 @@ export function ChangeEmailModal({
           newEmail={trimmedNew}
           oldOtp={oldOtp}
           newOtp={newOtp}
-          onOldOtpChange={setOldOtp}
-          onNewOtpChange={setNewOtp}
+          onOldOtpChange={(v) => {
+            setOtpError(false)
+            setOldOtp(v)
+          }}
+          onNewOtpChange={(v) => {
+            setOtpError(false)
+            setNewOtp(v)
+          }}
+          otpError={otpError}
           onResend={handleResend}
           resendCooldown={resendCooldown}
           isResending={isSending}
@@ -419,6 +433,7 @@ interface VerifyBothViewProps {
   newOtp: string
   onOldOtpChange: (v: string) => void
   onNewOtpChange: (v: string) => void
+  otpError: boolean
   onResend: () => void
   resendCooldown: number
   isResending: boolean
@@ -432,15 +447,13 @@ function VerifyBothView({
   newOtp,
   onOldOtpChange,
   onNewOtpChange,
+  otpError,
   onResend,
   resendCooldown,
   isResending,
   isConfirming,
 }: VerifyBothViewProps) {
   const intl = useIntl()
-
-  const sanitizeOtp = (raw: string) =>
-    raw.replace(/\D+/g, '').slice(0, 6)
 
   return (
     <>
@@ -483,51 +496,41 @@ function VerifyBothView({
         </div>
       </div>
 
-      <div className="change-email__otp-grid">
-        <AuthField
-          label={intl.formatMessage(
-            { id: 'account.email_change_old_otp_label' },
-            { email: oldEmail },
-          )}
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          value={oldOtp}
-          onChange={(e) => onOldOtpChange(sanitizeOtp(e.target.value))}
-          placeholder="000000"
-          autoCapitalize="off"
-          spellCheck={false}
-          className="change-email__otp-input"
-          disabled={isConfirming}
-          required
-        />
-        <AuthField
-          label={intl.formatMessage(
-            { id: 'account.email_change_new_otp_label' },
-            { email: newEmail },
-          )}
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          value={newOtp}
-          onChange={(e) => onNewOtpChange(sanitizeOtp(e.target.value))}
-          placeholder="000000"
-          autoCapitalize="off"
-          spellCheck={false}
-          className="change-email__otp-input"
-          disabled={isConfirming}
-          required
-        />
-      </div>
-
-      <div className="change-email__resend">
-        <button
-          type="button"
-          className="change-email__resend-button"
-          onClick={onResend}
+      <div className="modal-otp modal-otp--stack">
+        <div className="modal-otp__field">
+          <span className="modal-otp__label">
+            {intl.formatMessage(
+              { id: 'account.email_change_old_otp_label' },
+              { email: oldEmail },
+            )}
+          </span>
+          <OTPInput
+            value={oldOtp}
+            onChange={onOldOtpChange}
+            disabled={isConfirming}
+            error={otpError}
+          />
+        </div>
+        <div className="modal-otp__field">
+          <span className="modal-otp__label">
+            {intl.formatMessage(
+              { id: 'account.email_change_new_otp_label' },
+              { email: newEmail },
+            )}
+          </span>
+          <OTPInput
+            value={newOtp}
+            onChange={onNewOtpChange}
+            autoFocus={false}
+            disabled={isConfirming}
+            error={otpError}
+          />
+        </div>
+        <IonButton
+          fill="clear"
           disabled={resendCooldown > 0 || isResending || isConfirming}
+          onClick={onResend}
+          className="modal-otp__resend"
         >
           {resendCooldown > 0
             ? intl.formatMessage(
@@ -535,7 +538,7 @@ function VerifyBothView({
                 { seconds: resendCooldown },
               )
             : intl.formatMessage({ id: 'account.email_change_resend' })}
-        </button>
+        </IonButton>
       </div>
     </>
   )

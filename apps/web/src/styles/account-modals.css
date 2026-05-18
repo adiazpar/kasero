@@ -808,47 +808,11 @@
   color: var(--color-text-tertiary);
 }
 
-/* ===== Verify-OTP step-up — mono numerals, big and centered =====
-   Replaces the legacy password re-auth. The input is rendered through
-   AuthField with maxLength=6/inputMode=numeric; we lean on the mono
-   stack and aggressive letter-spacing so the empty state still reads
-   like a "stamp this" cell row, not a generic input. */
-.delete-account__otp-input.auth-field__input,
-input.delete-account__otp-input {
-  font-family: var(--font-mono);
-  font-size: 22px;
-  letter-spacing: 0.5em;
-  text-align: center;
-  text-transform: uppercase;
-  padding-right: calc(var(--space-3) - 0.5em); /* offset trailing tracking */
-  font-feature-settings: "tnum" 1;
-}
-
-.delete-account__resend {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--space-4);
-}
-
-.delete-account__resend-button {
-  background: none;
-  border: none;
-  padding: var(--space-2) var(--space-3);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: color var(--duration-fast) ease-out;
-}
-.delete-account__resend-button:hover:not(:disabled) {
-  color: var(--color-error);
-}
-.delete-account__resend-button:disabled {
-  color: var(--color-text-tertiary);
-  cursor: not-allowed;
-}
+/* ===== Verify-OTP step-up =====
+   The input itself is the shared <OTPInput> primitive (six terracotta-
+   ringed digit cells, see OTPInput.css). The wrapping .modal-otp layout
+   below is shared with ChangeEmailModal so both step-ups feel like the
+   auth wizard's verify step. */
 
 /* Two-button footer for the verify-otp stage: small "Back" outline on
    the leading edge, primary danger button takes the remaining width. */
@@ -1228,15 +1192,10 @@ input.delete-account__otp-input {
   font-feature-settings: "tnum" 1;
 }
 
-/* ===== Stage 2 — paired OTP grid =====
-   Two AuthFields in a 2-up grid. Each cell keeps the mono digits styling
-   from .delete-account__otp-input. Below 480px the grid collapses to a
-   single column so the digit cell never gets cramped on phones. */
-.change-email__otp-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
+/* ===== Stage 2 — paired OTPs =====
+   Two <OTPInput> primitives stacked vertically (six-cell rows are too
+   wide to sit side-by-side at modal widths). The wrapping .modal-otp
+   layout lives below in the shared block. */
 
 @media (max-width: 480px) {
   .change-email__pair { grid-template-columns: 1fr; }
@@ -1245,47 +1204,6 @@ input.delete-account__otp-input {
        directional cue still reads top-to-bottom. */
     box-shadow: inset 0 3px 0 var(--color-brand);
   }
-  .change-email__otp-grid { grid-template-columns: 1fr; }
-}
-
-/* Stamped numerals: mono, tracked-out, centered. Mirrors the delete
-   modal's OTP input verbatim so the two step-up flows feel identical to
-   the user's hands — same visual cell row, same affordance. */
-.change-email__otp-input.auth-field__input,
-input.change-email__otp-input {
-  font-family: var(--font-mono);
-  font-size: 22px;
-  letter-spacing: 0.5em;
-  text-align: center;
-  text-transform: uppercase;
-  padding-right: calc(var(--space-3) - 0.5em);
-  font-feature-settings: "tnum" 1;
-}
-
-.change-email__resend {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--space-4);
-}
-
-.change-email__resend-button {
-  background: none;
-  border: none;
-  padding: var(--space-2) var(--space-3);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: color var(--duration-fast) ease-out;
-}
-.change-email__resend-button:hover:not(:disabled) {
-  color: var(--color-brand);
-}
-.change-email__resend-button:disabled {
-  color: var(--color-text-tertiary);
-  cursor: not-allowed;
 }
 
 /* Stage-2 footer — small "Back" outline on the leading edge, primary

@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "本人確認をお願いします",
   "account.delete_otp_hero_subtitle": "{email} に6桁のコードを送信しました。下に入力して確認してください。",
   "account.delete_otp_target_eyebrow": "コード送信先",
-  "account.delete_otp_label": "6桁のコード",
   "account.delete_otp_resend": "コードが届きませんか?再送する",
   "account.delete_otp_resend_cooldown": "{seconds}秒後に再送できます",
   "account.delete_success_heading": "アカウントを<em>削除しました</em>",

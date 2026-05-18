@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "본인 확인",
   "account.delete_otp_hero_subtitle": "{email}로 6자리 코드를 보냈습니다. 아래에 입력하여 확인하세요.",
   "account.delete_otp_target_eyebrow": "코드 전송 대상",
-  "account.delete_otp_label": "6자리 코드",
   "account.delete_otp_resend": "코드를 받지 못하셨나요? 재전송",
   "account.delete_otp_resend_cooldown": "{seconds}초 후 재전송",
   "account.delete_success_heading": "계정 <em>삭제 완료</em>",

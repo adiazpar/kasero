@@ -539,7 +539,6 @@
   "account.delete_otp_hero_title": "Bestätigen Sie, dass Sie es wirklich sind",
   "account.delete_otp_hero_subtitle": "Wir haben einen 6-stelligen Code an {email} gesendet. Geben Sie ihn unten ein, um zu bestätigen.",
   "account.delete_otp_target_eyebrow": "Code gesendet an",
-  "account.delete_otp_label": "6-stelliger Code",
   "account.delete_otp_resend": "Code nicht erhalten? Erneut senden",
   "account.delete_otp_resend_cooldown": "Erneut senden in {seconds}s",
   "account.delete_success_heading": "Konto <em>stillgelegt</em>",

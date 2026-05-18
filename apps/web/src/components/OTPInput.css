@@ -74,3 +74,43 @@
     transition: none;
   }
 }
+
+/* ===== Shared modal wrapper =====
+   Centers the OTP cells, gives the resend button consistent spacing, and
+   provides a stacked variant for flows with two OTPInputs (e.g. email
+   change). Mirrors the auth wizard's VerifyStep so every step-up flow
+   reads as the same primitive. */
+.modal-otp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.modal-otp--stack {
+  gap: var(--space-4);
+}
+
+.modal-otp__field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.modal-otp__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.modal-otp__resend {
+  --color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
