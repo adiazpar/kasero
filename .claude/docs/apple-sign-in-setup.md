@@ -133,7 +133,7 @@ This is the `.p8` private key whose contents become `APPLE_PRIVATE_KEY` in Verce
 
 **Storage:** Save the `.p8` somewhere durable and private (a password manager's secure-note feature works well; or your laptop's encrypted disk; or a private GitHub gist on a private account — but never commit it to any repo). You'll need its contents for Vercel in step 6, and again whenever you want to verify or reconfigure.
 
-**Limit:** You can have up to 2 active Sign in with Apple keys per developer account at once (Apple-wide rule). If you ever revoke one, you can create a replacement.
+**Limit:** Apple lets you associate **up to 2 active Sign in with Apple keys per primary App ID** (per `developer.apple.com/help/account/capabilities/create-a-sign-in-with-apple-private-key`). This is NOT an account-wide cap: if you ever add a second project with its own primary App ID, that App ID gets its own pair of slots. Other key capabilities (APNs, WeatherKit, DeviceCheck, etc.) have separate quotas — your SIWA key allocation is not consumed by those. If you ever revoke a key, you can create a replacement immediately in the same slot.
 
 ---
 
