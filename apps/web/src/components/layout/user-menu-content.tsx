@@ -3,15 +3,13 @@
 import { useIntl } from 'react-intl';
 import { Link } from 'react-router-dom'
 import { useCallback } from 'react'
-import { useIonRouter } from '@ionic/react'
 import { usePathname } from '@/lib/next-navigation-shim'
 import { useAuth } from '@/contexts/auth-context'
 import { useAuthGate } from '@/contexts/auth-gate-context'
 import { usePageTransition } from '@/contexts/page-transition-context'
 import { useIncomingTransferContext } from '@/contexts/incoming-transfer-context'
 import { getUserInitials } from '@kasero/shared/auth'
-import { getBusinessIdFromPath } from '@/lib/navigation'
-import { Building2, ChevronRight, Settings, CircleHelp, LogOut } from 'lucide-react'
+import { ChevronRight, Settings, CircleHelp, LogOut } from 'lucide-react'
 
 interface UserMenuContentProps {
   onAction?: () => void
@@ -27,14 +25,6 @@ export function UserMenuContent({ onAction, showHeader = true }: UserMenuContent
   const { user } = useAuth()
   const { requestLogout } = useAuthGate()
   const { navigate } = usePageTransition()
-  // Ionic-aware router. We use it for cross-shell drilldown navigations
-  // (Hub -> /account, Account -> /, Hub -> business) so that the
-  // IonRouterOutlet stack-tracker tags each push with an explicit
-  // direction. Without it, Ionic infers direction from URL diffs and
-  // sometimes loses the cue (especially when the originating tap is
-  // inside a dismissing modal), which makes IonBackButton's peel-back
-  // animation stutter or skip entirely on the way back.
-  const ionRouter = useIonRouter()
   const { transfer: incomingTransfer } = useIncomingTransferContext()
 
   const handleLogout = useCallback(() => {
@@ -53,20 +43,9 @@ export function UserMenuContent({ onAction, showHeader = true }: UserMenuContent
       onAction?.()
       return
     }
-    // Use Ionic's router with an explicit "forward" direction so the
-    // IonRouterOutlet stack tracker registers this as a stack push —
-    // critical for IonBackButton's peel-back animation on the way back.
-    // Falls back to history-based navigate() for hub-to-business
-    // navigations where pendingHref bookkeeping matters.
-    if (href === '/' || href === '/account') {
-      ionRouter.push(href, 'forward', 'push')
-    } else {
-      navigate(href)
-    }
+    navigate(href)
     onAction?.()
-  }, [navigate, onAction, pathname, ionRouter])
-
-  const isBusinessContext = !!getBusinessIdFromPath(pathname)
+  }, [navigate, onAction, pathname])
 
   if (!user) return null
 
@@ -96,20 +75,6 @@ export function UserMenuContent({ onAction, showHeader = true }: UserMenuContent
       )}
       {/* Menu Items */}
       <div className="user-menu-items">
-        {isBusinessContext && (
-          <Link
-            to="/"
-            className="user-menu-item"
-            onClick={(e) => handleLinkClick(e, '/')}
-          >
-            <Building2 />
-            <span>{t.formatMessage({
-              id: 'ui.user_menu.business_hub'
-            })}</span>
-            <ChevronRight className="user-menu-item-arrow" />
-          </Link>
-        )}
-
         <Link
           to="/account"
           className="user-menu-item"
