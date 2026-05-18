@@ -424,18 +424,13 @@
 }
 
 /* Quick-bill chip row — mono uppercase pills on a horizontal scroll.
- * Hidden scrollbar; thumb-friendly height; press-feedback on tap. */
+ * Thumb-friendly height; press-feedback on tap. */
 .quick-bills {
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
-  scrollbar-width: none;
   margin: 0 calc(var(--page-padding) * -1);
   padding: 4px var(--page-padding);
-}
-
-.quick-bills::-webkit-scrollbar {
-  display: none;
 }
 
 .quick-bill {

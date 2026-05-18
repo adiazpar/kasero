@@ -424,23 +424,31 @@ button {
   color: var(--color-text-primary);
 }
 
-/* Custom scrollbar (subtle) */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Globally hide scrollbar UI while preserving scroll functionality.
+ * Firefox / IE / Edge legacy use scrollbar-width / -ms-overflow-style;
+ * WebKit / Blink need the ::-webkit-scrollbar pseudo-element.
+ * Ionic's ion-content lives in shadow DOM and exposes its inner scroll
+ * container via the "scroll" part, so we pierce shadow DOM via ::part. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-::-webkit-scrollbar-track {
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb {
+  display: none;
+  width: 0;
+  height: 0;
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-full);
+ion-content::part(scroll) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-
-@media (hover: hover) {
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-border-hover);
-  }
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

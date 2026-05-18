@@ -105,7 +105,7 @@ export function ProductPicker({ cart }: ProductPickerProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hidden flex flex-col gap-3">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
         {/* Search + scan row — same .app-search vocabulary as the Hub. */}
         <div className="pos-search-row">
           <label className="app-search">
