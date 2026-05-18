@@ -26,10 +26,12 @@ interface LocaleConfig {
 
 interface CurrencyConfig {
   code: string // ISO 4217 code
-  symbol: string // Currency symbol
+  symbol: string // Currency symbol (narrowSymbol per CLDR)
   name: string // Display name
   decimals: number // Decimal places
   symbolPosition: 'before' | 'after' // Symbol position relative to amount
+  denomination: string // Uppercase singular unit ("PESO", "DOLLAR", "EURO"),
+                       // used for banknote-style engraving in the locale picker.
 }
 
 // Supported locales with their defaults
@@ -84,29 +86,53 @@ export const REGIONS: Region[] = [
   'Europe',
 ]
 
-// Currency configurations
-const CURRENCIES: Record<string, CurrencyConfig> = {
-  USD: { code: 'USD', symbol: '$', name: 'US Dollar', decimals: 2, symbolPosition: 'before' },
-  CAD: { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar', decimals: 2, symbolPosition: 'before' },
-  MXN: { code: 'MXN', symbol: '$', name: 'Mexican Peso', decimals: 2, symbolPosition: 'before' },
-  EUR: { code: 'EUR', symbol: '€', name: 'Euro', decimals: 2, symbolPosition: 'before' },
-  GBP: { code: 'GBP', symbol: '£', name: 'British Pound', decimals: 2, symbolPosition: 'before' },
-  BRL: { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', decimals: 2, symbolPosition: 'before' },
-  ARS: { code: 'ARS', symbol: '$', name: 'Argentine Peso', decimals: 2, symbolPosition: 'before' },
-  CLP: { code: 'CLP', symbol: '$', name: 'Chilean Peso', decimals: 0, symbolPosition: 'before' },
-  COP: { code: 'COP', symbol: '$', name: 'Colombian Peso', decimals: 0, symbolPosition: 'before' },
-  PEN: { code: 'PEN', symbol: 'S/', name: 'Peruvian Sol', decimals: 2, symbolPosition: 'before' },
-  GTQ: { code: 'GTQ', symbol: 'Q', name: 'Guatemalan Quetzal', decimals: 2, symbolPosition: 'before' },
-  HNL: { code: 'HNL', symbol: 'L', name: 'Honduran Lempira', decimals: 2, symbolPosition: 'before' },
-  NIO: { code: 'NIO', symbol: 'C$', name: 'Nicaraguan Cordoba', decimals: 2, symbolPosition: 'before' },
-  CRC: { code: 'CRC', symbol: '₡', name: 'Costa Rican Colon', decimals: 0, symbolPosition: 'before' },
-  DOP: { code: 'DOP', symbol: 'RD$', name: 'Dominican Peso', decimals: 2, symbolPosition: 'before' },
-  CUP: { code: 'CUP', symbol: '$', name: 'Cuban Peso', decimals: 2, symbolPosition: 'before' },
-  BOB: { code: 'BOB', symbol: 'Bs', name: 'Bolivian Boliviano', decimals: 2, symbolPosition: 'before' },
-  UYU: { code: 'UYU', symbol: '$U', name: 'Uruguayan Peso', decimals: 2, symbolPosition: 'before' },
-  PYG: { code: 'PYG', symbol: '₲', name: 'Paraguayan Guarani', decimals: 0, symbolPosition: 'before' },
-  VES: { code: 'VES', symbol: 'Bs', name: 'Venezuelan Bolivar', decimals: 2, symbolPosition: 'before' },
+// Currency configurations. Symbols are derived from CLDR via
+// `Intl.NumberFormat` with `narrowSymbol`, paired with the first locale
+// that uses each currency — so a Canadian business sees "$", not "CA$";
+// a Peruvian sees "S/", not "PEN". This is what locals actually write
+// in their own market, and matches `formatCurrency` in lib/utils.
+const CURRENCY_BASE: Record<string, Omit<CurrencyConfig, 'symbol'>> = {
+  USD: { code: 'USD', name: 'US Dollar', decimals: 2, symbolPosition: 'before', denomination: 'DOLLAR' },
+  CAD: { code: 'CAD', name: 'Canadian Dollar', decimals: 2, symbolPosition: 'before', denomination: 'DOLLAR' },
+  MXN: { code: 'MXN', name: 'Mexican Peso', decimals: 2, symbolPosition: 'before', denomination: 'PESO' },
+  EUR: { code: 'EUR', name: 'Euro', decimals: 2, symbolPosition: 'before', denomination: 'EURO' },
+  GBP: { code: 'GBP', name: 'British Pound', decimals: 2, symbolPosition: 'before', denomination: 'POUND' },
+  BRL: { code: 'BRL', name: 'Brazilian Real', decimals: 2, symbolPosition: 'before', denomination: 'REAL' },
+  ARS: { code: 'ARS', name: 'Argentine Peso', decimals: 2, symbolPosition: 'before', denomination: 'PESO' },
+  CLP: { code: 'CLP', name: 'Chilean Peso', decimals: 0, symbolPosition: 'before', denomination: 'PESO' },
+  COP: { code: 'COP', name: 'Colombian Peso', decimals: 0, symbolPosition: 'before', denomination: 'PESO' },
+  PEN: { code: 'PEN', name: 'Peruvian Sol', decimals: 2, symbolPosition: 'before', denomination: 'SOL' },
+  GTQ: { code: 'GTQ', name: 'Guatemalan Quetzal', decimals: 2, symbolPosition: 'before', denomination: 'QUETZAL' },
+  HNL: { code: 'HNL', name: 'Honduran Lempira', decimals: 2, symbolPosition: 'before', denomination: 'LEMPIRA' },
+  NIO: { code: 'NIO', name: 'Nicaraguan Cordoba', decimals: 2, symbolPosition: 'before', denomination: 'CÓRDOBA' },
+  CRC: { code: 'CRC', name: 'Costa Rican Colon', decimals: 0, symbolPosition: 'before', denomination: 'COLÓN' },
+  DOP: { code: 'DOP', name: 'Dominican Peso', decimals: 2, symbolPosition: 'before', denomination: 'PESO' },
+  CUP: { code: 'CUP', name: 'Cuban Peso', decimals: 2, symbolPosition: 'before', denomination: 'PESO' },
+  BOB: { code: 'BOB', name: 'Bolivian Boliviano', decimals: 2, symbolPosition: 'before', denomination: 'BOLIVIANO' },
+  UYU: { code: 'UYU', name: 'Uruguayan Peso', decimals: 2, symbolPosition: 'before', denomination: 'PESO' },
+  PYG: { code: 'PYG', name: 'Paraguayan Guarani', decimals: 0, symbolPosition: 'before', denomination: 'GUARANÍ' },
+  VES: { code: 'VES', name: 'Venezuelan Bolivar', decimals: 2, symbolPosition: 'before', denomination: 'BOLÍVAR' },
 }
+
+function narrowSymbol(currency: string): string {
+  // Pair with the first locale that uses this currency so ICU returns
+  // the local glyph rather than the disambiguated en form (PEN → "S/"
+  // via es-PE, not "PEN" via en).
+  const locale = LOCALES.find(l => l.currency === currency)?.code ?? 'en'
+  const parts = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'narrowSymbol',
+  }).formatToParts(0)
+  return parts.find(p => p.type === 'currency')?.value ?? currency
+}
+
+const CURRENCIES: Record<string, CurrencyConfig> = Object.fromEntries(
+  Object.entries(CURRENCY_BASE).map(([code, base]) => [
+    code,
+    { ...base, symbol: narrowSymbol(code) },
+  ]),
+)
 
 // Helper functions
 export function getLocaleConfig(localeCode: string): LocaleConfig | undefined {

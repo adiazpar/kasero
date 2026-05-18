@@ -78,9 +78,6 @@ export function LocaleStep() {
           </header>
 
           <div className="create-business__locale-shelf">
-            <p className="wizard-note">
-              {t.formatMessage({ id: 'createBusiness.locale_currency_note' })}
-            </p>
             <LocalePicker value={formData.locale} onChange={setLocale} />
           </div>
         </div>

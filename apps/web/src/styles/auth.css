@@ -189,6 +189,215 @@
   margin-top: var(--space-2);
 }
 
+/* Native <select> living inside an .auth-field card. Strips the OS chrome,
+ * paints our own chevron, and reserves trailing space so the chevron never
+ * collides with the value. Same hit-zone as the standard auth-field input. */
+.auth-field__input--select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%2394A3B8'%3E%3Cpath d='M5.70711 9.71069C5.31658 10.1012 5.31658 10.7344 5.70711 11.1249L10.5993 16.0123C11.3805 16.7927 12.6463 16.7924 13.4271 16.0117L18.3174 11.1213C18.708 10.7308 18.708 10.0976 18.3174 9.70708C17.9269 9.31655 17.2937 9.31655 16.9032 9.70708L12.7176 13.8927C12.3271 14.2833 11.6939 14.2832 11.3034 13.8927L7.12132 9.71069C6.7308 9.32016 6.09763 9.32016 5.70711 9.71069Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 18px 18px;
+}
+
+.auth-field__input--select option {
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+}
+
+/* ===== Currency specimen — banknote-inspired =====
+ * A tall, generous "specimen plate" that doubles as the visual anchor
+ * of the locale step. A paper-deep tile carries the currency symbol in
+ * BIG Fraunces italic — the "face" of the bill — beside an editorial
+ * meta column (mono eyebrow, short rule, italic Fraunces name, mono
+ * ISO code). Decorative hairline corner brackets echo banknote
+ * engraving. A whisper-quiet radial wash gives the surface paper
+ * warmth without competing with the typography. Values cross-fade when
+ * the user switches country (driven by React `key` on the inner
+ * elements). */
+.locale-currency {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  min-height: 180px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255, 252, 245, 0.5) inset;
+}
+
+/* Paper-warm atmospheric wash — barely there, just lifts the surface
+ * out of flat. Two soft radials, one from the top-left in deep paper,
+ * one from the bottom-right tinted with the brand subtle. */
+.locale-currency::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 70% at 0% 0%,
+      color-mix(in srgb, var(--color-paper-deep) 55%, transparent),
+      transparent 55%),
+    radial-gradient(90% 60% at 100% 100%,
+      color-mix(in srgb, var(--color-brand-subtle) 28%, transparent),
+      transparent 60%);
+  pointer-events: none;
+}
+
+.locale-currency > * { position: relative; }
+
+/* The "face" — a tiny banknote. Paper-deep stage, banknote-leaning
+ * aspect ratio, with COUNTRY engraved across the top and the
+ * DENOMINATION across the bottom, both in mono tracked-out — the way
+ * real currency carries its identity along the margins. The italic
+ * symbol is centered between them like the face numeral. Hairline
+ * ticks beneath/above the engravings nod to bill ornamentation
+ * without going literal. */
+.locale-currency__face {
+  width: 172px;
+  height: 132px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--color-paper-deep);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 0 rgba(255, 252, 245, 0.7) inset,
+    0 14px 28px -22px rgba(27, 24, 21, 0.28);
+}
+
+.locale-currency__engrave {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  max-width: 100%;
+  /* Long country names ("Dominican Republic", "United Kingdom") still
+   * fit on one line at this size; clamp just in case. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: locale-currency-meta-in var(--duration-slow, 480ms) ease-out both;
+}
+
+/* Decorative hairline ticks: below the country name, above the
+ * denomination word — the small engraved rules that frame a banknote's
+ * face numeral. */
+.locale-currency__engrave--top::after,
+.locale-currency__engrave--bottom::before {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.locale-currency__symbol {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 60;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+  max-width: 100%;
+  padding: 0 4px;
+  text-align: center;
+  animation: locale-currency-symbol-in var(--duration-slow, 480ms) ease-out;
+}
+
+/* Multi-character symbols ("R$", "S/", "Bs", "Bs.S") scale down so they
+ * still feel like one engraved glyph rather than a scrunched word. */
+.locale-currency__symbol[data-len="2"] { font-size: 36px; letter-spacing: -0.025em; }
+.locale-currency__symbol[data-len="3"] { font-size: 28px; letter-spacing: -0.03em; }
+.locale-currency__symbol[data-len="4"] { font-size: 22px; letter-spacing: -0.035em; }
+
+.locale-currency__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.locale-currency__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.locale-currency__rule {
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: var(--color-border);
+  margin: 2px 0 4px;
+}
+
+.locale-currency__name {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+  /* Allow long names ("Philippine Peso") to wrap rather than overflow. */
+  overflow-wrap: anywhere;
+  animation: locale-currency-meta-in var(--duration-slow, 480ms) ease-out 60ms both;
+}
+
+.locale-currency__code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: var(--color-text-secondary);
+  animation: locale-currency-meta-in var(--duration-slow, 480ms) ease-out 120ms both;
+}
+
+@keyframes locale-currency-symbol-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0)  scale(1); }
+}
+
+@keyframes locale-currency-meta-in {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locale-currency__symbol,
+  .locale-currency__name,
+  .locale-currency__code {
+    animation: none;
+  }
+}
+
 /* ===== Field utility row (e.g. "Resend OTP?") ===== */
 .auth-field-utility {
   display: flex;

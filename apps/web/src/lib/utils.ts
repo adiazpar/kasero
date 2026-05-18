@@ -4,7 +4,9 @@
  * Uses `Intl.NumberFormat`, which already knows per-currency decimal
  * conventions (e.g., CLP / COP / PYG are integer-only, USD / EUR use 2
  * decimals). Locale drives the decimal separator, thousand separator,
- * and symbol position.
+ * and symbol position. `currencyDisplay: 'narrowSymbol'` strips the
+ * disambiguator prefix locals don't write — a Canadian business sees
+ * "$5.00", not "CA$5.00".
  *
  * Callers should generally go through `useBusinessFormat()` instead,
  * which binds the current business's locale and currency automatically.
@@ -18,6 +20,7 @@ export function formatCurrency(
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
+    currencyDisplay: 'narrowSymbol',
   }).format(amount)
 }
 
@@ -40,6 +43,7 @@ export function formatCurrencyCompact(
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
+    currencyDisplay: 'narrowSymbol',
     notation: 'compact',
     compactDisplay: 'short',
     maximumFractionDigits: 1,
