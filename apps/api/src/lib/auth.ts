@@ -45,19 +45,29 @@ if (
   // rotation. Vercel cold-starts re-mint; the JWT itself expires in 1h.
   // See node_modules/@better-auth/core/dist/social-providers/apple.d.mts
   // for the AppleOptions interface.
-  const appleClientSecret = await mintAppleClientSecret({
-    teamId: process.env.APPLE_TEAM_ID,
-    clientId: process.env.APPLE_CLIENT_ID,
-    keyId: process.env.APPLE_KEY_ID,
-    privateKey: process.env.APPLE_PRIVATE_KEY,
-  })
+  try {
+    const appleClientSecret = await mintAppleClientSecret({
+      teamId: process.env.APPLE_TEAM_ID,
+      clientId: process.env.APPLE_CLIENT_ID,
+      keyId: process.env.APPLE_KEY_ID,
+      privateKey: process.env.APPLE_PRIVATE_KEY,
+    })
 
-  socialProviders.apple = {
-    clientId: process.env.APPLE_CLIENT_ID,
-    clientSecret: appleClientSecret,
-    ...(process.env.APPLE_APP_BUNDLE_IDENTIFIER && {
-      appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER,
-    }),
+    socialProviders.apple = {
+      clientId: process.env.APPLE_CLIENT_ID,
+      clientSecret: appleClientSecret,
+      ...(process.env.APPLE_APP_BUNDLE_IDENTIFIER && {
+        appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER,
+      }),
+    }
+  } catch (err) {
+    // Fail loudly in production — a malformed APPLE_PRIVATE_KEY there must
+    // surface as a deploy failure, not silently disable Apple sign-in
+    // (.claude/docs/apple-sign-in-setup.md). Non-prod swallows so a
+    // partially-pasted .p8 in .env.local doesn't take down email-OTP and
+    // Google routes alongside Apple.
+    if (process.env.NODE_ENV === 'production') throw err
+    console.error('[auth] Failed to initialize Apple provider, dropping it:', err)
   }
 }
 
