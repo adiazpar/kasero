@@ -14,13 +14,11 @@
 
 These are not subagent-executable. The implementing engineer runs them once before any code change.
 
-### Task 0.1: Verify Upstash free-tier TCP connection cap
+### Task 0.1: Verify Upstash free-tier TCP connection cap — **deferred to Phase 11**
 
-**Files:** none.
+The current free-tier connection cap is not publicly documented (Upstash rolled out new pricing/limits 2025-03-12 without surfacing this specific number). Empirical validation happens in the Phase 11 load test, which asserts Upstash connections stay under 30 during a 200-client sustained run and under 50 during a 50-reconnect-storm burst. If those assertions fail because the cap is lower than expected, the remediation is a single `vercel.json` / route-segment change to cap Fluid concurrency, applied before merge.
 
-- [ ] **Step 1: Open the Upstash dashboard.** Navigate to https://console.upstash.com, sign in, open the existing Kasero database (the same one backing rate limiting).
-- [ ] **Step 2: Read the "Plan" panel.** Locate the `Max Connections` row. Record the value. (Free tier is currently 1000 simultaneous Redis client connections; verify before proceeding because Upstash periodically retunes free-tier limits.)
-- [ ] **Step 3: Note the value in the design doc.** Append a line under §13 of `/Users/adiaz/irvin/.claude/docs/plans/2026-05-19-realtime-upstash-design.md` stating "Verified <DATE>: free-tier cap = N simultaneous connections." (Edit later in a doc-only commit.) This step is information-gathering only; no commit yet.
+- [x] **Deferred.** Phase 11.4 is the validation gate. No work required here.
 
 ### Task 0.2: Enable standard Redis protocol on the Upstash database
 
