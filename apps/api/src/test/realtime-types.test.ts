@@ -56,6 +56,15 @@ describe('realtime types', () => {
         case 'system.error':
         case 'system.auth_expired':
           return 'system'
+        default: {
+          // Exhaustiveness assertion — if a new event type is added to
+          // RealtimeEvent without a case above, this assignment to
+          // `never` becomes a compile error. That is the entire point
+          // of this test: TS prevents drift between event taxonomy and
+          // dispatcher coverage.
+          const _exhaustive: never = e
+          return _exhaustive
+        }
       }
     }
     expect(dispatch({ type: 'system.resync' })).toBe('system')
