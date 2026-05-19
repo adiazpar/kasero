@@ -41,6 +41,7 @@ export interface InMemoryPublisher {
     ttlMs: number,
     event: Record<string, unknown>,
   ): Promise<void>
+  publishBatched(messages: Array<[channel: string, message: string]>): Promise<void>
   quit(): Promise<void>
 }
 
@@ -146,6 +147,12 @@ export class InMemoryBackend {
         await this.xaddMaxLen(streamKey, maxLen, event)
         await this.pexpire(streamKey, ttlMs)
         await this.publish(userChannel, JSON.stringify(event))
+      },
+      async publishBatched(messages) {
+        // In-memory: sequentially emit each PUBLISH on the shared bus.
+        for (const [channel, message] of messages) {
+          self.bus.emit(channel, channel, message)
+        }
       },
       async quit() {
         // Nothing to release; backend lives until process exit.

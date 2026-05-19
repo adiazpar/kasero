@@ -1,64 +1,49 @@
 import 'server-only'
-import { getPublisher } from './redis'
+import { getSubscriber } from './redis'
 import { userStream } from '@kasero/shared/realtime'
 import type { CriticalUserRealtimeEvent } from '@kasero/shared/realtime'
 
 /**
- * XREAD COUNT 100 STREAMS stream:user:{userId} <lastEventId>
+ * Stream replay helpers backed by the unified RealtimeSubscriber surface.
  *
- * Returns entries with id STRICTLY GREATER than lastEventId. ioredis
- * XREAD result shape:
- *   [ [streamName, [ [id, [field1, val1, ...]] , ... ]] ]
- *   or null when no entries match (note: synchronous XREAD with no
- *   BLOCK arg returns null on empty).
+ * Both backends (in-memory dev, ioredis prod) expose `xread` and
+ * `getStreamTipId` on the subscriber with high-level shapes:
+ *   xread(streamKey, sinceId) → Array<{ id, event }>
+ *   getStreamTipId(streamKey) → string | null
+ *
+ * We no longer touch ioredis pipelines or raw XREAD/XREVRANGE response
+ * shapes here — the wrapper in redis.ts owns that parsing.
  */
 export interface ReplayEntry {
   id: string
   event: CriticalUserRealtimeEvent
 }
 
+/**
+ * Read entries with id strictly greater than `lastEventId`. Used by the
+ * SSE handler on reconnect to replay critical events the client missed.
+ */
 export async function readUserStreamSince(
   userId: string,
   lastEventId: string,
 ): Promise<ReplayEntry[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pub = getPublisher() as any
-  const result = (await pub.xread(
-    'COUNT', 100,
-    'STREAMS', userStream(userId), lastEventId,
-  )) as Array<[string, Array<[string, string[]]>]> | null
-  if (!result || result.length === 0) return []
-  const [, entries] = result[0]
-  const out: ReplayEntry[] = []
-  for (const [id, fields] of entries) {
-    // fields = ['type', '<type>', 'payload', '<json>'] — defensive parse.
-    const map = new Map<string, string>()
-    for (let i = 0; i < fields.length; i += 2) {
-      map.set(fields[i], fields[i + 1])
-    }
-    const payloadRaw = map.get('payload')
-    if (!payloadRaw) continue
-    try {
-      const event = JSON.parse(payloadRaw) as CriticalUserRealtimeEvent
-      out.push({ id, event })
-    } catch (err) {
-      console.warn('[realtime.streams] dropping unparseable entry', id, err)
-    }
-  }
-  return out
+  const sub = getSubscriber()
+  const entries = await sub.xread(userStream(userId), lastEventId)
+  return entries.map((e) => ({
+    id: e.id,
+    event: e.event as unknown as CriticalUserRealtimeEvent,
+  }))
 }
 
 /**
- * XREVRANGE stream:user:{id} + - COUNT 1 -> the latest entry's id.
- * Returns '0-0' if the stream is empty so callers can use the value
- * unconditionally as a Last-Event-ID hint.
+ * Tip of the user's critical stream. Returns '0-0' on empty streams so
+ * callers can use the value unconditionally as a Last-Event-ID hint
+ * (the SSE handler emits a `system.resync` carrying this id on first
+ * connect, so the next reconnect's XREAD returns everything that was
+ * added in between).
  */
 export async function getUserStreamTip(userId: string): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pub = getPublisher() as any
-  const result = (await pub.xrevrange(
-    userStream(userId), '+', '-', 'COUNT', 1,
-  )) as Array<[string, string[]]>
-  if (!result || result.length === 0) return '0-0'
-  return result[0][0]
+  const sub = getSubscriber()
+  const tip = await sub.getStreamTipId(userStream(userId))
+  return tip ?? '0-0'
 }

@@ -60,24 +60,21 @@ export async function publishCriticalToUser(
   originDeviceId?: string,
 ): Promise<void> {
   const payload = { ...event, ...(originDeviceId ? { originDeviceId } : {}) }
-  const json = JSON.stringify(payload)
   const stream = userStream(userId)
   const channel = userChannel(userId)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pub = getPublisher() as any
-    const exec = pub
-      .multi()
-      .xadd(stream, 'MAXLEN', STREAM_MAXLEN, '*', 'type', event.type, 'payload', json)
-      .publish(channel, json)
-      .pexpire(stream, STREAM_TTL_MS)
-      .exec()
-    const result = await exec
-    if (!result) throw new RealtimeUnavailableError('MULTI/EXEC returned null')
-    // Each entry is [err, value]; treat any non-null err as failure.
-    for (const [err] of result as Array<[Error | null, unknown]>) {
-      if (err) throw new RealtimeUnavailableError(`pipeline step failed: ${err.message}`)
-    }
+    // The wrapper's publishCritical pipelines XADD + PEXPIRE + PUBLISH
+    // in a single MULTI/EXEC and validates each step's result. Pre-fix
+    // this function did its own (broken) cast-to-any plumbing — that
+    // bypassed the wrapper and called methods that don't exist on the
+    // RealtimePublisher interface, producing TypeErrors in prod.
+    await getPublisher().publishCritical(
+      channel,
+      stream,
+      STREAM_MAXLEN,
+      STREAM_TTL_MS,
+      payload,
+    )
   } catch (err) {
     if (err instanceof RealtimeUnavailableError) throw err
     console.warn('[realtime.publisher] publishCriticalToUser failed for', userId, err)
@@ -99,13 +96,9 @@ export async function publishBatchedToUsers(
   if (userIds.length === 0) return
   const payload = { ...event, ...(originDeviceId ? { originDeviceId } : {}) }
   const json = JSON.stringify(payload)
+  const messages: Array<[string, string]> = userIds.map((uid) => [userChannel(uid), json])
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = (getPublisher() as any).pipeline()
-    for (const userId of userIds) {
-      p.publish(userChannel(userId), json)
-    }
-    await p.exec()
+    await getPublisher().publishBatched(messages)
   } catch (err) {
     console.warn('[realtime.publisher] publishBatchedToUsers failed', err)
   }

@@ -118,12 +118,33 @@ function wrapIoredisPublisher(client: Redis): RealtimePublisher {
     async publishCritical(userChannel, streamKey, maxLen, ttlMs, event) {
       // Pipeline XADD + PEXPIRE + PUBLISH in a single round-trip.
       const json = JSON.stringify(event)
-      await client
+      const result = await client
         .multi()
         .xadd(streamKey, 'MAXLEN', maxLen, '*', 'data', json)
         .pexpire(streamKey, ttlMs)
         .publish(userChannel, json)
         .exec()
+      if (!result) {
+        throw new Error('publishCritical MULTI/EXEC returned null')
+      }
+      for (const [err] of result as Array<[Error | null, unknown]>) {
+        if (err) throw err
+      }
+    },
+    async publishBatched(messages) {
+      // PIPELINE all PUBLISHes into a single round-trip — much cheaper
+      // than N sequential PUBLISH calls when broadcasting to many users
+      // (e.g., business rename, business delete).
+      if (messages.length === 0) return
+      const pipe = client.pipeline()
+      for (const [channel, message] of messages) {
+        pipe.publish(channel, message)
+      }
+      const result = await pipe.exec()
+      if (!result) return
+      for (const [err] of result as Array<[Error | null, unknown]>) {
+        if (err) throw err
+      }
     },
     async quit() { await client.quit() },
   }
