@@ -93,7 +93,10 @@ export class InMemoryBackend {
           self.bus.off(channel, handler)
         }
       },
-      on(event: string, listener: (...args: unknown[]) => void) {
+      on(event: string, listener: (...args: any[]) => void) {
+        // Internal impl uses any[] for listener so the overloaded
+        // InMemorySubscriber.on signature stays satisfiable. Public
+        // callers see the strict-typed overload via the interface.
         local.on(event, listener)
         return this
       },
