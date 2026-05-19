@@ -70,13 +70,20 @@ export type RealtimeEvent =
   | SystemRealtimeEvent
 
 // Channel name helpers — the ONLY way to construct channel names.
-// Centralizing the format here makes a typo in any consumer a build error.
-export function businessChannel(businessId: string): string {
+// The template-literal return types let downstream code that takes a
+// `BusinessChannel`/`UserChannel`/`UserStream` reject a raw string at
+// the call site, so a route can never accidentally publish to an
+// untyped channel constructed inline.
+export type BusinessChannel = `business:${string}`
+export type UserChannel = `user:${string}`
+export type UserStream = `stream:user:${string}`
+
+export function businessChannel(businessId: string): BusinessChannel {
   return `business:${businessId}`
 }
-export function userChannel(userId: string): string {
+export function userChannel(userId: string): UserChannel {
   return `user:${userId}`
 }
-export function userStream(userId: string): string {
+export function userStream(userId: string): UserStream {
   return `stream:user:${userId}`
 }

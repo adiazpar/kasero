@@ -1,14 +1,12 @@
 import { describe, it, expect, expectTypeOf } from 'vitest'
-import {
-  type RealtimeEvent,
-  type BusinessRealtimeEvent,
-  type UserRealtimeEvent,
-  type CriticalUserRealtimeEvent,
-  type SystemRealtimeEvent,
-  businessChannel,
-  userChannel,
-  userStream,
+import type {
+  RealtimeEvent,
+  BusinessRealtimeEvent,
+  UserRealtimeEvent,
+  CriticalUserRealtimeEvent,
+  SystemRealtimeEvent,
 } from '@kasero/shared/realtime'
+import { businessChannel, userChannel, userStream } from '@kasero/shared/realtime'
 
 describe('realtime types', () => {
   it('businessChannel formats correctly', () => {
