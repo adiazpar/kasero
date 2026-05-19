@@ -14,10 +14,17 @@ This document outlines the established patterns and utilities for backend develo
 6. [Rate Limiting](#rate-limiting)
 7. [Upload Validation](#upload-validation)
 8. [Security Checklist](#security-checklist)
+9. [Realtime publishes](#realtime-publishes) — see `.claude/docs/realtime-system.md`
 
 ---
 
 ## API Routes
+
+### Realtime publishes
+
+When a mutation route changes shared state, audit whether open clients on other devices should learn of the change in real time. If so, publish the appropriate event after the DB write via the publisher helpers in `@/lib/realtime`. The event type, channel, and fail-open/fail-closed semantics are all documented in `.claude/docs/realtime-system.md`. The publish call belongs after the DB write succeeds, before `successResponse`.
+
+---
 
 ### Business-Scoped Routes
 
@@ -666,6 +673,7 @@ The `/api/auth/*` surface is owned by better-auth's `[...all]` catch-all route (
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/api/geolocation` | GET | Best-effort IP → locale/currency hint used by create-business |
+| `/api/realtime` | GET | SSE stream — cookie auth, Sec-Fetch-Site CSRF, optional `?businessId`, replays critical stream on reconnect. Region-pinned to iad1. See `.claude/docs/realtime-system.md`. |
 
 ### AI Features (Authenticated, rate-limited)
 

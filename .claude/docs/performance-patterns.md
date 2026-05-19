@@ -440,6 +440,14 @@ Every API call in the codebase funnels through `apiRequest` (`apiPost`, `apiPatc
 
 For background GET revalidations (e.g., the contexts' `ensureLoaded` paths), the offline `ApiError` is caught by the context's existing try/catch and the cached data stays in place — no error surfaced to the user.
 
+### Realtime push and focus refetch
+
+Realtime push (`/api/realtime` SSE) propagates state changes to open tabs as they happen. Focus refetch via `useRevalidateOnFocus` (5s debounce, Section 4 above) is the backstop for pub/sub events dropped during a subscriber reconnect gap. On reconnect, the server emits `system.resync` (or replays missed stream entries), triggering `callAllRefetches()` — which is equivalent to every context calling `ensureLoaded()` at once. The 30s freshness window still applies; a reconnect that happens within 30s of the last fetch is a no-op.
+
+The SSE endpoint is region-pinned (`preferredRegion = 'iad1'` in the route config) so all Lambda subscriber instances are co-located with the Upstash Redis replica — this keeps the Redis subscriber connection count bounded regardless of global traffic.
+
+See `.claude/docs/realtime-system.md` for the full event taxonomy, publisher API, and client lifecycle.
+
 ---
 
 ## 12. Navigation Feedback
