@@ -5,6 +5,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const deleteInviteSchema = z.object({
   id: Schemas.id(),
@@ -38,6 +39,12 @@ export const POST = withBusinessAuth(async (request, access) => {
         eq(inviteCodes.businessId, access.businessId)
       )
     )
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.invite.deleted', inviteId: id },
+    getOriginDeviceId(request),
+  )
 
   return successResponse({})
 })
