@@ -221,6 +221,25 @@ The client's `ApiError` class extracts `messageCode` and `messageVars` automatic
 
 **Generic codes that cross domains** — `RATE_LIMITED`, `REQUEST_TOO_LARGE`, `REQUEST_LENGTH_REQUIRED`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `INTERNAL_ERROR` — are emitted by the middleware helpers (`applyRateLimit`, `enforceMaxContentLength`, `withBusinessAuth`, `withAuth`). They're already in the union + JSON and shouldn't need to be added per-route.
 
+**Realtime-specific codes** (already in the union; shown here for discoverability):
+
+| Code | HTTP status | When emitted |
+|------|-------------|--------------|
+| `REALTIME_UNAVAILABLE` | 503 | `GET /api/realtime` stream-read failure on connect; also sent as a `system.error` SSE frame |
+| `REALTIME_PUBLISH_UNAVAILABLE` | 503 | A `publishCriticalToUser` call fails (MULTI/EXEC error). Routes that call `publishCriticalToUser` must catch `RealtimeUnavailableError` and return this code. |
+
+**Realtime UI keys** (already in all locale JSON files; shown here for discoverability):
+
+| Key | Purpose |
+|-----|---------|
+| `session_revoked_removed` | Toast shown when the current user is removed from the active business |
+| `session_revoked_business_deleted` | Toast shown when the active business is deleted |
+| `session_revoked_ownership_transferred` | Toast shown when ownership transfers away from the current user |
+| `apiMessages.realtime_unavailable` | Toast shown on `system.error` with `REALTIME_UNAVAILABLE` code |
+| `apiMessages.realtime_publish_unavailable` | Toast shown on `system.error` with `REALTIME_PUBLISH_UNAVAILABLE` code |
+
+All of the above were added to `en-US.json` first, then translated into `es.json` and `ja.json` directly (no script run) per the "real translations for every registered locale" rule.
+
 ### Zod schemas
 
 **Don't write custom error messages.** The `validationError()` helper reads Zod issue codes and maps them to generic `VALIDATION_*` codes automatically. Writing `.min(2, 'Must be at least 2')` is dead code.

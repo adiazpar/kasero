@@ -338,6 +338,24 @@ import { TabContainer } from '@/components/ui'
 
 ---
 
+## Programmatic close from outside the modal
+
+Some navigation-level events must dismiss every open modal before routing away, because the host `IonPage` is about to be replaced. The realtime revoke flow is the primary example: when `session.revoked`, `business.deleted`, or `ownership.transferred` arrives for the active business, `RealtimeProvider` calls `revokeBusinessContext`, which dismisses all open modals before navigating to the hub:
+
+```typescript
+document.querySelectorAll('ion-modal').forEach((m) => {
+  ;(m as unknown as { dismiss?: () => void }).dismiss?.()
+})
+```
+
+`HTMLIonModalElement.dismiss()` triggers the modal's exit animation and fires `onDidDismiss`, so each modal's host component cleans up its state correctly through the normal modal lifecycle. This is equivalent to the user pressing the close button on every open modal simultaneously.
+
+**When to use this pattern:** any code path that replaces the active `IonPage` programmatically (e.g., a push notification routing to a different business, a forced re-auth redirect) should call `dismiss()` on all open modals first. Without it, the modal portal stays mounted at the document root after the host `IonPage` is gone, leaving a stranded overlay on screen.
+
+See `.claude/docs/realtime-system.md` for the full revoke flow.
+
+---
+
 ## Examples
 
 **Simple edit modal:** `apps/web/src/components/providers/ProviderModal.tsx`

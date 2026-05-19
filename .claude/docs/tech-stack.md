@@ -78,6 +78,7 @@ The frontend and API share an origin in production — but it's not Vercel rewri
 | **ORM** | Drizzle ORM | $0 |
 | **Auth** | `better-auth` 1.6 (DB sessions, passwordless email-OTP sign-in, Google OAuth) | $0 |
 | **Rate limiting** | Two paths share one Upstash database: (a) `@upstash/ratelimit` SDK for app-level limits in `rate-limit.ts`, (b) better-auth `secondaryStorage` (via `@upstash/redis`) for auth-surface limits in `auth.ts`. In-memory fallback in dev. | $0 (Upstash free tier) |
+| **Realtime** | SSE over Upstash Redis pub/sub + Streams via `ioredis`. In-memory EventEmitter backend in dev (no env var needed). See `.claude/docs/realtime-system.md`. | $0 (Upstash free tier) |
 | **Shared package** | `packages/shared/` — TypeScript-only, consumed via TS project references | $0 |
 | **Icons** | Lucide React + custom SVGs in `apps/web/src/components/icons/` | $0 |
 | **Barcodes** | `html5-qrcode` (decode) + `bwip-js` (render; lazy-imported) | $0 |
@@ -650,6 +651,22 @@ Authorized via `Authorization: Bearer ${CRON_SECRET}` compared with `timingSafeE
 
 ---
 
+### Realtime: SSE over Upstash Redis (ioredis) + in-memory dev backend
+
+**What it is:** Server-Sent Events (SSE) delivered via a single GET endpoint (`/api/realtime`). The server subscribes to Upstash Redis pub/sub channels using `ioredis`; when a mutation route publishes an event, all connected clients on that channel receive it immediately. Security-critical events (session revoke, business delete, ownership transfer) are also appended to a per-user Redis Stream before publishing so they survive reconnects.
+
+**Why Upstash + ioredis for this (not the REST SDK):** pub/sub and Redis Streams require a persistent TCP connection with blocking reads — the `@upstash/redis` HTTP REST client cannot do this. `ioredis` holds one subscriber connection per server instance. The `UPSTASH_REDIS_URL` env var (`rediss://...`) is the TCP/TLS endpoint exposed by Upstash alongside their REST URL.
+
+**In-memory dev backend:** when `UPSTASH_REDIS_URL` is absent (all local dev), `apps/api/src/lib/realtime/redis.ts` returns an in-process `EventEmitter`-based backend. No Redis account or CLI needed locally. Never set `UPSTASH_REDIS_URL` in `.env.local` — local publishes should stay local.
+
+**`ioredis` in `apps/api/package.json`:** listed as a runtime dependency. Rate-limiting uses `@upstash/redis` (REST); realtime uses `ioredis` (TCP). Both point at the same Upstash database via different env vars and different client libraries.
+
+See `.claude/docs/realtime-system.md` for the full guide.
+
+**Future considerations (from the "Real-time Updates" item below):** the realtime system is now implemented. The "Vercel KV / Pusher / SSE" options listed in the Future Considerations section are historical — SSE over Upstash Redis is the chosen and deployed solution.
+
+---
+
 ### Icons: Lucide React
 
 **What it is:** Fork of Feather Icons with more icons and active development.
@@ -832,6 +849,10 @@ FAL_KEY=...
 UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
 
+# Vercel-only (realtime SSE pub/sub + streams via ioredis)
+# NOT in .env.local — local dev uses the in-memory backend automatically.
+# UPSTASH_REDIS_URL=rediss://...  (set in Vercel Production + Preview env vars)
+
 # Optional (dev-only — required by `npm run i18n:translate`)
 ANTHROPIC_API_KEY=sk-ant-...
 ```
@@ -884,10 +905,8 @@ Today we have **read-only** offline support via the Workbox service worker — c
 Conflict resolution is the hard part — none of these solve "two devices edited the same row" automatically. Defer until there's real user demand.
 
 ### Real-time Updates
-Options when needed:
-- Vercel KV for pub/sub
-- Pusher (free tier)
-- Server-Sent Events
+
+Implemented: SSE over Upstash Redis pub/sub + Streams. See `.claude/docs/realtime-system.md`.
 
 ### Native iOS/Android (deferred)
 Capacitor would let us wrap the SPA into a native shell using the same Ionic codebase. Not in scope for this migration, but the move to Ionic deliberately keeps that path open.

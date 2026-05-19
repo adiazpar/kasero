@@ -28,6 +28,7 @@ A multi-business management system for small businesses. Built for speed, simpli
 | **Icons** | Lucide React + custom SVGs |
 | **Barcodes** | `html5-qrcode` (decode) + `bwip-js` (render) |
 | **Rate limiting** | `@upstash/ratelimit` (prod) + in-memory fallback (dev) |
+| **Realtime** | SSE over Upstash Redis pub/sub + Streams (`ioredis`); in-memory backend in dev |
 | **Hosting** | Vercel (single deployment; SPA folded into `apps/api/public/` at build time) |
 
 Single-origin in production: the Vite SPA is built and copied into `apps/api/public/` by `apps/api/scripts/prepare-spa.mjs` (the API's `prebuild` hook). One Next.js deployment serves both `/api/*` and the SPA shell.
