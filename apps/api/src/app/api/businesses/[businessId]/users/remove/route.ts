@@ -5,6 +5,13 @@ import { canManageBusiness, invalidateAccessCache } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import {
+  publishToBusiness,
+  publishCriticalToUser,
+  publishToUser,
+  getOriginDeviceId,
+  RealtimeUnavailableError,
+} from '@/lib/realtime'
 
 const removeMemberSchema = z.object({
   userId: Schemas.id(),
@@ -71,6 +78,33 @@ export const POST = withBusinessAuth(async (request, access) => {
     )
 
   invalidateAccessCache(userId, access.businessId)
+
+  const originDeviceId = getOriginDeviceId(request)
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.member.removed', memberId: userId },
+    originDeviceId,
+  )
+
+  try {
+    await publishCriticalToUser(
+      userId,
+      { type: 'session.revoked', businessId: access.businessId, reason: 'removed' },
+      originDeviceId,
+    )
+  } catch (err) {
+    if (err instanceof RealtimeUnavailableError) {
+      return errorResponse(ApiMessageCode.REALTIME_PUBLISH_UNAVAILABLE, 503)
+    }
+    throw err
+  }
+
+  await publishToUser(
+    userId,
+    { type: 'business.list.changed', reason: 'removed' },
+    originDeviceId,
+  )
 
   return successResponse({})
 })
