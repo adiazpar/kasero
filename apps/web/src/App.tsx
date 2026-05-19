@@ -8,6 +8,7 @@ import { HapticFeedbackProvider } from '@/components/layout/haptic-feedback-prov
 import { OfflineBadge } from '@/components/layout/OfflineBadge'
 import { AuthGateProvider } from '@/contexts/auth-gate-context'
 import { AuthProvider } from '@/contexts/auth-context'
+import { RealtimeProvider } from '@/contexts/realtime-context'
 import { AppIntlProvider } from '@/i18n/AppIntlProvider'
 import { AuthenticatedShell } from '@/routes/AuthenticatedShell'
 import { AuthWizardPage } from '@/routes/AuthWizardPage'
@@ -33,17 +34,19 @@ export function App() {
           <AppIntlProvider>
             <AuthProvider>
               <AuthGateProvider>
-                <HapticFeedbackProvider />
-                <AuthGateOverlay />
-                <OfflineBadge />
-                <Switch>
-                  <Route exact path="/auth">
-                    <AuthWizardPage />
-                  </Route>
-                  <Route>
-                    <AuthenticatedShell />
-                  </Route>
-                </Switch>
+                <RealtimeProvider>
+                  <HapticFeedbackProvider />
+                  <AuthGateOverlay />
+                  <OfflineBadge />
+                  <Switch>
+                    <Route exact path="/auth">
+                      <AuthWizardPage />
+                    </Route>
+                    <Route>
+                      <AuthenticatedShell />
+                    </Route>
+                  </Switch>
+                </RealtimeProvider>
               </AuthGateProvider>
             </AuthProvider>
           </AppIntlProvider>
