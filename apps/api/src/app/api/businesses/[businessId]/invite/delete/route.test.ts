@@ -28,7 +28,7 @@ vi.mock('@/lib/business-auth', async (orig) => {
 const deleteImpl = vi.fn(() => ({ where: vi.fn(() => Promise.resolve([])) }))
 
 const dbMock = {
-  delete: (...args: unknown[]) => deleteImpl(...args),
+  delete: vi.fn(() => deleteImpl()),
 }
 
 vi.mock('@/db', () => ({

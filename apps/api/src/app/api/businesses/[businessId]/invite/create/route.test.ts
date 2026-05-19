@@ -50,7 +50,7 @@ const insertImpl = vi.fn(() => ({
 
 const dbMock = {
   select: vi.fn(() => selectBuilder()),
-  insert: (...args: unknown[]) => insertImpl(...args),
+  insert: vi.fn(() => insertImpl()),
 }
 
 vi.mock('@/db', () => ({

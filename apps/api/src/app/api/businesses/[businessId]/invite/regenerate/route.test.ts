@@ -32,8 +32,8 @@ const insertImpl = vi.fn(() => ({
 }))
 
 const dbMock = {
-  delete: (...args: unknown[]) => deleteImpl(...args),
-  insert: (...args: unknown[]) => insertImpl(...args),
+  delete: vi.fn(() => deleteImpl()),
+  insert: vi.fn(() => insertImpl()),
 }
 
 vi.mock('@/db', () => ({
