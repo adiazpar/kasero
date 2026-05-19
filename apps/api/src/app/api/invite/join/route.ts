@@ -9,6 +9,7 @@ import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
 import { RateLimits } from '@/lib/rate-limit'
 import { logServerError } from '@/lib/server-logger'
+import { publishToBusiness, publishToUser, getOriginDeviceId } from '@/lib/realtime'
 
 const joinSchema = z.object({
   code: Schemas.code(),
@@ -162,6 +163,21 @@ export async function POST(request: NextRequest) {
       status: 'active',
       createdAt: now,
     })
+
+    const originDeviceId = getOriginDeviceId(request)
+    await publishToBusiness(invite.businessId, {
+      type: 'team.member.joined',
+      memberId: session.user.id,
+    }, originDeviceId)
+    await publishToBusiness(invite.businessId, {
+      type: 'team.invite.consumed',
+      inviteId: invite.id,
+      consumedByName: session.user.name ?? '',
+    }, originDeviceId)
+    await publishToUser(session.user.id, {
+      type: 'business.list.changed',
+      reason: 'added',
+    }, originDeviceId)
 
     return NextResponse.json({
       success: true,
