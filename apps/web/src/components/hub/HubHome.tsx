@@ -12,6 +12,7 @@ import { useCreateBusinessModal } from '@/contexts/create-business-context'
 import { useJoinBusinessModal } from '@/contexts/join-business-context'
 import { fetchDeduped } from '@/lib/fetch'
 import { createSessionCache, CACHE_KEYS } from '@/hooks'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import { FeatureCard, GroupLabel, PageSpinner } from '@/components/ui'
 import { BusinessRow } from '@/components/businesses/shared'
 import type { MessageId } from '@/i18n/messageIds'
@@ -95,6 +96,10 @@ function HubHomeBody() {
       setIsLoading(false)
     }
   }, [setCachedBusinesses])
+
+  useEffect(() => {
+    return registerRefetch('businesses-list', fetchBusinesses)
+  }, [fetchBusinesses])
 
   const userId = user?.id
   useEffect(() => {
