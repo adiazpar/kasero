@@ -19,11 +19,18 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
  *   confirm:
  *     - either OTP wrong                             -> 401 OTP_INVALID
  *     - happy path                                   -> 200 EMAIL_CHANGED
- *                                                       (users.email updated, other sessions revoked)
+ *                                                       (users.email updated, other sessions revoked,
+ *                                                        publishToUser called with fields: ['email'])
  */
 
 const getSession = vi.fn()
 const sendVerificationEmail = vi.fn()
+const publishToUser = vi.fn()
+
+vi.mock('@/lib/realtime', async (orig) => {
+  const real = await orig<typeof import('@/lib/realtime')>()
+  return { ...real, publishToUser }
+})
 
 // Drizzle query-builder mocks. The route uses chainable .select / .insert
 // / .update / .delete; each method returns the same `builder` object so
@@ -129,14 +136,16 @@ function makeRequest(body: unknown): Request {
 beforeEach(() => {
   getSession.mockReset()
   sendVerificationEmail.mockReset()
+  publishToUser.mockReset()
   selectImpl.mockReset()
   insertImpl.mockReset()
   updateImpl.mockReset()
   deleteImpl.mockReset()
   transactionImpl.mockReset()
-  // Default: every send succeeds, every insert/delete/update resolves to
-  // a no-op result. Tests that care override per-call.
+  // Default: every send/publish succeeds, every insert/delete/update
+  // resolves to a no-op result. Tests that care override per-call.
   sendVerificationEmail.mockResolvedValue(undefined)
+  publishToUser.mockResolvedValue(undefined)
   insertImpl.mockImplementation(() => builder({ rowsAffected: 1 }))
   updateImpl.mockImplementation(() => builder({ rowsAffected: 1 }))
   deleteImpl.mockImplementation(() => builder({ rowsAffected: 1 }))
@@ -311,5 +320,53 @@ describe('POST /api/account/change-email — confirm', () => {
     expect(updateImpl).toHaveBeenCalled()
     // session delete happened inside the tx (revoke other sessions).
     expect(deleteImpl).toHaveBeenCalled()
+    // Realtime: profile.updated with fields: ['email'] published after the tx.
+    expect(publishToUser).toHaveBeenCalledOnce()
+    expect(publishToUser).toHaveBeenCalledWith(
+      SESSION_USER.id,
+      expect.objectContaining({ type: 'profile.updated', fields: ['email'] }),
+      undefined,
+    )
+  })
+
+  it('forwards X-Device-Id to the publish call on confirm success', async () => {
+    getSession.mockResolvedValue({ user: SESSION_USER, session: { id: 'sess-1' } })
+    selectImpl.mockReturnValueOnce(builder([]))
+    selectImpl.mockReturnValueOnce(
+      builder([{ id: 'ver-old', value: '111111:0', expiresAt: new Date(Date.now() + 60_000) }]),
+    )
+    selectImpl.mockReturnValueOnce(
+      builder([{ id: 'ver-new', value: '222222:0', expiresAt: new Date(Date.now() + 60_000) }]),
+    )
+    const req = new Request('http://localhost:3000/api/account/change-email', {
+      method: 'POST',
+      body: JSON.stringify({ phase: 'confirm', newEmail: 'new@x.com', oldOtp: '111111', newOtp: '222222' }),
+      headers: {
+        'content-type': 'application/json',
+        'content-length': '1',
+        origin: 'http://localhost:3000',
+        host: 'localhost:3000',
+        'x-device-id': 'dev-xyz',
+      },
+    })
+    const { POST } = await import('./route')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any)
+    expect(res.status).toBe(200)
+    expect(publishToUser).toHaveBeenCalledWith(
+      SESSION_USER.id,
+      expect.objectContaining({ type: 'profile.updated', fields: ['email'] }),
+      'dev-xyz',
+    )
+  })
+
+  it('does not call publishToUser in the initiate phase', async () => {
+    getSession.mockResolvedValueOnce({ user: SESSION_USER })
+    selectImpl.mockReturnValueOnce(builder([]))
+    const { POST } = await import('./route')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(makeRequest({ phase: 'initiate', newEmail: 'new@x.com' }) as any)
+    expect(res.status).toBe(200)
+    expect(publishToUser).not.toHaveBeenCalled()
   })
 })

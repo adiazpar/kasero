@@ -14,6 +14,7 @@ import {
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
 import { sendVerificationEmail } from '@/lib/email'
+import { getOriginDeviceId, publishToUser } from '@/lib/realtime'
 
 /**
  * POST /api/account/change-email
@@ -259,5 +260,13 @@ export const POST = withAuth(async (request, user) => {
       await tx.delete(sessions).where(eq(sessions.userId, user.userId))
     }
   })
+  // Fail-open: a publish blip must not block the user from seeing their
+  // email change succeed. The client will learn the new value on next
+  // profile load if the SSE event is missed.
+  await publishToUser(user.userId, {
+    type: 'profile.updated',
+    fields: ['email'],
+  }, getOriginDeviceId(request))
+
   return successResponse({ newEmail: target }, ApiMessageCode.EMAIL_CHANGED)
 })
