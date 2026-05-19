@@ -207,6 +207,31 @@ export const auth = betterAuth({
         })
       }
     }),
+
+    // After /update-user succeeds, publish a profile.updated event so
+    // other devices learn about displayName / language changes in realtime.
+    // Fail-open: a publish blip must not break the update response.
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/update-user') return
+      const session = await getSessionFromCtx(ctx).catch(() => null)
+      if (!session) return
+      const body = ctx.body as { name?: string; language?: string } | undefined
+      const fields: Array<'displayName' | 'language'> = []
+      if (body?.name != null) fields.push('displayName')
+      if (body?.language != null) fields.push('language')
+      if (fields.length === 0) return
+      const deviceId = ctx.request?.headers.get('x-device-id') ?? undefined
+      // Dynamic import avoids a potential circular load order between
+      // auth.ts (loaded at module init) and realtime/publisher (which
+      // imports redis.ts, which also runs at module init).
+      const { publishToUser } = await import('./realtime/publisher')
+      await publishToUser(session.user.id, {
+        type: 'profile.updated',
+        fields,
+      }, deviceId || undefined).catch((err) => {
+        console.warn('[realtime] auth after /update-user publish failed', err)
+      })
+    }),
   },
 
   plugins: [
