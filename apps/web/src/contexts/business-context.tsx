@@ -15,6 +15,7 @@ import { useAuth } from './auth-context'
 import { usePageTransition } from './page-transition-context'
 import type { BusinessRole } from '@kasero/shared/business-role'
 import { ApiError, apiRequest } from '@/lib/api-client'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 
 // Re-export for backwards compatibility
 export type { BusinessRole }
@@ -114,6 +115,10 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
       setIsLoading(false)
     }
   }, [businessId, router, setCachedBusiness, t])
+
+  useEffect(() => {
+    return registerRefetch('business', validateAccess)
+  }, [validateAccess])
 
   useEffect(() => {
     // No business ID - reset state and skip validation
