@@ -10,6 +10,7 @@ import { Schemas } from '@/lib/schemas'
 import { checkRateLimit, getClientIp, RateLimits } from '@/lib/rate-limit'
 import { invalidateAccessCache } from '@/lib/business-auth'
 import { logServerError } from '@/lib/server-logger'
+import { getOriginDeviceId, publishCriticalToUser, publishToUser, RealtimeUnavailableError } from '@/lib/realtime'
 
 const acceptSchema = z.object({
   code: Schemas.code(),
@@ -186,6 +187,37 @@ export async function POST(request: NextRequest) {
     // Invalidate cached access
     invalidateAccessCache(transfer.fromUser, transfer.businessId)
     invalidateAccessCache(session.user.id, transfer.businessId)
+
+    const newOwnerId = session.user.id
+    const formerOwnerId = transfer.fromUser
+    const businessId = transfer.businessId
+    const originDeviceId = getOriginDeviceId(request)
+
+    // Critical publishes — fail-closed. Run in parallel; if either throws
+    // return 503 so the caller knows the ownership event was not delivered.
+    try {
+      await Promise.all([
+        publishCriticalToUser(newOwnerId, {
+          type: 'ownership.transferred',
+          businessId,
+          role: 'new_owner',
+        }, originDeviceId),
+        publishCriticalToUser(formerOwnerId, {
+          type: 'session.revoked',
+          businessId,
+          reason: 'ownership_transferred',
+        }, originDeviceId),
+      ])
+    } catch (err) {
+      if (err instanceof RealtimeUnavailableError) {
+        return errorResponse(ApiMessageCode.REALTIME_PUBLISH_UNAVAILABLE, 503)
+      }
+      throw err
+    }
+
+    // Non-critical publishes — fail-open.
+    await publishToUser(newOwnerId, { type: 'business.list.changed', reason: 'added' }, originDeviceId)
+    await publishToUser(formerOwnerId, { type: 'business.list.changed', reason: 'removed' }, originDeviceId)
 
     return NextResponse.json({
       success: true,
