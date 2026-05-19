@@ -73,6 +73,48 @@ export function invalidateAccessCacheForUser(userId: string): void {
   }
 }
 
+// ============================================
+// REALTIME ACCESS CACHE (SSE-only)
+// ============================================
+
+const RT_CACHE_TTL_MS = 30_000
+
+interface RealtimeGrant {
+  granted: boolean
+  expiresAt: number
+}
+const realtimeGrantCache = new Map<string, RealtimeGrant>()
+
+/**
+ * Lightweight per-instance access check used by the SSE route.
+ * Mirrors requireBusinessAccess semantics (status=active, membership
+ * row exists) but returns a boolean and caches for 30 seconds. The
+ * SSE route reconnects multiple times per session and we don't want
+ * the membership SELECT on every reconnect.
+ */
+export async function requireBusinessAccessForRealtime(
+  userId: string,
+  businessId: string,
+): Promise<boolean> {
+  const key = `${userId}:${businessId}`
+  const cached = realtimeGrantCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.granted
+  const row = await db
+    .select({ id: businessUsers.id })
+    .from(businessUsers)
+    .where(
+      and(
+        eq(businessUsers.userId, userId),
+        eq(businessUsers.businessId, businessId),
+        eq(businessUsers.status, 'active'),
+      ),
+    )
+    .get()
+  const granted = row != null
+  realtimeGrantCache.set(key, { granted, expiresAt: Date.now() + RT_CACHE_TTL_MS })
+  return granted
+}
+
 /**
  * Require business access - throws if not authenticated or no access.
  * Uses a short-lived in-memory cache to avoid repeated DB queries.
