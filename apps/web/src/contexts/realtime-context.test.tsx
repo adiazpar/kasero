@@ -131,10 +131,9 @@ vi.stubGlobal('EventSource', MockEventSource)
 // ============================================================
 
 function Wrapper({ children }: { children: ReactNode }) {
+  // messages omitted intentionally — tests don't assert on translated strings.
   return (
-    // messages omitted intentionally — tests don't assert on translated strings.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <IntlProvider locale="en" defaultLocale="en" messages={{} as any}>
+    <IntlProvider locale="en" defaultLocale="en">
       {children}
     </IntlProvider>
   )

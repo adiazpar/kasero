@@ -173,10 +173,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         }
       }, 250)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [intl, presentToast, router],
     // Intentionally omit activeBusinessIdRef — it is a ref, not state.
     // The callback reads it via ref so revokeBusinessContext stays stable.
+    [intl, presentToast, router],
   )
 
   // ============================================================
