@@ -9,6 +9,7 @@ import {
   type ApiMessageCode,
   type ApiMessageEnvelope,
 } from '@kasero/shared/api-messages'
+import { getDeviceId } from './realtime/device-id'
 
 export interface ApiResponse<T = unknown> {
   success?: boolean
@@ -82,9 +83,22 @@ export async function apiRequest<T extends ApiResponse>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  // Inject X-Device-Id on every outbound request. The realtime publisher
+  // echoes this id back via originDeviceId so the publishing client can
+  // suppress its own event (echo suppression).
+  const headers = new Headers(options?.headers)
+  if (!headers.has('x-device-id')) {
+    try {
+      headers.set('x-device-id', getDeviceId())
+    } catch {
+      // localStorage unavailable; omit the header rather than throw.
+    }
+  }
+  const augmentedOptions: RequestInit = { ...options, headers }
+
   let response: Response
   try {
-    response = await fetch(url, options)
+    response = await fetch(url, augmentedOptions)
   } catch (err) {
     // Network-layer failure (offline, DNS error, request blocked). The
     // browser-specific TypeError messages we recognise: Chrome ("Failed
