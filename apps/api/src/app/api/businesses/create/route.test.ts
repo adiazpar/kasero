@@ -62,11 +62,11 @@ const batchImpl = vi.fn(async (ops: unknown[]) => {
 
 vi.mock('@/db', () => ({
   db: {
-    select: (...args: unknown[]) => selectImpl(...args),
+    select: () => selectImpl(),
     insert: vi.fn(() => ({
       values: vi.fn(() => ({})),
     })),
-    batch: (...args: unknown[]) => batchImpl(...args),
+    batch: (...args: Parameters<typeof batchImpl>) => batchImpl(...args),
   },
   businesses: {
     id: 'businesses.id',

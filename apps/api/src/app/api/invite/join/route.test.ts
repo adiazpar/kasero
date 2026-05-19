@@ -71,9 +71,9 @@ const insertImpl = vi.fn(() => ({
 
 vi.mock('@/db', () => ({
   db: {
-    select: (...args: unknown[]) => selectImpl(...args),
-    update: (...args: unknown[]) => updateImpl(...args),
-    insert: (...args: unknown[]) => insertImpl(...args),
+    select: () => selectImpl(),
+    update: () => updateImpl(),
+    insert: () => insertImpl(),
   },
   inviteCodes: {
     id: 'invite_codes.id',
