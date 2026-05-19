@@ -14,6 +14,24 @@ declare const self: ServiceWorkerGlobalScope
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
+// Bypass the service worker entirely for the realtime SSE stream. Even
+// NetworkOnly through Workbox introduces a fetch() indirection that some
+// browsers (notably Safari/iOS) handle awkwardly for long-lived
+// text/event-stream responses — the SW's fetch can buffer chunks or
+// interfere with the browser's native reconnect on network flap.
+// Returning without calling event.respondWith() lets the browser go
+// direct to the origin.
+//
+// Manual verification: build the app, install the SW, open DevTools →
+// Network, reload. The /api/realtime request must NOT show "(service worker)"
+// in its Initiator column.
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  if (url.pathname === '/api/realtime') {
+    return
+  }
+})
+
 // CRITICAL: never cache `/api/*` — the API must always hit network so writes,
 // authenticated reads, and rate-limit headers are never served stale. This
 // route is registered FIRST so it wins over the navigation handler below.
