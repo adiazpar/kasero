@@ -5,6 +5,7 @@ import { canManageBusiness, invalidateAccessCache } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const changeRoleSchema = z.object({
   userId: Schemas.id(),
@@ -76,6 +77,12 @@ export const POST = withBusinessAuth(async (request, access) => {
     )
 
   invalidateAccessCache(userId, access.businessId)
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.member.role_changed', memberId: userId, role },
+    getOriginDeviceId(request),
+  )
 
   return successResponse({})
 })

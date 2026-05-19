@@ -8,6 +8,7 @@ import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { isExpiryWithinBounds } from '@/lib/invite-expiry'
 import { generateInviteCode } from '@kasero/shared/auth'
 import { logServerError } from '@/lib/server-logger'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 // Server-supplied codes only — the client used to send `code` in the
 // payload, which let a malicious manager pick a memorable string
@@ -108,6 +109,12 @@ export const POST = withBusinessAuth(async (request, access) => {
     logServerError('invite.create.exhausted-retries', lastError)
     return errorResponse(ApiMessageCode.INTERNAL_ERROR, 500)
   }
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.invite.created', inviteId },
+    getOriginDeviceId(request),
+  )
 
   return successResponse({ id: inviteId, code })
 })

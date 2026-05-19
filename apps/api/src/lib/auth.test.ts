@@ -1,18 +1,61 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// publishToUser is dynamically imported inside the after hook; mock the
+// module so the hook's import('./realtime/publisher') resolves to this spy.
+vi.mock('./realtime/publisher', () => ({
+  publishToUser: vi.fn().mockResolvedValue(undefined),
+}))
+
+// getSessionFromCtx is called inside the after hook. Mock it so tests can
+// control what session is returned without needing real auth cookies.
+vi.mock('better-auth/api', async (orig) => {
+  const real = await orig<typeof import('better-auth/api')>()
+  return { ...real, getSessionFromCtx: vi.fn() }
+})
+
 import { auth } from './auth'
+import { getSessionFromCtx } from 'better-auth/api'
+import { publishToUser } from './realtime/publisher'
+
+const mockGetSessionFromCtx = vi.mocked(getSessionFromCtx)
+const mockPublishToUser = vi.mocked(publishToUser)
 
 const opts = (auth as unknown as {
   options: {
     plugins?: Array<{ id: string }>
     emailAndPassword?: { enabled?: boolean }
     account?: { accountLinking?: { trustedProviders?: string[] } }
-    hooks?: { before?: unknown }
+    hooks?: { before?: unknown; after?: unknown }
     session?: { freshAge?: number }
     rateLimit?: { storage?: string; enabled?: boolean }
     secondaryStorage?: { get: unknown; set: unknown; delete: unknown }
     socialProviders?: Record<string, { clientId?: unknown; clientSecret?: unknown } | undefined>
   }
 }).options
+
+const afterHook = opts.hooks?.after as ((ctx: unknown) => Promise<void>) | undefined
+
+beforeEach(() => {
+  mockPublishToUser.mockReset()
+  mockGetSessionFromCtx.mockReset()
+  mockPublishToUser.mockResolvedValue(undefined)
+})
+
+// Fake auth context that satisfies the middleware's createInternalContext
+// field access. We only set the fields the after hook actually reads:
+// path, body, request.
+function fakeCtx(path: string, body: Record<string, unknown>, deviceId?: string) {
+  const headers = new Headers({ 'content-type': 'application/json' })
+  if (deviceId) headers.set('x-device-id', deviceId)
+  return {
+    path,
+    body,
+    request: { headers },
+    headers: {},
+    method: 'POST',
+    context: {},
+  }
+}
 
 describe('better-auth config', () => {
   it('exposes the options object (sanity)', () => {
@@ -70,6 +113,10 @@ describe('better-auth config', () => {
     expect(typeof opts.hooks?.before).toBe('function')
   })
 
+  it('registers an after hook for profile.updated publish', () => {
+    expect(typeof opts.hooks?.after).toBe('function')
+  })
+
   it('disables better-auth freshAge gate so OTP step-up is the sole freshness proof', () => {
     expect(opts.session?.freshAge).toBe(0)
   })
@@ -98,5 +145,84 @@ describe('better-auth config', () => {
     } else {
       expect(opts.secondaryStorage).toBeUndefined()
     }
+  })
+})
+
+describe('better-auth after hook — profile.updated', () => {
+  // better-auth's getSessionFromCtx returns { session, user } — the session
+  // fields are stubbed minimally; only `user.id` is read by the hook.
+  const SESSION = {
+    user: { id: 'user-abc', email: 'test@example.com' },
+    session: {
+      id: 's-1',
+      userId: 'user-abc',
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+      expiresAt: new Date(Date.now() + 3_600_000),
+      token: 'tok',
+    },
+  } as unknown as Parameters<typeof mockGetSessionFromCtx.mockResolvedValue>[0]
+
+  it('publishes profile.updated with fields: [displayName] on name change', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/update-user', { name: 'Alice' }))
+    expect(mockPublishToUser).toHaveBeenCalledOnce()
+    expect(mockPublishToUser).toHaveBeenCalledWith(
+      'user-abc',
+      expect.objectContaining({ type: 'profile.updated', fields: ['displayName'] }),
+      undefined,
+    )
+  })
+
+  it('publishes profile.updated with fields: [language] on language change', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/update-user', { language: 'es' }))
+    expect(mockPublishToUser).toHaveBeenCalledOnce()
+    expect(mockPublishToUser).toHaveBeenCalledWith(
+      'user-abc',
+      expect.objectContaining({ type: 'profile.updated', fields: ['language'] }),
+      undefined,
+    )
+  })
+
+  it('publishes profile.updated with both fields when name and language change together', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/update-user', { name: 'Bob', language: 'ja' }))
+    expect(mockPublishToUser).toHaveBeenCalledOnce()
+    expect(mockPublishToUser).toHaveBeenCalledWith(
+      'user-abc',
+      expect.objectContaining({ type: 'profile.updated', fields: expect.arrayContaining(['displayName', 'language']) }),
+      undefined,
+    )
+    const fields = (mockPublishToUser.mock.calls[0][1] as { fields: string[] }).fields
+    expect(fields).toHaveLength(2)
+  })
+
+  it('does not publish when no profile fields change (e.g. image-only update)', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/update-user', { image: 'data:...' }))
+    expect(mockPublishToUser).not.toHaveBeenCalled()
+  })
+
+  it('forwards X-Device-Id to publishToUser', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/update-user', { name: 'Carol' }, 'dev-xyz'))
+    expect(publishToUser).toHaveBeenCalledWith(
+      'user-abc',
+      expect.objectContaining({ type: 'profile.updated' }),
+      'dev-xyz',
+    )
+  })
+
+  it('does not publish on non-update-user paths', async () => {
+    mockGetSessionFromCtx.mockResolvedValue(SESSION)
+    await afterHook!(fakeCtx('/sign-in/email-otp', { name: 'Alice' }))
+    expect(mockPublishToUser).not.toHaveBeenCalled()
+  })
+
+  it('does not publish when session cannot be resolved', async () => {
+    mockGetSessionFromCtx.mockRejectedValue(new Error('no session'))
+    await afterHook!(fakeCtx('/update-user', { name: 'Alice' }))
+    expect(mockPublishToUser).not.toHaveBeenCalled()
   })
 })

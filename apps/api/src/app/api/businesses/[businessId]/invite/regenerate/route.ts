@@ -9,6 +9,7 @@ import { isExpiryWithinBounds } from '@/lib/invite-expiry'
 import { Schemas } from '@/lib/schemas'
 import { generateInviteCode } from '@kasero/shared/auth'
 import { logServerError } from '@/lib/server-logger'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 // Same rationale as invite/create: code is server-generated. Client
 // no longer sends `newCode`.
@@ -84,6 +85,12 @@ export const POST = withBusinessAuth(async (request, access) => {
     logServerError('invite.regenerate.exhausted-retries', lastError)
     return errorResponse(ApiMessageCode.INTERNAL_ERROR, 500)
   }
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.invite.regenerated', inviteId: newCodeId },
+    getOriginDeviceId(request),
+  )
 
   return successResponse({ id: newCodeId, code: newCode })
 })

@@ -6,6 +6,7 @@ import { canManageBusiness, invalidateAccessCache } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const toggleStatusSchema = z.object({
   userId: Schemas.id(),
@@ -127,6 +128,12 @@ export const POST = withBusinessAuth(async (request, access) => {
   })
 
   invalidateAccessCache(userId, access.businessId)
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'team.member.status_changed', memberId: userId, status },
+    getOriginDeviceId(request),
+  )
 
   return successResponse({})
 })

@@ -13,6 +13,7 @@ import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
 import { getCurrencyForLocale } from '@kasero/shared/locale-config'
 import { logServerError } from '@/lib/server-logger'
+import { publishToUser, getOriginDeviceId } from '@/lib/realtime'
 
 const createBusinessSchema = z.object({
   name: Schemas.name().max(100),
@@ -100,6 +101,11 @@ export const POST = withAuth(async (request, user) => {
         createdAt: now,
       }),
     ])
+
+    await publishToUser(user.userId, {
+      type: 'business.list.changed',
+      reason: 'added',
+    }, getOriginDeviceId(request))
 
     return successResponse({
       business: {

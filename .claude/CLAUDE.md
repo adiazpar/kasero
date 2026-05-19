@@ -24,6 +24,7 @@ All project documentation lives in `.claude/docs/`. The `.claude/` directory is 
 | `.claude/docs/tab-system.md` | `TabContainer` in-page sub-tabs primitive (top-level shell is Ionic `IonTabs`) |
 | `.claude/docs/ai-product-pipeline.md` | AI snap-to-add pipeline |
 | `.claude/docs/barcode-system.md` | Barcode identifiers, cascade, scanner, live camera, validation, rendering |
+| `.claude/docs/realtime-system.md` | Adding a publish site, defining a new event type, working with SSE/Streams |
 
 ## Critical rules
 
@@ -86,6 +87,10 @@ Every UI route is a `<Route>` rendering an `IonPage` inside an `IonRouterOutlet`
 - Validate inputs with Zod.
 - Co-locate shared types in `packages/shared/src/types/` so both apps consume the same definition.
 
+### Realtime publishes
+
+Every API route that mutates business or user state should publish the corresponding realtime event after the DB commit succeeds. See `.claude/docs/realtime-system.md` for the event taxonomy and which channel to use. Non-critical publishes (UI hints) fail open — log and continue. Security-critical events (`session.revoked`, `business.deleted`, `ownership.transferred`) use `publishCriticalToUser` which fails closed and returns 503 `REALTIME_PUBLISH_UNAVAILABLE` on failure.
+
 ### Content Security Policy
 
 The prod CSP lives in `apps/api/next.config.js` under the `headers()` callback. It is currently shipped as `Content-Security-Policy-Report-Only` but the stated plan is to flip to enforcing once the report stream is clean — so **any new violation is a real bug**, not just console noise. Walk the affected page in prod after merging and confirm DevTools → Console is clean.
@@ -136,3 +141,5 @@ Per-app scripts (`db:push`, `db:push:prod`, `db:studio`, `start:local`, `i18n:tr
 4. `npm run dev`.
 
 Whenever a value rotates (new Upstash creds, regenerated `AUTH_SECRET`, new Google OAuth client, etc.), update the corresponding Bitwarden note in the same PR-or-session that changes the value, so the canonical copy never drifts from the live config. The companion `.env.example` files document the *shape* (which keys are expected) — Bitwarden carries the *values*.
+
+**Realtime credentials are Vercel-only.** `UPSTASH_REDIS_URL` is configured in the Vercel project envs (Production + Preview), not in your local `apps/api/.env.local`. Local dev uses an in-memory realtime backend so a `npm run dev` publish never reaches production subscribers. The canonical value is recorded in the Bitwarden note `Kasero — Vercel project envs`.

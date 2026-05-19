@@ -401,6 +401,17 @@ The 429 response sets a `Retry-After` header with the number of seconds until th
 
 ---
 
+## Future: push completion via realtime
+
+The pipeline currently runs fully client-side: the browser holds the three parallel `fetch()` calls open and awaits them all in `useAiProductPipeline.ts`. A future improvement would move the pipeline to a server-side job (e.g., queued via Upstash QStash) and push the result to the client via a `product.ai_pipeline_complete` realtime event on the `user:{id}` channel. This would allow:
+
+- The user to close the modal and receive a notification when the AI finishes
+- Sharing the result across devices (e.g., start on phone, review on desktop)
+
+If this is implemented, add `product.ai_pipeline_complete` to `UserRealtimeEvent` in `packages/shared/src/realtime/types.ts` and a matching handler branch in `apps/web/src/lib/realtime/handlers.ts`. See `.claude/docs/realtime-system.md` for the full guide.
+
+---
+
 ## References
 
 - [fal.ai Dashboard](https://fal.ai/dashboard) - Get API key here

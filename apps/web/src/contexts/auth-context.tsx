@@ -16,6 +16,7 @@ import type { User } from '@kasero/shared/types'
 import type { SupportedLocale } from '@/i18n/config'
 import { clearKaseroLocalStorage } from '@/hooks/useSessionCache'
 import { LANGUAGE_CHANGE_EVENT, setCachedUser } from '@/lib/user-cache'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 
 // ============================================
 // TYPES
@@ -329,6 +330,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     await refetch()
   }, [refetch])
+
+  useEffect(() => {
+    return registerRefetch('profile', refreshUser)
+  }, [refreshUser])
 
   const changeLanguage = useCallback(
     async (language: SupportedLocale): Promise<{ success: boolean; error?: string }> => {

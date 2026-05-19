@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useBusiness } from '@/contexts/business-context'
 import { apiRequest, apiPost, ApiError } from '@/lib/api-client'
 import { useApiMessage } from '@/hooks/useApiMessage'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import {
   getInviteCodeExpiration,
   type InviteDuration,
@@ -81,6 +82,9 @@ interface UseTeamManagementReturn {
   handleToggleUserStatus: () => Promise<void>
   handleSubmitRoleChange: () => Promise<boolean>
   handleRemoveMember: () => Promise<boolean>
+
+  // Realtime
+  refresh: () => Promise<void>
 }
 
 interface TeamDataResponse {
@@ -148,28 +152,37 @@ export function useTeamManagement({ businessId }: UseTeamManagementOptions): Use
   const canManageTeam = canManageBusiness(role)
 
   // Load team members and invite codes
-  useEffect(() => {
-    const loadTeamData = async () => {
-      try {
-        const data = await apiRequest<TeamDataResponse>(`/api/businesses/${businessId}/team`)
-        setTeamMembers(data.teamMembers || [])
-        setInviteCodes(data.inviteCodes || [])
-      } catch (err) {
-        console.error('Error loading team data:', err)
-        setError(
-          err instanceof ApiError && err.envelope
-            ? translateApiMessage(err.envelope)
-            : t.formatMessage({
-            id: 'team.error_failed_to_load'
-          })
-        )
-      } finally {
-        setIsLoading(false)
-      }
+  const loadTeamData = useCallback(async () => {
+    try {
+      const data = await apiRequest<TeamDataResponse>(`/api/businesses/${businessId}/team`)
+      setTeamMembers(data.teamMembers || [])
+      setInviteCodes(data.inviteCodes || [])
+    } catch (err) {
+      console.error('Error loading team data:', err)
+      setError(
+        err instanceof ApiError && err.envelope
+          ? translateApiMessage(err.envelope)
+          : t.formatMessage({
+          id: 'team.error_failed_to_load'
+        })
+      )
+    } finally {
+      setIsLoading(false)
     }
-
-    loadTeamData()
   }, [businessId, t, translateApiMessage])
+
+  useEffect(() => {
+    loadTeamData()
+  }, [loadTeamData])
+
+  useEffect(() => {
+    const unsubTeam = registerRefetch('team', loadTeamData)
+    const unsubInvites = registerRefetch('invites', loadTeamData)
+    return () => {
+      unsubTeam()
+      unsubInvites()
+    }
+  }, [loadTeamData])
 
   // Sort team members: owner first, then partners, then employees
   const sortedTeamMembers = useMemo(() => {
@@ -541,5 +554,8 @@ export function useTeamManagement({ businessId }: UseTeamManagementOptions): Use
     handleToggleUserStatus,
     handleSubmitRoleChange,
     handleRemoveMember,
+
+    // Realtime
+    refresh: loadTeamData,
   }
 }

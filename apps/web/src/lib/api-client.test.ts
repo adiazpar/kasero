@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { apiRequest, ApiError } from './api-client'
+import { apiRequest, apiPost, ApiError } from './api-client'
+
+vi.mock('./realtime/device-id', () => ({ getDeviceId: () => 'test-device-123' }))
 
 describe('apiRequest offline detection', () => {
   let originalFetch: typeof fetch
@@ -54,5 +56,21 @@ describe('apiRequest offline detection', () => {
     const aborted = new DOMException('aborted', 'AbortError')
     globalThis.fetch = vi.fn().mockRejectedValue(aborted)
     await expect(apiRequest('/x')).rejects.toBe(aborted)
+  })
+})
+
+describe('apiRequest X-Device-Id header', () => {
+  it('attaches X-Device-Id to every outgoing request', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    await apiPost('/api/test', {})
+    const [, init] = fetchSpy.mock.calls[0]
+    const headers = new Headers((init as RequestInit).headers)
+    expect(headers.get('x-device-id')).toBeTruthy()
+    fetchSpy.mockRestore()
   })
 })
