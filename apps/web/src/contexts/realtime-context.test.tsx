@@ -516,4 +516,53 @@ describe('RealtimeProvider', () => {
     // Only 2 errors since last open — should not trigger logout.
     expect(mockLogout).not.toHaveBeenCalled()
   })
+
+  // ----------------------------------------------------------
+  // 9.1: Modal dismiss on revoke
+  // ----------------------------------------------------------
+  it('dismisses open ion-modals before navigating on active-business revoke', async () => {
+    mockIsAuthenticated.mockReturnValue(true)
+    mockUser.mockReturnValue({ id: 'user-1' })
+
+    const mockDismiss = vi.fn()
+    const fakeModal = { dismiss: mockDismiss }
+    vi.spyOn(document, 'querySelectorAll').mockReturnValue(
+      [fakeModal] as unknown as NodeListOf<Element>,
+    )
+
+    const { RealtimeProvider, useRealtime } = await importProvider()
+
+    let setActive!: (id: string | null) => void
+    let revoke!: (businessId: string, reason: 'removed') => void
+
+    function Consumer() {
+      const ctx = useRealtime()
+      setActive = ctx.setActiveBusinessId
+      revoke = ctx.revokeBusinessContext
+      return null
+    }
+
+    await act(async () => {
+      render(
+        <Wrapper>
+          <RealtimeProvider>
+            <Consumer />
+          </RealtimeProvider>
+        </Wrapper>,
+      )
+    })
+
+    await act(async () => {
+      setActive('biz-revoke')
+      vi.advanceTimersByTime(250)
+    })
+
+    await act(async () => {
+      revoke('biz-revoke', 'removed')
+    })
+
+    expect(mockDismiss).toHaveBeenCalled()
+
+    vi.restoreAllMocks()
+  })
 })

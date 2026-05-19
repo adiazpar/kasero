@@ -145,6 +145,16 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
       const message = intl.formatMessage({ id: messageId }, { businessName: '' })
       presentToast({ message, duration: 4000, color: 'medium' })
+
+      // Dismiss any open IonModal before navigating away. Without this an
+      // open invite-code or product modal stays pinned on screen after the
+      // route change because the host IonPage is replaced while the portal
+      // is still mounted. HTMLIonModalElement.dismiss() triggers the
+      // exit animation and fires onDidDismiss so host state cleans up.
+      document.querySelectorAll('ion-modal').forEach((m) => {
+        ;(m as unknown as { dismiss?: () => void }).dismiss?.()
+      })
+
       callRefetch('businesses-list')
       setActiveBusinessIdState(null)
       router.replace('/')
