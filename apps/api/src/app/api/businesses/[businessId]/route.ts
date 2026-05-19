@@ -23,6 +23,13 @@ import { patchSchema } from './schema'
 import { MAX_UPLOAD_SIZE } from '@/lib/storage'
 import { sniffImageMimeType } from '@/lib/file-sniff'
 import { logServerError } from '@/lib/server-logger'
+import {
+  getOriginDeviceId,
+  publishToBusiness,
+  publishBatchedToUsers,
+  publishCriticalToUser,
+  RealtimeUnavailableError,
+} from '@/lib/realtime'
 
 /**
  * GET /api/businesses/[businessId]
@@ -62,6 +69,7 @@ export const GET = withBusinessAuth(async (_request, access) => {
 const PATCH_MAX_BODY_BYTES = 5 * 1024 * 1024
 
 export const PATCH = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
   // Identity edits (name, icon, locale, currency) are owner-only.
   // Functional settings (defaultCategoryId, sortPreference) live on a
   // separate route and remain manager-level.
@@ -161,6 +169,13 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     }, ApiMessageCode.BUSINESS_UPDATE_SUCCESS)
   }
 
+  // Determine which user-visible fields changed for the realtime event.
+  const changedFields: Array<'name' | 'locale' | 'currency' | 'iconUrl'> = []
+  if (update.name !== undefined) changedFields.push('name')
+  if (update.locale !== undefined) changedFields.push('locale')
+  if (update.currency !== undefined) changedFields.push('currency')
+  if (update.icon !== undefined) changedFields.push('iconUrl')
+
   try {
     const [row] = await db
       .update(businesses)
@@ -169,6 +184,31 @@ export const PATCH = withBusinessAuth(async (request, access) => {
       .returning()
     if (!row) return errorResponse(ApiMessageCode.BUSINESS_NOT_FOUND, 404)
     invalidateAccessCacheForBusiness(access.businessId)
+
+    // Publish realtime event — fail-open, never break the response.
+    if (changedFields.length > 0) {
+      await publishToBusiness(
+        access.businessId,
+        { type: 'business.updated', fields: changedFields },
+        originDeviceId,
+      )
+    }
+
+    // If the name changed, fan out business.list.changed to all members
+    // so their business-switcher label refreshes.
+    if (changedFields.includes('name')) {
+      const memberRows = await db
+        .select({ userId: businessUsers.userId })
+        .from(businessUsers)
+        .where(eq(businessUsers.businessId, access.businessId))
+      const memberIds = memberRows.map((r) => r.userId)
+      await publishBatchedToUsers(
+        memberIds,
+        { type: 'business.list.changed', reason: 'renamed' },
+        originDeviceId,
+      )
+    }
+
     return successResponse({
       business: {
         id: row.id, name: row.name, icon: row.icon,
@@ -210,7 +250,9 @@ export const PATCH = withBusinessAuth(async (request, access) => {
  * either commits all rows gone, or rolls back to the pre-delete state.
  * No half-deleted business is possible.
  */
-export const DELETE = withBusinessAuth(async (_request, access) => {
+export const DELETE = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!isOwner(access.role)) {
     return errorResponse(ApiMessageCode.BUSINESS_ONLY_OWNER_CAN_DELETE, 403)
   }
@@ -225,6 +267,14 @@ export const DELETE = withBusinessAuth(async (_request, access) => {
     if (!existing) {
       return errorResponse(ApiMessageCode.BUSINESS_NOT_FOUND, 404)
     }
+
+    // Query member userIds BEFORE the delete — once business_users rows
+    // are gone they can't be queried.
+    const memberRows = await db
+      .select({ userId: businessUsers.userId })
+      .from(businessUsers)
+      .where(eq(businessUsers.businessId, access.businessId))
+    const memberIds = memberRows.map((r) => r.userId)
 
     await db.transaction(async (tx) => {
       // 1. sale_items — fetch parent sale ids first (no businessId on
@@ -308,8 +358,33 @@ export const DELETE = withBusinessAuth(async (_request, access) => {
     // is now invalid (every member, not just the deleting owner).
     invalidateAccessCacheForBusiness(access.businessId)
 
+    // Critical: revoke each member's session by writing to their stream
+    // so the revocation survives reconnects. Promise.all attempts every
+    // recipient; if any throws RealtimeUnavailableError we return 503.
+    // The delete has already committed — 503 here tells the client to
+    // retry the confirmation screen, not undo the delete.
+    await Promise.all(
+      memberIds.map((userId) =>
+        publishCriticalToUser(
+          userId,
+          { type: 'session.revoked', businessId: access.businessId, reason: 'business_deleted' },
+          originDeviceId,
+        ),
+      ),
+    )
+
+    // Hint each member's business-switcher to refresh. Fail-open.
+    await publishBatchedToUsers(
+      memberIds,
+      { type: 'business.list.changed', reason: 'removed' },
+      originDeviceId,
+    )
+
     return successResponse({}, ApiMessageCode.BUSINESS_DELETE_SUCCESS)
   } catch (error) {
+    if (error instanceof RealtimeUnavailableError) {
+      return errorResponse(ApiMessageCode.REALTIME_PUBLISH_UNAVAILABLE, 503)
+    }
     logServerError('business.delete', error)
     return errorResponse(ApiMessageCode.BUSINESS_DELETE_FAILED, 500)
   }
