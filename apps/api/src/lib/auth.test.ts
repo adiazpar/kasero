@@ -149,7 +149,19 @@ describe('better-auth config', () => {
 })
 
 describe('better-auth after hook — profile.updated', () => {
-  const SESSION = { user: { id: 'user-abc', email: 'test@example.com' } }
+  // better-auth's getSessionFromCtx returns { session, user } — the session
+  // fields are stubbed minimally; only `user.id` is read by the hook.
+  const SESSION = {
+    user: { id: 'user-abc', email: 'test@example.com' },
+    session: {
+      id: 's-1',
+      userId: 'user-abc',
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+      expiresAt: new Date(Date.now() + 3_600_000),
+      token: 'tok',
+    },
+  } as unknown as Parameters<typeof mockGetSessionFromCtx.mockResolvedValue>[0]
 
   it('publishes profile.updated with fields: [displayName] on name change', async () => {
     mockGetSessionFromCtx.mockResolvedValue(SESSION)
