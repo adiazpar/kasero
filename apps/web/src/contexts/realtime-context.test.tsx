@@ -49,6 +49,14 @@ vi.mock('@/lib/realtime/refetch-registry', () => ({
   callAllRefetches: vi.fn(),
 }))
 
+// Hub businesses sessionStorage cache — controls what revokeBusinessContext
+// reads after the refetch settles to decide where to navigate.
+const mockHubCacheGet = vi.fn<() => unknown[] | null>(() => null)
+vi.mock('@/hooks/useSessionCache', () => ({
+  createSessionCache: () => ({ get: mockHubCacheGet, set: vi.fn(), clear: vi.fn() }),
+  CACHE_KEYS: { HUB_BUSINESSES: 'kasero_hub_businesses' },
+}))
+
 // ============================================================
 // MOCK EventSource
 // ============================================================
@@ -149,6 +157,8 @@ describe('RealtimeProvider', () => {
     mockPresentToast.mockReset()
     mockLogout.mockReset()
     mockCallRefetch.mockReset()
+    mockHubCacheGet.mockReset()
+    mockHubCacheGet.mockReturnValue(null)
     // Default: not authenticated.
     mockIsAuthenticated.mockReturnValue(false)
     mockUser.mockReturnValue(null)
@@ -562,6 +572,114 @@ describe('RealtimeProvider', () => {
     })
 
     expect(mockDismiss).toHaveBeenCalled()
+
+    vi.restoreAllMocks()
+  })
+
+  // ----------------------------------------------------------
+  // 9.2: No businesses remaining → route to /join
+  // ----------------------------------------------------------
+  it('navigates to /join when revoke leaves the user with no businesses', async () => {
+    mockIsAuthenticated.mockReturnValue(true)
+    mockUser.mockReturnValue({ id: 'user-1' })
+
+    // Hub cache returns empty after the refetch settles.
+    mockHubCacheGet.mockReturnValue([])
+
+    vi.spyOn(document, 'querySelectorAll').mockReturnValue(
+      [] as unknown as NodeListOf<Element>,
+    )
+
+    const { RealtimeProvider, useRealtime } = await importProvider()
+
+    let setActive!: (id: string | null) => void
+    let revoke!: (businessId: string, reason: 'business_deleted') => void
+
+    function Consumer() {
+      const ctx = useRealtime()
+      setActive = ctx.setActiveBusinessId
+      revoke = ctx.revokeBusinessContext
+      return null
+    }
+
+    await act(async () => {
+      render(
+        <Wrapper>
+          <RealtimeProvider>
+            <Consumer />
+          </RealtimeProvider>
+        </Wrapper>,
+      )
+    })
+
+    await act(async () => {
+      setActive('only-biz')
+      vi.advanceTimersByTime(250)
+    })
+
+    await act(async () => {
+      revoke('only-biz', 'business_deleted')
+    })
+
+    // The 250ms setTimeout in revokeBusinessContext hasn't fired yet.
+    expect(mockPush).not.toHaveBeenCalledWith('/join')
+
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
+
+    expect(mockPush).toHaveBeenCalledWith('/join')
+
+    vi.restoreAllMocks()
+  })
+
+  it('navigates to / hub when revoke leaves the user with remaining businesses', async () => {
+    mockIsAuthenticated.mockReturnValue(true)
+    mockUser.mockReturnValue({ id: 'user-1' })
+
+    // Hub cache returns a remaining business after the refetch settles.
+    mockHubCacheGet.mockReturnValue([{ id: 'other-biz', name: 'Other' }])
+
+    vi.spyOn(document, 'querySelectorAll').mockReturnValue(
+      [] as unknown as NodeListOf<Element>,
+    )
+
+    const { RealtimeProvider, useRealtime } = await importProvider()
+
+    let setActive!: (id: string | null) => void
+    let revoke!: (businessId: string, reason: 'removed') => void
+
+    function Consumer() {
+      const ctx = useRealtime()
+      setActive = ctx.setActiveBusinessId
+      revoke = ctx.revokeBusinessContext
+      return null
+    }
+
+    await act(async () => {
+      render(
+        <Wrapper>
+          <RealtimeProvider>
+            <Consumer />
+          </RealtimeProvider>
+        </Wrapper>,
+      )
+    })
+
+    await act(async () => {
+      setActive('active-biz')
+      vi.advanceTimersByTime(250)
+    })
+
+    await act(async () => {
+      revoke('active-biz', 'removed')
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
+
+    expect(mockPush).toHaveBeenCalledWith('/')
 
     vi.restoreAllMocks()
   })

@@ -45,8 +45,11 @@ import { useRouter } from '@/lib/next-navigation-shim'
 import { getDeviceId } from '@/lib/realtime/device-id'
 import { dispatchRealtimeEvent } from '@/lib/realtime/handlers'
 import { callRefetch } from '@/lib/realtime/refetch-registry'
+import { createSessionCache, CACHE_KEYS } from '@/hooks/useSessionCache'
 import type { RealtimeEvent } from '@kasero/shared/realtime'
 import type { MessageId } from '@/i18n/messageIds'
+
+const hubBusinessesCache = createSessionCache<unknown[]>(CACHE_KEYS.HUB_BUSINESSES)
 
 type RevokeReason = 'removed' | 'business_deleted' | 'ownership_transferred'
 
@@ -157,7 +160,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
       callRefetch('businesses-list')
       setActiveBusinessIdState(null)
-      router.replace('/')
+
+      // Give the refetch a beat to settle the sessionStorage cache, then
+      // decide where to send the user: hub (has remaining businesses) or
+      // the join/create entry point (no businesses left).
+      setTimeout(() => {
+        const remaining = hubBusinessesCache.get()
+        if (!remaining || remaining.length === 0) {
+          router.replace('/join')
+        } else {
+          router.replace('/')
+        }
+      }, 250)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [intl, presentToast, router],
