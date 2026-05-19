@@ -8,6 +8,7 @@
     "./types": "./src/types/index.ts",
     "./api-messages": "./src/api-messages.ts",
     "./business-role": "./src/business-role.ts",
+    "./realtime": "./src/realtime/index.ts",
     "./locales": "./src/locales.ts",
     "./auth": "./src/auth.ts",
     "./barcodes": "./src/barcodes.ts",
