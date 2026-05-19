@@ -1,4 +1,5 @@
 export * from './errors'
+export * from './origin-device-id'
 export * from './publisher'
 export * from './streams'
 export { subscribe } from './broker'
