@@ -30,28 +30,30 @@ These are not subagent-executable. The implementing engineer runs them once befo
 - [ ] **Step 2: Capture the `rediss://...` URL.** Copy the value labelled "Connect with Redis CLI" or "Standard Redis URL". It looks like `rediss://default:<password>@<host>:<port>`. Keep this value at hand for Task 0.3.
 - [ ] **Step 3: Confirm TLS.** The URL scheme MUST be `rediss://` (TLS), not `redis://`. If only `redis://` is offered, enable TLS on the database and re-copy.
 
-### Task 0.3: Add `UPSTASH_REDIS_URL` to `apps/api/.env.local` and Vercel
+### Task 0.3: Add `UPSTASH_REDIS_URL` to Vercel (Production + Preview only)
 
 **Files:**
-- Modify: `apps/api/.env.local` (gitignored; local only)
 - Modify: Vercel project envs (Production + Preview) via Vercel dashboard or `vercel env add`
 
-- [ ] **Step 1: Edit `apps/api/.env.local`.** Append a line:
+**Important:** We deliberately do **NOT** put `UPSTASH_REDIS_URL` in `apps/api/.env.local`. Local dev uses an in-memory backend (added in Task 2.2) so a `npm run dev` publish never reaches production subscribers. The production gate in `redis.ts` ensures Vercel deployments refuse to boot without this credential.
+
+- [ ] **Step 1: Add the key to Vercel — Production.** Run `npx vercel env add UPSTASH_REDIS_URL production` from `apps/api/`, paste the URL from Task 0.2 when prompted.
+- [ ] **Step 2: Add the same key to Vercel — Preview.** Run `npx vercel env add UPSTASH_REDIS_URL preview` from `apps/api/`, paste the same URL.
+- [ ] **Step 3: Verify.** Run `npx vercel env ls` from `apps/api/`. Expect `UPSTASH_REDIS_URL` listed under `Production` and `Preview`, NOT under `Development`.
+
+### Task 0.4: Record the Vercel-only value in Bitwarden
+
+**Files:** Bitwarden Secure Note `Kasero — Vercel project envs` (create if it doesn't exist).
+
+The existing `Kasero — apps/api/.env.local` note continues to hold local-dev secrets only. The realtime TCP URL is a Vercel-only secret, so it gets a separate record to make the boundary explicit.
+
+- [ ] **Step 1: Open Bitwarden.** Web vault → Items → search for `Kasero — Vercel project envs`. If it doesn't exist, create a new Secure Note with that name.
+- [ ] **Step 2: Append the key + URL.** Add a line:
   ```
   UPSTASH_REDIS_URL=rediss://default:<password>@<host>:<port>
   ```
-  Use the exact URL from Task 0.2.
-- [ ] **Step 2: Add the same key to Vercel — Production.** Run `npx vercel env add UPSTASH_REDIS_URL production` from `apps/api/`, paste the URL when prompted.
-- [ ] **Step 3: Add the same key to Vercel — Preview.** Run `npx vercel env add UPSTASH_REDIS_URL preview` from `apps/api/`, paste the same URL.
-- [ ] **Step 4: Verify.** Run `npx vercel env ls` from `apps/api/`. Expect `UPSTASH_REDIS_URL` listed under `Production` and `Preview`.
-
-### Task 0.4: Update Bitwarden Secure Note
-
-**Files:** Bitwarden Secure Note `Kasero — apps/api/.env.local`.
-
-- [ ] **Step 1: Open the Secure Note.** Bitwarden web vault → Items → "Kasero — apps/api/.env.local".
-- [ ] **Step 2: Append the new line** in the same shape as Task 0.3 Step 1.
-- [ ] **Step 3: Save.** Confirm the note now contains the new key alongside `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+  Use the URL from Task 0.2.
+- [ ] **Step 3: Save.** The note documents the canonical value so we can recreate the Vercel env if it's ever rotated or lost.
 
 ### Task 0.5: Document the new key in `.env.example`
 
@@ -63,8 +65,14 @@ These are not subagent-executable. The implementing engineer runs them once befo
   
   # Standard Redis TCP/TLS endpoint on the same Upstash database. Used by
   # the realtime subsystem (apps/api/src/lib/realtime/*) for pub/sub +
-  # Streams. Get this from the Upstash dashboard under "Connect with
-  # Redis CLI" — the URL scheme must be rediss:// (TLS).
+  # Streams. Get this from the Upstash dashboard's TCP tab — the URL scheme
+  # must be rediss:// (TLS).
+  #
+  # IMPORTANT: This key is intentionally Vercel-only (Production + Preview).
+  # Do NOT set it in your local apps/api/.env.local — local dev uses an
+  # in-memory realtime backend so dev publishes never reach prod clients.
+  # Setting it locally will route your local pub/sub through prod Upstash
+  # and accidentally broadcast to real connected users.
   UPSTASH_REDIS_URL=
   ```
 - [ ] **Step 2: Stage and commit.**
@@ -73,7 +81,7 @@ These are not subagent-executable. The implementing engineer runs them once befo
   git commit -m "chore(env): document UPSTASH_REDIS_URL for realtime subsystem"
   ```
 
-**Phase 0 done when:** `apps/api/.env.local` has `UPSTASH_REDIS_URL`, Vercel Production+Preview have `UPSTASH_REDIS_URL`, Bitwarden note matches, `.env.example` documents the key (committed).
+**Phase 0 done when:** Vercel Production+Preview have `UPSTASH_REDIS_URL`, Bitwarden record exists for the Vercel-only secret, `.env.example` documents the key with the "do not set locally" warning (committed). `apps/api/.env.local` deliberately does NOT contain this key — local dev uses the in-memory backend added in Phase 2.
 
 ---
 
@@ -304,81 +312,452 @@ Each task below is TDD: test first, then implementation, then run, then commit.
   git commit -m "feat(realtime): add RealtimeUnavailableError"
   ```
 
-### Task 2.2: `redis.ts` — lazy ioredis singletons
+### Task 2.2a: `in-memory-backend.ts` — dev-mode realtime backend
+
+**Why:** Local dev does NOT have `UPSTASH_REDIS_URL` set (Phase 0 deliberately puts it in Vercel only). Without a backend, every realtime operation would have to throw, breaking the SSE route during development. The in-memory backend implements the subset of Redis we actually use — pub/sub, XADD with MAXLEN, XREAD, XREVRANGE, PEXPIRE, MULTI/EXEC, PING — using process-local state. In dev, the same Node process owns both the publishing API routes and the SSE handlers, so an in-process EventEmitter and Map-based streams are functionally identical to Upstash from the broker/publisher's perspective.
+
+**Files:**
+- Create: `/Users/adiaz/irvin/apps/api/src/lib/realtime/in-memory-backend.ts`
+- Create: `/Users/adiaz/irvin/apps/api/src/lib/realtime/in-memory-backend.test.ts`
+
+- [ ] **Step 1: Write the test.**
+  ```ts
+  import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+  import { InMemoryBackend } from './in-memory-backend'
+
+  let backend: InMemoryBackend
+  beforeEach(() => { backend = new InMemoryBackend() })
+  afterEach(() => { backend.dispose() })
+
+  describe('InMemoryBackend (dev pub/sub + streams)', () => {
+    it('delivers a published message to a subscriber on the same channel', async () => {
+      const received: Array<{ channel: string; message: string }> = []
+      const sub = backend.createSubscriber()
+      sub.on('message', (channel, message) => received.push({ channel, message }))
+      await sub.subscribe('business:1')
+      const pub = backend.createPublisher()
+      await pub.publish('business:1', JSON.stringify({ type: 'team.member.joined' }))
+      // EventEmitter is synchronous; the message is already delivered.
+      expect(received).toHaveLength(1)
+      expect(received[0].channel).toBe('business:1')
+    })
+
+    it('does not deliver to subscribers on other channels', async () => {
+      const received: string[] = []
+      const sub = backend.createSubscriber()
+      sub.on('message', (_, m) => received.push(m))
+      await sub.subscribe('business:1')
+      const pub = backend.createPublisher()
+      await pub.publish('business:2', 'X')
+      expect(received).toHaveLength(0)
+    })
+
+    it('refcounts subscriptions across multiple subscribers (one shared backend bus)', async () => {
+      const r1: string[] = []
+      const r2: string[] = []
+      const subA = backend.createSubscriber()
+      const subB = backend.createSubscriber()
+      subA.on('message', (_, m) => r1.push(m))
+      subB.on('message', (_, m) => r2.push(m))
+      await subA.subscribe('c')
+      await subB.subscribe('c')
+      const pub = backend.createPublisher()
+      await pub.publish('c', 'X')
+      expect(r1).toEqual(['X'])
+      expect(r2).toEqual(['X'])
+    })
+
+    it('XADD with MAXLEN exact caps the stream length', async () => {
+      const pub = backend.createPublisher()
+      for (let i = 0; i < 105; i++) {
+        await pub.xaddMaxLen('stream:user:1', 100, { type: `e${i}` })
+      }
+      const len = backend.streamLength('stream:user:1')
+      expect(len).toBe(100)
+    })
+
+    it('XREAD returns entries strictly greater than the given id', async () => {
+      const pub = backend.createPublisher()
+      const id1 = await pub.xaddMaxLen('stream:user:1', 100, { type: 'a' })
+      const id2 = await pub.xaddMaxLen('stream:user:1', 100, { type: 'b' })
+      const id3 = await pub.xaddMaxLen('stream:user:1', 100, { type: 'c' })
+      const sub = backend.createSubscriber()
+      const out = await sub.xread('stream:user:1', id1)
+      expect(out.map((e) => e.event.type)).toEqual(['b', 'c'])
+      // Sanity: also greater-than id2 returns only c.
+      const out2 = await sub.xread('stream:user:1', id2)
+      expect(out2.map((e) => e.event.type)).toEqual(['c'])
+      // Reading after id3 returns nothing.
+      expect(await sub.xread('stream:user:1', id3)).toEqual([])
+    })
+
+    it('XREVRANGE COUNT 1 returns the current stream tip', async () => {
+      const pub = backend.createPublisher()
+      await pub.xaddMaxLen('stream:user:1', 100, { type: 'a' })
+      const tipId = await pub.xaddMaxLen('stream:user:1', 100, { type: 'b' })
+      const sub = backend.createSubscriber()
+      expect(await sub.getStreamTipId('stream:user:1')).toBe(tipId)
+    })
+
+    it('PEXPIRE causes stream entries to vanish after the TTL elapses (lazy expiry on read)', async () => {
+      const pub = backend.createPublisher()
+      const id = await pub.xaddMaxLen('stream:user:1', 100, { type: 'a' })
+      await pub.pexpire('stream:user:1', 1)
+      await new Promise((r) => setTimeout(r, 5))
+      const sub = backend.createSubscriber()
+      const out = await sub.xread('stream:user:1', '0')
+      expect(out).toEqual([])
+      // And the tip query also returns null.
+      expect(await sub.getStreamTipId('stream:user:1')).toBeNull()
+      // id was returned at write time; just sanity-touch to satisfy TS.
+      expect(typeof id).toBe('string')
+    })
+
+    it('PING returns PONG', async () => {
+      const sub = backend.createSubscriber()
+      expect(await sub.ping()).toBe('PONG')
+    })
+
+    it('publishCritical helper performs xadd + publish + pexpire atomically', async () => {
+      const received: string[] = []
+      const sub = backend.createSubscriber()
+      sub.on('message', (_, m) => received.push(m))
+      await sub.subscribe('user:1')
+      const pub = backend.createPublisher()
+      await pub.publishCritical(
+        'user:1',
+        'stream:user:1',
+        100,
+        90 * 24 * 60 * 60 * 1000,
+        { type: 'session.revoked', businessId: 'B', reason: 'removed' },
+      )
+      expect(received).toHaveLength(1)
+      expect(backend.streamLength('stream:user:1')).toBe(1)
+    })
+  })
+  ```
+- [ ] **Step 2: Run — expect failures.** `npm run test:run --workspace=apps/api -- src/lib/realtime/in-memory-backend.test.ts`. Module not found.
+- [ ] **Step 3: Implement `in-memory-backend.ts`.**
+  ```ts
+  import 'server-only'
+  import { EventEmitter } from 'node:events'
+
+  /**
+   * Dev-mode realtime backend.
+   *
+   * Implements only the subset of Redis that the realtime subsystem
+   * uses: pub/sub (SUBSCRIBE / UNSUBSCRIBE / PUBLISH), Streams
+   * (XADD with MAXLEN, XREAD strict-greater-than, XREVRANGE COUNT 1),
+   * PEXPIRE, and PING. All state is process-local — fine in dev where
+   * one Node process owns both publishers and subscribers.
+   *
+   * Activated by redis.ts when UPSTASH_REDIS_URL is missing AND
+   * VERCEL_ENV !== 'production'. Production runtime refuses to start
+   * without real Upstash creds; the in-memory backend never reaches
+   * a deployed environment.
+   */
+
+  type StreamEntry = { id: string; event: Record<string, unknown> }
+
+  export interface InMemorySubscriber {
+    subscribe(channel: string): Promise<void>
+    unsubscribe(channel: string): Promise<void>
+    on(event: 'message', listener: (channel: string, message: string) => void): this
+    on(event: 'ready' | 'end' | 'error', listener: (...args: unknown[]) => void): this
+    ping(): Promise<'PONG'>
+    quit(): Promise<void>
+    xread(streamKey: string, sinceId: string): Promise<StreamEntry[]>
+    getStreamTipId(streamKey: string): Promise<string | null>
+    readonly status: string
+  }
+
+  export interface InMemoryPublisher {
+    publish(channel: string, message: string): Promise<number>
+    xaddMaxLen(streamKey: string, maxLen: number, event: Record<string, unknown>): Promise<string>
+    pexpire(streamKey: string, ttlMs: number): Promise<number>
+    publishCritical(
+      userChannel: string,
+      streamKey: string,
+      maxLen: number,
+      ttlMs: number,
+      event: Record<string, unknown>,
+    ): Promise<void>
+    quit(): Promise<void>
+  }
+
+  export class InMemoryBackend {
+    private bus = new EventEmitter()
+    private streams = new Map<string, StreamEntry[]>()
+    private streamExpiry = new Map<string, number>()
+    private seq = 0
+
+    constructor() {
+      this.bus.setMaxListeners(0)
+    }
+
+    streamLength(key: string): number {
+      this.evict(key)
+      return this.streams.get(key)?.length ?? 0
+    }
+
+    private evict(key: string): void {
+      const exp = this.streamExpiry.get(key)
+      if (exp && exp <= Date.now()) {
+        this.streams.delete(key)
+        this.streamExpiry.delete(key)
+      }
+    }
+
+    private nextId(): string {
+      return `${Date.now()}-${this.seq++}`
+    }
+
+    createSubscriber(): InMemorySubscriber {
+      const self = this
+      const local = new EventEmitter()
+      const handler = (channel: string, message: string) => {
+        local.emit('message', channel, message)
+      }
+      const owned = new Set<string>()
+      let status = 'ready'
+      return {
+        get status() { return status },
+        async subscribe(channel: string) {
+          if (!owned.has(channel)) {
+            owned.add(channel)
+            self.bus.on(channel, handler)
+          }
+        },
+        async unsubscribe(channel: string) {
+          if (owned.has(channel)) {
+            owned.delete(channel)
+            self.bus.off(channel, handler)
+          }
+        },
+        on(event: string, listener: (...args: unknown[]) => void) {
+          local.on(event, listener)
+          return this
+        },
+        async ping() { return 'PONG' as const },
+        async quit() {
+          for (const c of owned) self.bus.off(c, handler)
+          owned.clear()
+          status = 'end'
+        },
+        async xread(streamKey: string, sinceId: string) {
+          self.evict(streamKey)
+          const entries = self.streams.get(streamKey) ?? []
+          return entries.filter((e) => e.id > sinceId)
+        },
+        async getStreamTipId(streamKey: string) {
+          self.evict(streamKey)
+          const entries = self.streams.get(streamKey) ?? []
+          return entries.length ? entries[entries.length - 1].id : null
+        },
+      }
+    }
+
+    createPublisher(): InMemoryPublisher {
+      const self = this
+      return {
+        async publish(channel, message) {
+          // Synchronous fan-out: every listener on this channel sees the
+          // message before publish() resolves. Matches how the broker
+          // tests assert behavior.
+          self.bus.emit(channel, channel, message)
+          return self.bus.listenerCount(channel)
+        },
+        async xaddMaxLen(streamKey, maxLen, event) {
+          self.evict(streamKey)
+          const id = self.nextId()
+          const list = self.streams.get(streamKey) ?? []
+          list.push({ id, event })
+          while (list.length > maxLen) list.shift()
+          self.streams.set(streamKey, list)
+          return id
+        },
+        async pexpire(streamKey, ttlMs) {
+          self.streamExpiry.set(streamKey, Date.now() + ttlMs)
+          return 1
+        },
+        async publishCritical(userChannel, streamKey, maxLen, ttlMs, event) {
+          await this.xaddMaxLen(streamKey, maxLen, event)
+          await this.pexpire(streamKey, ttlMs)
+          await this.publish(userChannel, JSON.stringify(event))
+        },
+        async quit() {
+          // Nothing to release; backend lives until process exit.
+        },
+      }
+    }
+
+    dispose(): void {
+      this.bus.removeAllListeners()
+      this.streams.clear()
+      this.streamExpiry.clear()
+    }
+  }
+
+  /**
+   * Process-global singleton. Exposed so redis.ts and tests can reach
+   * the same instance regardless of HMR reloads.
+   */
+  const BACKEND_KEY = Symbol.for('kasero.realtime.in-memory-backend')
+  type GlobalWithBackend = typeof globalThis & {
+    [BACKEND_KEY]?: InMemoryBackend
+  }
+  export function getSharedInMemoryBackend(): InMemoryBackend {
+    const g = globalThis as GlobalWithBackend
+    if (!g[BACKEND_KEY]) {
+      g[BACKEND_KEY] = new InMemoryBackend()
+    }
+    return g[BACKEND_KEY]!
+  }
+  ```
+- [ ] **Step 4: Run — expect pass.** All 9 tests pass.
+- [ ] **Step 5: Commit.**
+  ```
+  git add apps/api/src/lib/realtime/in-memory-backend.ts apps/api/src/lib/realtime/in-memory-backend.test.ts
+  git commit -m "feat(realtime): in-memory backend for dev pub/sub and streams"
+  ```
+
+### Task 2.2: `redis.ts` — backend factory (ioredis in prod, in-memory in dev)
 
 **Files:**
 - Create: `/Users/adiaz/irvin/apps/api/src/lib/realtime/redis.ts`
 - Create: `/Users/adiaz/irvin/apps/api/src/lib/realtime/redis.test.ts`
 - Modify: `/Users/adiaz/irvin/apps/api/package.json` (add `ioredis`)
 
+This task's job is to wrap ioredis with the same interface as `in-memory-backend.ts` exposes, and pick which backend to return based on environment. The broker and publisher consumers in subsequent tasks see one uniform API.
+
 - [ ] **Step 1: Add `ioredis` dependency.** From repo root: `npm install --workspace=apps/api ioredis@^5`. Verify `apps/api/package.json` `dependencies` now lists `ioredis`. (Subagents NEVER run install unprompted; the user has approved the dep in the spec.)
 - [ ] **Step 2: Write the test.**
   ```ts
-  import { afterEach, describe, expect, it, vi } from 'vitest'
+  import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-  // Provide a Redis constructor mock that records every instantiation
-  // so we can assert lazy-construction behavior.
-  const constructed: Array<unknown> = []
+  // Ioredis constructor mock — used only by the production-branch tests.
+  const constructed: Array<{ url: string; opts: unknown }> = []
   vi.mock('ioredis', () => {
     return {
       default: vi.fn().mockImplementation((url: string, opts: unknown) => {
-        const inst = { url, opts, on: vi.fn(), quit: vi.fn() }
-        constructed.push(inst)
+        const inst = {
+          url,
+          opts,
+          on: vi.fn(),
+          quit: vi.fn().mockResolvedValue(undefined),
+          subscribe: vi.fn().mockResolvedValue(undefined),
+          unsubscribe: vi.fn().mockResolvedValue(undefined),
+          publish: vi.fn().mockResolvedValue(1),
+          xadd: vi.fn().mockResolvedValue('1-0'),
+          xread: vi.fn().mockResolvedValue(null),
+          xrevrange: vi.fn().mockResolvedValue([]),
+          pexpire: vi.fn().mockResolvedValue(1),
+          ping: vi.fn().mockResolvedValue('PONG'),
+          status: 'ready',
+        }
+        constructed.push({ url, opts })
         return inst
       }),
     }
   })
 
-  afterEach(() => {
+  beforeEach(() => {
     constructed.length = 0
+    delete process.env.UPSTASH_REDIS_URL
+    delete process.env.VERCEL_ENV
+    delete process.env.NEXT_PHASE
+  })
+
+  afterEach(() => {
     vi.resetModules()
   })
 
-  describe('redis.ts (lazy ioredis)', () => {
-    it('does NOT construct a client at module import time', async () => {
+  describe('redis.ts (backend factory)', () => {
+    it('does NOT construct any backend at module import time', async () => {
       await import('./redis')
-      expect(constructed.length).toBe(0)
+      expect(constructed).toEqual([])
     })
 
-    it('constructs the subscriber on first getSubscriber() call only', async () => {
-      process.env.UPSTASH_REDIS_URL = 'rediss://test:pw@host:1'
-      const mod = await import('./redis')
-      mod.getSubscriber()
-      mod.getSubscriber()
-      expect(constructed.length).toBe(1)
+    describe('with UPSTASH_REDIS_URL set (production-style)', () => {
+      it('constructs the ioredis subscriber on first getSubscriber() call only', async () => {
+        process.env.UPSTASH_REDIS_URL = 'rediss://test:pw@host:1'
+        const mod = await import('./redis')
+        mod.getSubscriber()
+        mod.getSubscriber()
+        expect(constructed).toHaveLength(1)
+      })
+
+      it('constructs publisher and subscriber as separate ioredis connections', async () => {
+        process.env.UPSTASH_REDIS_URL = 'rediss://test:pw@host:1'
+        const mod = await import('./redis')
+        mod.getSubscriber()
+        mod.getPublisher()
+        expect(constructed).toHaveLength(2)
+      })
+
+      it('exposes the unified interface (subscribe/publish/xaddMaxLen/etc.) on the wrapper', async () => {
+        process.env.UPSTASH_REDIS_URL = 'rediss://test:pw@host:1'
+        const mod = await import('./redis')
+        const sub = mod.getSubscriber()
+        const pub = mod.getPublisher()
+        expect(typeof sub.subscribe).toBe('function')
+        expect(typeof sub.unsubscribe).toBe('function')
+        expect(typeof sub.xread).toBe('function')
+        expect(typeof sub.getStreamTipId).toBe('function')
+        expect(typeof sub.ping).toBe('function')
+        expect(typeof pub.publish).toBe('function')
+        expect(typeof pub.xaddMaxLen).toBe('function')
+        expect(typeof pub.pexpire).toBe('function')
+        expect(typeof pub.publishCritical).toBe('function')
+      })
     })
 
-    it('constructs publisher and subscriber as separate connections', async () => {
-      process.env.UPSTASH_REDIS_URL = 'rediss://test:pw@host:1'
-      const mod = await import('./redis')
-      mod.getSubscriber()
-      mod.getPublisher()
-      expect(constructed.length).toBe(2)
-    })
+    describe('without UPSTASH_REDIS_URL (dev/local)', () => {
+      it('returns the in-memory backend in dev — no ioredis construction', async () => {
+        // No VERCEL_ENV set => dev. No URL => use in-memory backend.
+        const mod = await import('./redis')
+        const sub = mod.getSubscriber()
+        const pub = mod.getPublisher()
+        expect(constructed).toEqual([])
+        // Round-trip: publish from publisher reaches subscriber.
+        const received: string[] = []
+        sub.on('message', (_, m) => received.push(m))
+        await sub.subscribe('c')
+        await pub.publish('c', 'X')
+        expect(received).toEqual(['X'])
+      })
 
-    it('throws RealtimeUnavailableError when called in prod without UPSTASH_REDIS_URL', async () => {
-      delete process.env.UPSTASH_REDIS_URL
-      process.env.VERCEL_ENV = 'production'
-      delete process.env.NEXT_PHASE
-      const mod = await import('./redis')
-      expect(() => mod.getSubscriber()).toThrow(/realtime unavailable/i)
-      delete process.env.VERCEL_ENV
-    })
+      it('publisher and subscriber in dev share the SAME in-memory backend instance', async () => {
+        // Two separate getSubscriber/getPublisher calls still talk to one
+        // backend — required for round-trip delivery to work.
+        const mod = await import('./redis')
+        const subA = mod.getSubscriber()
+        const subB = mod.getSubscriber() // same singleton
+        expect(subA).toBe(subB)
+        const pub = mod.getPublisher()
+        const received: string[] = []
+        subA.on('message', (_, m) => received.push(m))
+        await subA.subscribe('shared')
+        await pub.publish('shared', 'Y')
+        expect(received).toEqual(['Y'])
+      })
 
-    it('returns null-equivalent (throws) in build phase even without URL', async () => {
-      delete process.env.UPSTASH_REDIS_URL
-      process.env.VERCEL_ENV = 'production'
-      process.env.NEXT_PHASE = 'phase-production-build'
-      const mod = await import('./redis')
-      // In build phase we must NOT throw — module load + getter call
-      // during page-data collection should be a no-throw degraded state.
-      // The function returns a stub or throws a recoverable error;
-      // callers in the SSE route translate to 503 at request time.
-      // We assert the throw shape is RealtimeUnavailableError, not a
-      // generic Error, so the SSE 503 mapping fires correctly.
-      expect(() => mod.getSubscriber()).toThrow(/realtime unavailable/i)
-      delete process.env.VERCEL_ENV
-      delete process.env.NEXT_PHASE
+      it('throws RealtimeUnavailableError when called in prod without UPSTASH_REDIS_URL', async () => {
+        process.env.VERCEL_ENV = 'production'
+        const mod = await import('./redis')
+        expect(() => mod.getSubscriber()).toThrow(/realtime unavailable/i)
+        expect(() => mod.getPublisher()).toThrow(/realtime unavailable/i)
+      })
+
+      it('still throws during Next.js build phase (Vercel build sets VERCEL_ENV=production)', async () => {
+        process.env.VERCEL_ENV = 'production'
+        process.env.NEXT_PHASE = 'phase-production-build'
+        const mod = await import('./redis')
+        // We assert the throw shape so the SSE route's 503 mapping fires.
+        // Build-time crashes are avoided by NOT calling the getters at
+        // module-evaluation time (lazy construction is the safeguard).
+        expect(() => mod.getSubscriber()).toThrow(/realtime unavailable/i)
+      })
     })
   })
   ```
@@ -388,73 +767,164 @@ Each task below is TDD: test first, then implementation, then run, then commit.
   import 'server-only'
   import Redis, { type RedisOptions } from 'ioredis'
   import { RealtimeUnavailableError } from './errors'
+  import {
+    getSharedInMemoryBackend,
+    type InMemoryPublisher,
+    type InMemorySubscriber,
+  } from './in-memory-backend'
 
   /**
-   * Lazy ioredis singletons for the realtime subsystem.
+   * Backend factory for the realtime subsystem.
    *
-   * Construction is deferred to first-use so module evaluation never
-   * crashes a clean clone with no Upstash creds. Mirrors the
-   * production-gate pattern in apps/api/src/lib/rate-limit.ts.
+   * Returns one of two backends depending on environment:
+   *   - `UPSTASH_REDIS_URL` is set → ioredis-backed clients talking to
+   *     Upstash over TCP/TLS. This is the production / Vercel-preview path.
+   *   - `UPSTASH_REDIS_URL` is unset → in-memory backend (process-local
+   *     EventEmitter + Map). Used in local dev so a `npm run dev` publish
+   *     never reaches the production Upstash subscribers. The production
+   *     gate below makes sure this branch is never taken on Vercel.
    *
-   * Two clients:
-   *   - subscriber: long-lived, SUBSCRIBE/UNSUBSCRIBE only. Owned by
-   *     broker.ts; do not call PUBLISH on this connection (ioredis
-   *     enters subscribe-mode after the first SUBSCRIBE).
-   *   - publisher: short-lived commands (PUBLISH, XADD, MULTI/EXEC).
-   *     maxRetriesPerRequest: 1 so a route doesn't block indefinitely
-   *     during an Upstash outage.
+   * Construction is lazy so a clean clone with no Upstash creds still
+   * imports the module cleanly — only first-use triggers the decision.
+   * Mirrors the production-gate pattern in apps/api/src/lib/rate-limit.ts.
+   *
+   * The two backends share the same surface — see
+   * `RealtimeSubscriber` / `RealtimePublisher` below — so the broker and
+   * publisher.ts modules consume one uniform API regardless of mode.
    */
 
-  let _subscriber: Redis | null = null
-  let _publisher: Redis | null = null
+  // Public unified interface. Both backends implement this.
+  export type RealtimeSubscriber = InMemorySubscriber
+  export type RealtimePublisher = InMemoryPublisher
 
-  function resolveUrl(): string {
+  let _subscriber: RealtimeSubscriber | null = null
+  let _publisher: RealtimePublisher | null = null
+
+  function isInDevMode(): boolean {
     const url = process.env.UPSTASH_REDIS_URL
-    if (url && url.trim().length > 0) return url
-    // Gate matches rate-limit.ts: production runtime without creds is a
-    // misconfiguration. Build phase and dev tolerate the missing key —
-    // the SSE route will 503 at request time via RealtimeUnavailableError.
-    throw new RealtimeUnavailableError(
-      'UPSTASH_REDIS_URL is not set. Set it in apps/api/.env.local '
-        + 'and in Vercel project envs (Production + Preview).',
-    )
+    if (url && url.trim().length > 0) return false
+    if (process.env.VERCEL_ENV === 'production') {
+      // Production runtime without creds = misconfiguration. The SSE
+      // route maps this throw to a 503 via REALTIME_UNAVAILABLE.
+      throw new RealtimeUnavailableError(
+        'UPSTASH_REDIS_URL is not set. Add it to the Vercel project envs '
+          + '(Production + Preview). Local dev intentionally has no value '
+          + 'and uses the in-memory backend.',
+      )
+    }
+    return true
   }
 
-  const baseOpts: RedisOptions = {
+  const ioredisOpts: RedisOptions = {
     lazyConnect: true,
     enableReadyCheck: true,
-    // Exponential backoff: 200ms, 400ms, ..., capped at 5s.
     retryStrategy(times) {
       return Math.min(200 * 2 ** Math.min(times, 5), 5000)
     },
-    // Allow long-lived connections through Vercel's edge.
     keepAlive: 10_000,
   }
 
-  export function getSubscriber(): Redis {
+  function wrapIoredisSubscriber(client: Redis): RealtimeSubscriber {
+    // Adapt the wire-level ioredis API to the high-level surface our
+    // broker/publisher consume. ioredis SUBSCRIBE puts the client into
+    // subscribe-mode; we still expose xread/xrevrange/ping/getStreamTipId
+    // — but those operations target a separate connection in the real
+    // wiring (broker.ts only calls subscribe/unsubscribe/on; the SSE
+    // route uses the *publisher* for XREAD/XREVRANGE pre-replay).
+    // We still implement xread + getStreamTipId on the subscriber wrapper
+    // for parity with the in-memory backend's API. They internally use a
+    // shared "command" connection — for ioredis production we route those
+    // reads through the publisher's underlying connection to avoid the
+    // subscribe-mode restriction.
+    return {
+      get status() { return client.status },
+      async subscribe(channel: string) { await client.subscribe(channel) },
+      async unsubscribe(channel: string) { await client.unsubscribe(channel) },
+      on(event: string, listener: (...args: unknown[]) => void) {
+        client.on(event, listener)
+        return this
+      },
+      async ping() { return (await client.ping()) as 'PONG' },
+      async quit() { await client.quit() },
+      async xread(streamKey, sinceId) {
+        // XREAD lives on the publisher connection (subscriber is in
+        // subscribe-mode and cannot issue arbitrary commands).
+        const pub = getPublisherRaw()
+        const res = await pub.xread('COUNT', 100, 'STREAMS', streamKey, sinceId)
+        if (!res) return []
+        // ioredis returns [[streamKey, [[id, [field, value, ...]], ...]]]
+        const [, entries] = res[0] as [string, Array<[string, string[]]>]
+        return entries.map(([id, fields]) => {
+          // We always XADD with a single 'data' field carrying JSON.
+          const idx = fields.indexOf('data')
+          const json = idx >= 0 ? fields[idx + 1] : '{}'
+          return { id, event: JSON.parse(json) as Record<string, unknown> }
+        })
+      },
+      async getStreamTipId(streamKey) {
+        const pub = getPublisherRaw()
+        const res = await pub.xrevrange(streamKey, '+', '-', 'COUNT', 1)
+        if (!Array.isArray(res) || res.length === 0) return null
+        return res[0][0] as string
+      },
+    }
+  }
+
+  function wrapIoredisPublisher(client: Redis): RealtimePublisher {
+    return {
+      async publish(channel, message) { return await client.publish(channel, message) },
+      async xaddMaxLen(streamKey, maxLen, event) {
+        // MAXLEN = (exact). Not `~` — the spec demands predictable trim.
+        const id = await client.xadd(streamKey, 'MAXLEN', maxLen, '*', 'data', JSON.stringify(event))
+        return id as string
+      },
+      async pexpire(streamKey, ttlMs) {
+        return await client.pexpire(streamKey, ttlMs)
+      },
+      async publishCritical(userChannel, streamKey, maxLen, ttlMs, event) {
+        // Pipeline XADD + PEXPIRE + PUBLISH in a single round-trip.
+        const json = JSON.stringify(event)
+        await client
+          .multi()
+          .xadd(streamKey, 'MAXLEN', maxLen, '*', 'data', json)
+          .pexpire(streamKey, ttlMs)
+          .publish(userChannel, json)
+          .exec()
+      },
+      async quit() { await client.quit() },
+    }
+  }
+
+  // Internal: the raw ioredis publisher, needed by the subscriber wrapper
+  // for XREAD/XREVRANGE. Constructs the publisher if it doesn't yet exist.
+  let _ioredisPublisherRaw: Redis | null = null
+  function getPublisherRaw(): Redis {
+    if (_ioredisPublisherRaw) return _ioredisPublisherRaw
+    const url = process.env.UPSTASH_REDIS_URL!
+    _ioredisPublisherRaw = new Redis(url, { ...ioredisOpts, maxRetriesPerRequest: 1 })
+    return _ioredisPublisherRaw
+  }
+
+  export function getSubscriber(): RealtimeSubscriber {
     if (_subscriber) return _subscriber
-    const url = resolveUrl()
-    _subscriber = new Redis(url, {
-      ...baseOpts,
-      // Subscriber connections cannot share with publisher.
-      // No per-request retry limit because we want it to keep retrying
-      // forever on a transient blip; the broker's watchdog forces a
-      // reconnect after 30s if the socket is silently dead.
-    })
+    if (isInDevMode()) {
+      _subscriber = getSharedInMemoryBackend().createSubscriber()
+    } else {
+      const url = process.env.UPSTASH_REDIS_URL!
+      const client = new Redis(url, ioredisOpts)
+      _subscriber = wrapIoredisSubscriber(client)
+    }
     return _subscriber
   }
 
-  export function getPublisher(): Redis {
+  export function getPublisher(): RealtimePublisher {
     if (_publisher) return _publisher
-    const url = resolveUrl()
-    _publisher = new Redis(url, {
-      ...baseOpts,
-      // Fail-fast for publish operations — better to 503 a route than
-      // to block it indefinitely. The route translates the throw via
-      // REALTIME_PUBLISH_UNAVAILABLE for critical publishes; non-critical
-      // publishers (publishToBusiness) swallow + log.
-      maxRetriesPerRequest: 1,
-    })
+    if (isInDevMode()) {
+      _publisher = getSharedInMemoryBackend().createPublisher()
+    } else {
+      const client = getPublisherRaw()
+      _publisher = wrapIoredisPublisher(client)
+    }
     return _publisher
   }
 
@@ -466,15 +936,17 @@ Each task below is TDD: test first, then implementation, then run, then commit.
   export function __resetForTests(): void {
     _subscriber?.quit().catch(() => {})
     _publisher?.quit().catch(() => {})
+    _ioredisPublisherRaw?.quit().catch(() => {})
     _subscriber = null
     _publisher = null
+    _ioredisPublisherRaw = null
   }
   ```
-- [ ] **Step 5: Run — expect pass.** All 5 tests pass.
+- [ ] **Step 5: Run — expect pass.** All tests pass (both the ioredis-mocked-path tests and the in-memory dev-path round-trip tests).
 - [ ] **Step 6: Commit.**
   ```
   git add apps/api/src/lib/realtime/redis.ts apps/api/src/lib/realtime/redis.test.ts apps/api/package.json package-lock.json
-  git commit -m "feat(realtime): lazy ioredis subscriber and publisher singletons"
+  git commit -m "feat(realtime): lazy backend factory with ioredis prod and in-memory dev backends"
   ```
 
 ### Task 2.3: `broker.ts` — shared-subscriber broker
@@ -3258,7 +3730,60 @@ The current `revokeBusinessContext` (added in Task 7.1) navigates away but doesn
   git commit -m "docs(realtime): cross-reference realtime-system.md from backend, performance, and CLAUDE.md"
   ```
 
-**Phase 12 done when:** `realtime-system.md` exists, linked from three locations, CSP audit clean on a deployed preview, all manual-verification scenarios from spec §17 pass.
+### Task 12.3: Comprehensive documentation sweep
+
+**Why:** The realtime subsystem touches the entire stack — env-var conventions, security model, modal lifecycle, i18n, the offline story, the dev workflow, and the SW. Anything left undocumented becomes a future trap. This task walks every doc that should now reference realtime and either updates it or confirms no change is needed.
+
+**Files (every file checked; modifies only those whose content needs an actual edit):**
+- Modify (if applicable): `/Users/adiaz/irvin/README.md`
+- Modify: `/Users/adiaz/irvin/.claude/CLAUDE.md`
+- Modify: `/Users/adiaz/irvin/.claude/docs/tech-stack.md`
+- Modify: `/Users/adiaz/irvin/.claude/docs/backend-patterns.md`
+- Modify: `/Users/adiaz/irvin/.claude/docs/performance-patterns.md`
+- Modify: `/Users/adiaz/irvin/.claude/docs/i18n-system.md` (new locale keys, new ApiMessageCodes)
+- Modify: `/Users/adiaz/irvin/.claude/docs/modal-system.md` (programmatic-close usage during revocation)
+- Verify (no edit expected, but confirm): `/Users/adiaz/irvin/.claude/docs/tab-system.md`, `/Users/adiaz/irvin/.claude/docs/ai-product-pipeline.md`, `/Users/adiaz/irvin/.claude/docs/barcode-system.md`
+- Verify (no edit expected): `/Users/adiaz/irvin/apps/api/.env.example` (already updated in Phase 0.5)
+
+- [ ] **Step 1: README.md** — Check `README.md` at the repo root. If it has an "Architecture" or "Stack" section listing major subsystems, add a one-line entry: "Realtime: SSE over Upstash Redis pub/sub + Streams. See `.claude/docs/realtime-system.md`." If the README is purely a setup-instructions file with no architecture section, no edit is needed; record a note "README has no architecture section; skipped" in the commit message body.
+
+- [ ] **Step 2: `.claude/CLAUDE.md` — Documentation table.** Locate the "Documentation" section (around the "Guides" subsection). Add the row from Task 12.2 if not already present, AND verify the existing rows reference current paths. If you added `realtime-system.md` row already in 12.2, this step is a no-op.
+
+- [ ] **Step 3: `.claude/CLAUDE.md` — Critical rules.** Add a brief "Realtime publishes" entry under "Critical rules" with the rule:
+  > Every API route that mutates business or user state should publish the corresponding realtime event after the DB commit succeeds. See `.claude/docs/realtime-system.md` for the event taxonomy and which channel to use. Non-critical publishes fail open; security-critical (`session.revoked`, `business.deleted`, `ownership.transferred`) fail closed and bubble a 503.
+
+- [ ] **Step 4: `.claude/CLAUDE.md` — Local secrets.** Update the "Local secrets" section to clarify that `UPSTASH_REDIS_URL` is intentionally Vercel-only (not in `.env.local`). Add a paragraph:
+  > **Realtime credentials are Vercel-only.** `UPSTASH_REDIS_URL` is configured in the Vercel project envs (Production + Preview), not in your local `apps/api/.env.local`. Local dev uses an in-memory realtime backend so a `npm run dev` publish never reaches production subscribers. The canonical value is recorded in the Bitwarden note `Kasero — Vercel project envs`.
+
+- [ ] **Step 5: `.claude/docs/tech-stack.md`.** Locate the "Database schema" / "Environment variables" / "Per-app commands" sections. Add `UPSTASH_REDIS_URL` to the env-var listing (with the Vercel-only caveat). Add `ioredis` to the api dependencies listing. Add a brief "Realtime" subsection under "Stack decisions" that summarizes the SSE-over-Upstash choice and links to `realtime-system.md`.
+
+- [ ] **Step 6: `.claude/docs/backend-patterns.md`.** Confirm the entry from Task 12.2 is present. Additionally:
+  - In the "API routes" section, add a short note: when a mutation route ships, audit whether any open client devices would benefit from a realtime publish; add the publish call after the DB commit, before `successResponse`. Reference the publisher API.
+  - Update the "full route index" to include `GET /api/realtime`.
+
+- [ ] **Step 7: `.claude/docs/performance-patterns.md`.** Confirm the entry from Task 12.2 is present. Additionally:
+  - Document the relationship between `useRevalidateOnFocus` and the realtime layer: focus-refetch remains the backstop for pub/sub messages dropped during a subscriber-reconnect gap, in addition to the `system.resync` signal.
+  - Document that the SSE endpoint is region-pinned (`preferredRegion = 'iad1'`) and why (connection-cap math).
+
+- [ ] **Step 8: `.claude/docs/i18n-system.md`.** Add the new `ApiMessageCode` entries (`REALTIME_UNAVAILABLE`, `REALTIME_PUBLISH_UNAVAILABLE`) and the new UI keys (`session_revoked_*`, `realtime_disconnected_banner`) to whatever inventory tables / examples the doc maintains. Confirm the "real translations for every registered locale" rule is honored by the entries landed in Phase 4.
+
+- [ ] **Step 9: `.claude/docs/modal-system.md`.** Add a short section "Programmatic close from outside the modal" describing the API the revocation handler uses (Phase 9.1). Reference where this is consumed: the realtime revoke flow may need to dismiss any open business-scoped modal before navigating away. Cross-reference `realtime-system.md`.
+
+- [ ] **Step 10: Sanity-verify the no-edit-expected docs.** Open `.claude/docs/tab-system.md`, `ai-product-pipeline.md`, `barcode-system.md` and confirm no realtime-relevant content exists yet. If any of them describe a feature that would benefit from realtime (e.g., AI snap-to-add completion push), add a "Future: push completion via realtime" stub.
+
+- [ ] **Step 11: Final search for orphan references.** From the repo root:
+  ```
+  grep -rn "real-?time\|EventSource\|SSE\|publishToBusiness\|publishToUser\|publishCritical" --include='*.md' .
+  ```
+  Walk every hit and confirm it either points to `realtime-system.md` or is in `realtime-system.md` itself. Update any orphan that should link to the canonical doc.
+
+- [ ] **Step 12: Commit.**
+  ```
+  git add README.md .claude/CLAUDE.md .claude/docs/tech-stack.md .claude/docs/backend-patterns.md .claude/docs/performance-patterns.md .claude/docs/i18n-system.md .claude/docs/modal-system.md .claude/docs/tab-system.md .claude/docs/ai-product-pipeline.md .claude/docs/barcode-system.md
+  git commit -m "docs(realtime): comprehensive sweep across README, CLAUDE.md, and .claude/docs"
+  ```
+
+**Phase 12 done when:** `realtime-system.md` exists, linked from three locations, CSP audit clean on a deployed preview, all manual-verification scenarios from spec §17 pass, AND every project doc that mentions realtime, env vars, or related subsystems is current and cross-linked.
 
 ---
 
