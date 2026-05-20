@@ -294,6 +294,17 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // ============================================================
   // EFFECT: open/close on auth state
   // ============================================================
+  //
+  // CRITICAL: this effect MUST NOT depend on `openConnection`. The
+  // server's `system.resync` event fires `callAllRefetches`, which
+  // calls `refreshUser` in the auth context, which produces a new
+  // `user` object reference. That cascades:
+  //   user changes → openConnection useCallback re-creates →
+  //   useEffect re-runs → cleanup closes EventSource → reopens →
+  //   server emits system.resync → loop.
+  // Reading openConnection via the ref breaks the cycle: the effect
+  // only ever runs on auth-state toggle, and the latest callback
+  // body is invoked via the ref at that moment.
   useEffect(() => {
     if (!isAuthenticated) {
       if (esRef.current) {
@@ -307,7 +318,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    openConnection()
+    openConnectionRef.current?.()
 
     return () => {
       if (esRef.current) {
@@ -319,7 +330,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         watchdogRef.current = null
       }
     }
-  }, [isAuthenticated, openConnection])
+  }, [isAuthenticated, activeBusinessId])
 
   // ============================================================
   // DEBOUNCED BUSINESS SWITCH
