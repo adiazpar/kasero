@@ -10,6 +10,7 @@ import {
 } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { roundToCurrencyDecimals, startOfUtcDay, startOfPrevUtcDay } from '@kasero/shared/sales-helpers'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 import { postSaleSchema } from './schema'
 
 // 64KB easily covers 100 lines + 1000-char notes.
@@ -28,6 +29,7 @@ const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
  * and assigns a sequential saleNumber.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
   const oversize = enforceMaxContentLength(request, POST_MAX_BODY_BYTES)
   if (oversize) return oversize
 
@@ -178,6 +180,15 @@ export const POST = withBusinessAuth(async (request, access) => {
 
       return { openSessionId, saleNumber }
     })
+
+    // Fire-and-forget hint. The receiving client's handler refetches
+    // both `sales` (the new row) and `products` (the stock decrement
+    // cascade) — see apps/web/src/lib/realtime/handlers.ts.
+    await publishToBusiness(
+      access.businessId,
+      { type: 'sale.created', saleId },
+      originDeviceId,
+    )
 
     return successResponse({
       sale: {
