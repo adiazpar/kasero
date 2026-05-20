@@ -32,6 +32,7 @@ import {
 } from '@/lib/api-client'
 import { useApiMessage } from '@/hooks/useApiMessage'
 import { CACHE_KEYS, scopedCache } from '@/hooks/useSessionCache'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { ProductCategory, ProductSettings, SortPreference } from '@kasero/shared/types'
 
 // ============================================
@@ -213,6 +214,16 @@ export function ProductSettingsProvider({
       refreshSettings()
     }
   }, [businessId, refreshSettings])
+
+  // Register this provider's refresh callbacks with the realtime layer
+  // so product.settings.updated events from other devices trigger a
+  // refetch. Categories share the wire-up because the only way a
+  // category list goes stale across devices is through other events
+  // (category CRUD is not yet realtime), so we limit the registration
+  // to product-settings.
+  useEffect(() => {
+    return registerRefetch('product-settings', refreshSettings)
+  }, [refreshSettings])
 
   const createCategory = useCallback(
     async (name: string): Promise<ProductCategory | null> => {

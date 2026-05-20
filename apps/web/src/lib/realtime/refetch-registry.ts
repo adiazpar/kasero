@@ -7,7 +7,14 @@
  * callAllRefetches() and every registered callback fires.
  */
 
-export type RefetchKey = 'team' | 'invites' | 'business' | 'businesses-list' | 'profile'
+export type RefetchKey =
+  | 'team'
+  | 'invites'
+  | 'business'
+  | 'businesses-list'
+  | 'profile'
+  | 'products'
+  | 'product-settings'
 
 type Listener = () => Promise<void> | void
 

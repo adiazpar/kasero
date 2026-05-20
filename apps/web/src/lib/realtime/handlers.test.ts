@@ -70,6 +70,47 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('profile')
   })
 
+  // --- product events ---
+
+  it('product.created -> callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'product.created', productId: 'p1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('product.updated -> callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.updated', productId: 'p1', fields: ['price'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('product.updated with stock fields -> callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.updated', productId: 'p1', fields: ['stock'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('product.deleted -> callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'product.deleted', productId: 'p1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('product.settings.updated -> callRefetch(product-settings)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.settings.updated', fields: ['sortPreference'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('product-settings')
+  })
+
   // --- critical user events ---
 
   it('session.revoked -> revokeBusinessContext(businessId, reason)', async () => {

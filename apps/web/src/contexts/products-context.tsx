@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import { fetchDeduped } from '@/lib/fetch'
 import { CACHE_KEYS, createSessionCache } from '@/hooks'
 import { isFresh } from '@/lib/freshness'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { Product } from '@kasero/shared/types'
 
 type ProductsUpdater =
@@ -125,6 +127,14 @@ export function ProductsProvider({ businessId, children }: ProductsProviderProps
   // (debounced inside the hook). Routes through ensureLoaded so the
   // freshness window still applies — quick alt-tabs won't refetch.
   useRevalidateOnFocus(ensureLoaded)
+
+  // Register this provider's refetch with the realtime layer so
+  // product.* events published by other devices (or this one's own
+  // publishing tab) trigger a refetch here. Mirrors the
+  // `registerRefetch('business', ...)` wiring in business-context.tsx.
+  useEffect(() => {
+    return registerRefetch('products', refetch)
+  }, [refetch])
 
   // Memoize so consumers don't re-render on every parent tick. Multiple
   // pages (products list, new-order picker, provider detail, providers

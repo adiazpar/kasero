@@ -68,6 +68,16 @@ export function dispatchRealtimeEvent(
       callRefetch('business')
       return
 
+    case 'product.created':
+    case 'product.updated':
+    case 'product.deleted':
+      callRefetch('products')
+      return
+
+    case 'product.settings.updated':
+      callRefetch('product-settings')
+      return
+
     case 'profile.updated':
       callRefetch('profile')
       return
