@@ -15,6 +15,7 @@ import {
   validateBarcodeSourcePrefix,
 } from '@kasero/shared/barcodes'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const createProductSchema = z.object({
   name: Schemas.name(),
@@ -83,6 +84,8 @@ export const POST = withBusinessAuth(async (request, access) => {
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PRODUCT_FORBIDDEN_NOT_MANAGER, 403)
   }
+
+  const originDeviceId = getOriginDeviceId(request)
 
   const oversize = enforceMaxContentLength(request, POST_MAX_BODY_BYTES)
   if (oversize) return oversize
@@ -238,6 +241,14 @@ export const POST = withBusinessAuth(async (request, access) => {
     active: validActive,
     stock: validInitialStock ?? 0,
   }).returning()
+
+  // Fail-open realtime hint to every device in the business. The publisher
+  // swallows Upstash errors internally; the response is unaffected.
+  await publishToBusiness(
+    access.businessId,
+    { type: 'product.created', productId: newProduct.id },
+    originDeviceId,
+  )
 
   return successResponse({ product: newProduct })
 }, { maxBodyBytes: POST_MAX_BODY_BYTES })

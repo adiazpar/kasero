@@ -4,6 +4,13 @@ import { z } from 'zod'
 import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
+import type { BusinessRealtimeEvent } from '@kasero/shared/realtime'
+
+type ProductSettingsField = Extract<
+  BusinessRealtimeEvent,
+  { type: 'product.settings.updated' }
+>['fields'][number]
 
 const sortPreferenceValues = ['name_asc', 'name_desc', 'price_asc', 'price_desc', 'category', 'stock_asc', 'stock_desc'] as const
 
@@ -44,6 +51,8 @@ export const PATCH = withBusinessAuth(async (request, access) => {
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.FORBIDDEN, 403)
   }
+
+  const originDeviceId = getOriginDeviceId(request)
 
   const body = await request.json()
   const validation = updateSettingsSchema.safeParse(body)
@@ -87,6 +96,18 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     .update(businesses)
     .set(updateData)
     .where(eq(businesses.id, access.businessId))
+
+  const changedFields: ProductSettingsField[] = []
+  if (defaultCategoryId !== undefined) changedFields.push('defaultCategoryId')
+  if (sortPreference !== undefined) changedFields.push('sortPreference')
+
+  if (changedFields.length > 0) {
+    await publishToBusiness(
+      access.businessId,
+      { type: 'product.settings.updated', fields: changedFields },
+      originDeviceId,
+    )
+  }
 
   return successResponse({
     settings: {

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { canManageBusiness } from '@/lib/business-auth'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 // Two payload shapes are accepted:
 //
@@ -52,6 +53,8 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
   if (!id) {
     return errorResponse(ApiMessageCode.PRODUCT_ID_REQUIRED, 400)
   }
+
+  const originDeviceId = getOriginDeviceId(request)
 
   // Verify product exists and belongs to business
   const [existingProduct] = await db
@@ -102,6 +105,11 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
     if (updated.length === 0) {
       return errorResponse(ApiMessageCode.STOCK_INVALID, 409)
     }
+    await publishToBusiness(
+      access.businessId,
+      { type: 'product.updated', productId: id, fields: ['stock'] },
+      originDeviceId,
+    )
     return successResponse({ stock: updated[0].stock })
   }
 
@@ -123,6 +131,12 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
   if (updated.length === 0) {
     return errorResponse(ApiMessageCode.STOCK_CONCURRENCY_CONFLICT, 409)
   }
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'product.updated', productId: id, fields: ['stock'] },
+    originDeviceId,
+  )
 
   return successResponse({ stock: updated[0].stock })
 })

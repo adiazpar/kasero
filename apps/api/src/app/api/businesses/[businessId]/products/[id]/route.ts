@@ -14,6 +14,15 @@ import {
   validateBarcodeSourcePrefix,
 } from '@kasero/shared/barcodes'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
+import type { BusinessRealtimeEvent } from '@kasero/shared/realtime'
+
+// Narrow alias for the `fields` literal type on product.updated so the
+// caller can build the array with full type-checking instead of casting.
+type ProductUpdatedField = Extract<
+  BusinessRealtimeEvent,
+  { type: 'product.updated' }
+>['fields'][number]
 
 /**
  * PATCH /api/businesses/[businessId]/products/[id]
@@ -33,6 +42,8 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
   if (!id) {
     return errorResponse(ApiMessageCode.PRODUCT_ID_REQUIRED, 400)
   }
+
+  const originDeviceId = getOriginDeviceId(request)
 
   const oversize = enforceMaxContentLength(request, PATCH_MAX_BODY_BYTES)
   if (oversize) return oversize
@@ -216,6 +227,29 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
     return errorResponse(ApiMessageCode.PRODUCT_NOT_FOUND, 404)
   }
 
+  // Compute the set of fields that actually changed on the wire. Maps the
+  // route's internal updateData keys to the realtime event's `fields`
+  // literal so the discriminated-union type catches drift if the column
+  // surface area changes.
+  const changedFields: ProductUpdatedField[] = []
+  if ('name' in updateData) changedFields.push('name')
+  if ('price' in updateData) changedFields.push('price')
+  if ('categoryId' in updateData) changedFields.push('categoryId')
+  if ('active' in updateData) changedFields.push('active')
+  if ('icon' in updateData) changedFields.push('icon')
+  if ('barcode' in updateData) changedFields.push('barcode')
+
+  // Fail-open. Even when nothing changed (the route returned NO_DATA_TO_UPDATE
+  // above and we never reach here) the publish is guarded against an empty
+  // fields array — handlers don't care, but smaller payloads are nicer.
+  if (changedFields.length > 0) {
+    await publishToBusiness(
+      access.businessId,
+      { type: 'product.updated', productId: id, fields: changedFields },
+      originDeviceId,
+    )
+  }
+
   return successResponse({ product: updatedProduct })
 }, { maxBodyBytes: PATCH_MAX_BODY_BYTES })
 
@@ -238,6 +272,8 @@ export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
   if (!id) {
     return errorResponse(ApiMessageCode.PRODUCT_ID_REQUIRED, 400)
   }
+
+  const originDeviceId = getOriginDeviceId(request)
 
   // Verify product exists and belongs to business
   const [existingProduct] = await db
@@ -287,6 +323,12 @@ export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
   // Hard delete. order_items.productId has ON DELETE SET NULL and
   // preserves its productName snapshot for historical display.
   await db.delete(products).where(eq(products.id, id))
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'product.deleted', productId: id },
+    originDeviceId,
+  )
 
   return successResponse({})
 })
