@@ -50,9 +50,13 @@ function jsonError(code: ApiMessageCode, status: number, retryAfterSeconds?: num
 
 // SSE frame builder. event: <type>, id: <id>, data: <json>.
 function frame(event: RealtimeEvent, id?: string): string {
+  // Emit as the default `message` event (no `event:` field). This lets
+  // the client's single onmessage handler catch every event type — no
+  // per-type addEventListener registration, no NAMED_EVENT_TYPES array
+  // to keep in sync with the discriminated union. The event.type is
+  // already on the JSON payload, so dispatch logic switches on that.
   let out = ''
   if (id) out += `id: ${id}\n`
-  out += `event: ${event.type}\n`
   out += `data: ${JSON.stringify(event)}\n\n`
   return out
 }

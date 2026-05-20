@@ -88,7 +88,7 @@ describe('GET /api/realtime', () => {
     const { value } = await reader.read()
     const text = new TextDecoder().decode(value)
     expect(text).toContain('id: 1700000000-0')
-    expect(text).toContain('event: system.resync')
+    expect(text).toContain('"type":"system.resync"')
     // Tear down so the stream's intervals don't keep the test alive.
     await reader.cancel()
   })
@@ -108,7 +108,7 @@ describe('GET /api/realtime', () => {
     const { value } = await reader.read()
     const text = new TextDecoder().decode(value)
     expect(text).toContain('id: 1700000001-0')
-    expect(text).toContain('event: session.revoked')
+    expect(text).toContain('"type":"session.revoked"')
     await reader.cancel()
   })
 
@@ -131,7 +131,7 @@ describe('GET /api/realtime', () => {
     captured.userListener?.({ __resync__: true })
     const { value } = await reader.read()
     const text = new TextDecoder().decode(value)
-    expect(text).toContain('event: system.resync')
+    expect(text).toContain('"type":"system.resync"')
     await reader.cancel()
   })
 })

@@ -83,28 +83,12 @@ export function useRealtime(): RealtimeContextValue {
   return v
 }
 
-// Named SSE event types the server emits with an `event:` field.
-// We register a listener for each so named events also reset the watchdog.
-const NAMED_EVENT_TYPES: ReadonlyArray<string> = [
-  'team.member.joined',
-  'team.member.removed',
-  'team.member.role_changed',
-  'team.member.status_changed',
-  'team.invite.created',
-  'team.invite.regenerated',
-  'team.invite.consumed',
-  'team.invite.deleted',
-  'business.updated',
-  'profile.updated',
-  'business.list.changed',
-  'session.revoked',
-  'business.deleted',
-  'ownership.transferred',
-  'system.resync',
-  'system.error',
-  'system.auth_expired',
-]
-
+// The server emits every realtime event as a default `message` frame
+// (no `event:` field). The single onmessage handler dispatches by
+// inspecting the JSON payload's `type` field. Pre-fix this file held a
+// NAMED_EVENT_TYPES array that mirrored the RealtimeEvent union;
+// forgetting to update it when adding a new event type silently dropped
+// every instance of that event on the client.
 const WATCHDOG_MS = 45_000
 const SWITCH_DEBOUNCE_MS = 250
 const MAX_CONSECUTIVE_ERRORS = 3
@@ -282,13 +266,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Default message events (no `event:` field on the frame).
+    // Server emits every event as a default `message` frame (no
+    // `event:` field). The dispatch handler inspects payload.type to
+    // route. No per-type listener registration needed.
     es.onmessage = onMessage
-
-    // Named events — server sets `event: <type>` on each frame.
-    for (const type of NAMED_EVENT_TYPES) {
-      es.addEventListener(type, onMessage as EventListener)
-    }
 
     // ---- error handler ----
     es.addEventListener('error', () => {
