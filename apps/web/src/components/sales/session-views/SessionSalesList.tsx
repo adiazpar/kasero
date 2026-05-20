@@ -1,10 +1,11 @@
 'use client'
 
 import { useIntl } from 'react-intl'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { IonSpinner } from '@ionic/react'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
 import { apiRequest } from '@/lib/api-client'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 
 export interface SaleProjection {
   id: string
@@ -44,29 +45,47 @@ export function SessionSalesList({
   const [items, setItems] = useState<SaleProjection[]>([])
   const [loading, setLoading] = useState(false)
 
+  // Latest sessionId in a ref so the refetch callback registered with
+  // the realtime layer sees the current session without re-registering
+  // on every render.
+  const sessionIdRef = useRef(sessionId)
+  sessionIdRef.current = sessionId
+
+  const refetch = useCallback(async () => {
+    const sid = sessionIdRef.current
+    if (!sid) {
+      setItems([])
+      return
+    }
+    setLoading(true)
+    try {
+      const { sales } = await apiRequest<{ sales: SaleProjection[] }>(
+        `/api/businesses/${businessId}/sales-sessions/${sid}/sales?limit=50`,
+      )
+      setItems(sales)
+    } catch {
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
+  }, [businessId])
+
+  // Initial load + refetch when sessionId changes.
   useEffect(() => {
     if (!sessionId) {
       setItems([])
       return
     }
-    let cancelled = false
-    setLoading(true)
-    apiRequest<{ sales: SaleProjection[] }>(
-      `/api/businesses/${businessId}/sales-sessions/${sessionId}/sales?limit=50`,
-    )
-      .then(({ sales }) => {
-        if (!cancelled) setItems(sales)
-      })
-      .catch(() => {
-        if (!cancelled) setItems([])
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [businessId, sessionId])
+    void refetch()
+  }, [sessionId, refetch])
+
+  // Subscribe to the realtime 'sales' refetch key so a sale rung up on
+  // another device while this view is open refreshes the list without
+  // requiring the user to close and reopen the modal. The main
+  // sales-context already owns 'sales' for its own list view; multiple
+  // registrants under the same key all fire on every realtime sale
+  // event.
+  useEffect(() => registerRefetch('sales', refetch), [refetch])
 
   if (loading) {
     return (
