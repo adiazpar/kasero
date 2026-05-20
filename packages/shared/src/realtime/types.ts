@@ -34,6 +34,35 @@ export type BusinessRealtimeEvent =
       type: 'business.updated'
       fields: Array<'name' | 'locale' | 'currency' | 'iconUrl'>
     } & WithOrigin)
+  // Product catalog events. Inventory ("stock") is not a separate domain
+  // in this codebase — it's the `products.stock` column adjusted by the
+  // stock-adjust route, and reflected via `product.updated fields:['stock']`.
+  // Fields enumerated here mirror every column the product create/update/
+  // stock routes can touch; extend the literal type when a new column
+  // becomes mutable.
+  | ({ type: 'product.created'; productId: string } & WithOrigin)
+  | ({
+      type: 'product.updated'
+      productId: string
+      fields: Array<
+        | 'name'
+        | 'price'
+        | 'categoryId'
+        | 'icon'
+        | 'barcode'
+        | 'stock'
+        | 'active'
+      >
+    } & WithOrigin)
+  | ({ type: 'product.deleted'; productId: string } & WithOrigin)
+  // Product-list display preferences on the business row (sortPreference,
+  // defaultCategoryId). Distinct from `business.updated` because the
+  // refetch target is the per-business product-settings, not the business
+  // metadata header.
+  | ({
+      type: 'product.settings.updated'
+      fields: Array<'defaultCategoryId' | 'sortPreference'>
+    } & WithOrigin)
 
 export type UserRealtimeEvent =
   | ({

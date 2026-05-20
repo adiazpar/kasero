@@ -42,6 +42,10 @@ describe('realtime types', () => {
         case 'team.invite.consumed':
         case 'team.invite.deleted':
         case 'business.updated':
+        case 'product.created':
+        case 'product.updated':
+        case 'product.deleted':
+        case 'product.settings.updated':
           return 'biz'
         case 'profile.updated':
         case 'business.list.changed':
