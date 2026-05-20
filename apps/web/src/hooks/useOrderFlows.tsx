@@ -10,6 +10,8 @@ import { useProductSettings } from '@/contexts/product-settings-context'
 import { ApiError, apiDelete, apiPost, apiPatchForm, apiPostForm } from '@/lib/api-client'
 import { NewOrderModal, OrderDetailModal } from '@/components/products'
 import { sortProducts } from '@/lib/products'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
+import { useResyncOnUpdate } from '@/hooks/useResyncOnUpdate'
 import type { Product, Provider } from '@kasero/shared/types'
 import type { ExpandedOrder, OrderFormItem } from '@/lib/products'
 
@@ -114,6 +116,7 @@ export function useOrderFlows(opts: UseOrderFlowsOptions): UseOrderFlowsReturn {
   // only when it has already been loaded — otherwise the toggle's first
   // open does the work.
   const {
+    orders,
     setOrders,
     refetchActive: refetchActiveOrders,
     refetchCompleted: refetchCompletedOrders,
@@ -486,6 +489,29 @@ export function useOrderFlows(opts: UseOrderFlowsOptions): UseOrderFlowsReturn {
   }, [initializeEditForm, initializeReceiveQuantities])
 
   const closeOrderDetail = useCallback(() => setIsOrderDetailOpen(false), [])
+
+  // ===== Realtime: dismiss / resync the open detail modal =====
+  // When another device deletes the order this user is viewing, dismiss
+  // the detail modal so the user isn't staring at a row that has just
+  // disappeared from the underlying list. Same pattern as
+  // EditProductModal / ProductInfoDrawer.
+  const dismissDetailOnRemoteDelete = useCallback(() => {
+    setIsOrderDetailOpen(false)
+  }, [])
+  useDismissOnDelete('order', viewingOrder?.id ?? null, dismissDetailOnRemoteDelete)
+
+  // When another device edits or receives the open order, the orders
+  // context refetch fires first (in handlers.ts), so by the time this
+  // callback runs the `orders` array already holds the fresh row. Mirror
+  // the freshest snapshot into `viewingOrder` so the open modal's steps
+  // re-render with up-to-date totals / items / status. If the row is no
+  // longer present (raced delete), useDismissOnDelete handles dismissal.
+  const resyncViewingOrder = useCallback(() => {
+    if (!viewingOrder?.id) return
+    const fresh = orders.find((o) => o.id === viewingOrder.id)
+    if (fresh) setViewingOrder(fresh)
+  }, [orders, viewingOrder?.id])
+  useResyncOnUpdate('order', viewingOrder?.id ?? null, resyncViewingOrder)
 
   // ===== Ready-to-render modals =====
   const modals = (
