@@ -49,7 +49,15 @@ import { createSessionCache, CACHE_KEYS } from '@/hooks/useSessionCache'
 import type { RealtimeEvent } from '@kasero/shared/realtime'
 import type { MessageId } from '@/i18n/messageIds'
 
-const hubBusinessesCache = createSessionCache<unknown[]>(CACHE_KEYS.HUB_BUSINESSES)
+// Minimal shape — matches the Business interface in HubHome.tsx. We
+// only read `id` and `name` here to resolve the revocation toast.
+interface CachedBusinessSummary {
+  id: string
+  name: string
+}
+const hubBusinessesCache = createSessionCache<CachedBusinessSummary[]>(
+  CACHE_KEYS.HUB_BUSINESSES,
+)
 
 type RevokeReason = 'removed' | 'business_deleted' | 'ownership_transferred'
 
@@ -146,7 +154,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             ? 'session_revoked_business_deleted'
             : 'session_revoked_ownership_transferred'
 
-      const message = intl.formatMessage({ id: messageId }, { businessName: '' })
+      // Resolve the business name from the hub cache so the toast reads
+      // "You've been removed from <Name>." instead of "...from ."
+      // The cache is populated when the user visits the hub; if a user
+      // is revoked before ever loading the hub, we fall back to a
+      // generic message via the messageId-without-name variant.
+      const cached = hubBusinessesCache.get() ?? []
+      const businessName =
+        cached.find((b) => b.id === businessId)?.name ?? ''
+      const message = intl.formatMessage(
+        { id: businessName ? messageId : (`${messageId}_no_name` as MessageId) },
+        { businessName },
+      )
       presentToast({ message, duration: 4000, color: 'medium' })
 
       // Dismiss any open IonModal before navigating away. Without this an
