@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -14,6 +15,7 @@ import { apiRequest } from '@/lib/api-client'
 import { CACHE_KEYS, scopedCache } from '@/hooks'
 import { isFresh } from '@/lib/freshness'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { Sale, SalesStats, PaymentMethod } from '@kasero/shared/types/sale'
 
 interface SalesCacheShape {
@@ -157,6 +159,12 @@ export function SalesProvider({ businessId, children }: SalesProviderProps) {
   }, [fetchPage])
 
   useRevalidateOnFocus(ensureLoaded)
+
+  // Register the sales refetch with the realtime layer so `sale.created`
+  // events from teammates trigger a list refresh on this device.
+  useEffect(() => {
+    return registerRefetch('sales', refetch)
+  }, [refetch])
 
   const commitSale = useCallback(
     async (params: CommitSaleParams): Promise<Sale> => {

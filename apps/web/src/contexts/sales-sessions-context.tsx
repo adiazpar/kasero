@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -14,6 +15,7 @@ import { apiRequest } from '@/lib/api-client'
 import { CACHE_KEYS, scopedLocalCache } from '@/hooks'
 import { isFresh } from '@/lib/freshness'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { SalesSession } from '@kasero/shared/types/sale'
 
 interface SalesSessionsCacheShape {
@@ -165,6 +167,12 @@ export function SalesSessionsProvider({
   }, [businessId, persist, writeSessions, writeCursor])
 
   useRevalidateOnFocus(ensureLoaded)
+
+  // Register both the current-session and history-list state under one
+  // realtime key — open/close events from teammates need to flip both.
+  useEffect(() => {
+    return registerRefetch('sales-sessions', refetch)
+  }, [refetch])
 
   const openSession = useCallback(async (startingCash: number): Promise<SalesSession> => {
     const { session } = await apiRequest<{ session: SalesSession }>(

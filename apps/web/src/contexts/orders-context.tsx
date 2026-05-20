@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import { fetchDeduped } from '@/lib/fetch'
 import { CACHE_KEYS, createSessionCache } from '@/hooks'
 import { isFresh } from '@/lib/freshness'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { ExpandedOrder } from '@/lib/products'
 
 type OrdersUpdater =
@@ -220,6 +222,18 @@ export function OrdersProvider({ businessId, children }: OrdersProviderProps) {
   // history view; users only land there intentionally and won't expect
   // surprise updates while they're scrolling it.
   useRevalidateOnFocus(ensureActiveLoaded)
+
+  // Register both buckets behind one realtime key so a single
+  // `callRefetch('orders')` covers any order.* event regardless of which
+  // bucket the changed row currently belongs to (a receive flips an order
+  // from active → completed, an edit can land in either). The registry
+  // de-duplicates the simultaneous calls per the leading-edge debounce.
+  const refetchAllBuckets = useCallback((): Promise<void> => {
+    return Promise.all([refetchActive(), refetchCompleted()]).then(() => {})
+  }, [refetchActive, refetchCompleted])
+  useEffect(() => {
+    return registerRefetch('orders', refetchAllBuckets)
+  }, [refetchAllBuckets])
 
   const setOrders = useCallback((updater: OrdersUpdater) => {
     const prev = [...activeRef.current, ...completedRef.current]

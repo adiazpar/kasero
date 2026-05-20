@@ -9,7 +9,14 @@
  * signal doesn't accidentally receive the other.
  */
 
-export type EntityType = 'product' | 'team-member' | 'invite' | 'category'
+export type EntityType =
+  | 'product'
+  | 'team-member'
+  | 'invite'
+  | 'category'
+  | 'sale'
+  | 'order'
+  | 'sales-session'
 
 /**
  * @deprecated Use EntityType instead.

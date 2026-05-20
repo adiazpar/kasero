@@ -376,6 +376,155 @@ describe('dispatchRealtimeEvent', () => {
     expect(emitEntityDeleted).not.toHaveBeenCalled()
   })
 
+  // --- sale events ---
+
+  it('sale.created -> callRefetch(sales) + callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sale.created', saleId: 's1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('sales')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('sale.created -> does NOT emitEntityUpdated or emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sale.created', saleId: 's1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+  })
+
+  // --- order events ---
+
+  it('order.created -> callRefetch(orders)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'order.created', orderId: 'o1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+  })
+
+  it('order.created -> does NOT emitEntityUpdated', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'order.created', orderId: 'o1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+  })
+
+  it('order.updated -> callRefetch(orders)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.updated', orderId: 'o2', fields: ['total'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+  })
+
+  it('order.updated -> emitEntityUpdated(order, orderId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.updated', orderId: 'o3', fields: ['items'], originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('order', 'o3')
+  })
+
+  it('order.updated -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.updated', orderId: 'o3', fields: ['items'], originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+  })
+
+  it('order.received -> callRefetch(orders) + callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'order.received', orderId: 'o4' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('order.received -> emitEntityUpdated(order, orderId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.received', orderId: 'o5', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('order', 'o5')
+  })
+
+  it('order.received -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.received', orderId: 'o5', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('order.deleted -> callRefetch(orders)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'order.deleted', orderId: 'o6' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+  })
+
+  it('order.deleted -> emitEntityDeleted(order, orderId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.deleted', orderId: 'o7', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityDeleted).toHaveBeenCalledWith('order', 'o7')
+  })
+
+  it('order.deleted -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'order.deleted', orderId: 'o7', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('orders')
+  })
+
+  // --- sales-session events ---
+
+  it('sales_session.opened -> callRefetch(sales-sessions)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sales_session.opened', sessionId: 'sess1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('sales-sessions')
+  })
+
+  it('sales_session.opened -> does NOT emitEntityUpdated', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sales_session.opened', sessionId: 'sess1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+  })
+
+  it('sales_session.closed -> callRefetch(sales-sessions)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sales_session.closed', sessionId: 'sess2' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('sales-sessions')
+  })
+
+  it('sales_session.closed -> emitEntityUpdated(sales-session, sessionId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'sales_session.closed', sessionId: 'sess3', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('sales-session', 'sess3')
+  })
+
+  it('sales_session.closed -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'sales_session.closed', sessionId: 'sess3', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('sales-sessions')
+  })
+
   // --- critical user events ---
 
   it('session.revoked -> revokeBusinessContext(businessId, reason)', async () => {
