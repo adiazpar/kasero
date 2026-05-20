@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import { fetchDeduped } from '@/lib/fetch'
 import { CACHE_KEYS, createSessionCache } from '@/hooks'
 import { isFresh } from '@/lib/freshness'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import type { Provider } from '@kasero/shared/types'
 
 type ProvidersUpdater = Provider[] | ((prev: Provider[]) => Provider[])
@@ -114,6 +116,11 @@ export function ProvidersProvider({ businessId, children }: ProvidersProviderPro
   }, [fetchProviders])
 
   useRevalidateOnFocus(ensureLoaded)
+
+  // Register with the realtime refetch registry so provider events
+  // dispatched by dispatchRealtimeEvent can trigger a providers refetch
+  // without a direct reference to this context.
+  useEffect(() => registerRefetch('providers', refetch), [refetch])
 
   // Memoize so consumers only re-render on meaningful changes. Mirrors
   // the OrdersContext / ProductsContext pattern; same fan-out concern.

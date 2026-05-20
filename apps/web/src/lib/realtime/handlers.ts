@@ -125,6 +125,20 @@ export function dispatchRealtimeEvent(
       callRefetch('categories')
       return
 
+    case 'provider.created':
+      callRefetch('providers')
+      return
+
+    case 'provider.updated':
+      callRefetch('providers')
+      if (!isSelfEcho) emitEntityUpdated('provider', event.providerId)
+      return
+
+    case 'provider.deleted':
+      callRefetch('providers')
+      if (!isSelfEcho) emitEntityDeleted('provider', event.providerId)
+      return
+
     case 'sale.created':
       // Server decrements products.stock per line item. Refetch both
       // lists so receivers see the new sale AND the updated stock.
