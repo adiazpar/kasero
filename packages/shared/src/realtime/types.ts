@@ -63,6 +63,16 @@ export type BusinessRealtimeEvent =
       type: 'product.settings.updated'
       fields: Array<'defaultCategoryId' | 'sortPreference'>
     } & WithOrigin)
+  // Category events. The mutable columns on product_categories are `name`
+  // (PATCH /categories/[id]) and `sortOrder` (POST /categories/reorder).
+  | ({ type: 'category.created'; categoryId: string } & WithOrigin)
+  | ({
+      type: 'category.updated'
+      categoryId: string
+      fields: Array<'name' | 'sortOrder'>
+    } & WithOrigin)
+  | ({ type: 'category.deleted'; categoryId: string } & WithOrigin)
+  | ({ type: 'category.reordered' } & WithOrigin)
 
 export type UserRealtimeEvent =
   | ({
