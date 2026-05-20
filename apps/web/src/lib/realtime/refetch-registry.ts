@@ -15,6 +15,7 @@ export type RefetchKey =
   | 'profile'
   | 'products'
   | 'product-settings'
+  | 'categories'
 
 type Listener = () => Promise<void> | void
 

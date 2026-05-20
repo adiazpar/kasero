@@ -290,6 +290,92 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('product-settings')
   })
 
+  // --- category events ---
+
+  it('category.created -> callRefetch(categories)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'category.created', categoryId: 'cat1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+  })
+
+  it('category.created -> does NOT emitEntityUpdated', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'category.created', categoryId: 'cat1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+  })
+
+  it('category.updated -> callRefetch(categories)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.updated', categoryId: 'cat2', fields: ['name'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+  })
+
+  it('category.updated -> emitEntityUpdated(category, categoryId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.updated', categoryId: 'cat2', fields: ['name'], originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('category', 'cat2')
+  })
+
+  it('category.updated -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.updated', categoryId: 'cat2', fields: ['name'], originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+  })
+
+  it('category.deleted -> callRefetch(categories) + callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.deleted', categoryId: 'cat3', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('category.deleted -> emitEntityDeleted(category, categoryId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.deleted', categoryId: 'cat3', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityDeleted).toHaveBeenCalledWith('category', 'cat3')
+  })
+
+  it('category.deleted -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'category.deleted', categoryId: 'cat3', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    // refetch is still unconditional
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('category.reordered -> callRefetch(categories)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'category.reordered' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('categories')
+  })
+
+  it('category.reordered -> does NOT emitEntityUpdated or emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'category.reordered' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+  })
+
   // --- critical user events ---
 
   it('session.revoked -> revokeBusinessContext(businessId, reason)', async () => {

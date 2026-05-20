@@ -215,15 +215,17 @@ export function ProductSettingsProvider({
     }
   }, [businessId, refreshSettings])
 
-  // Register this provider's refresh callbacks with the realtime layer
-  // so product.settings.updated events from other devices trigger a
-  // refetch. Categories share the wire-up because the only way a
-  // category list goes stale across devices is through other events
-  // (category CRUD is not yet realtime), so we limit the registration
-  // to product-settings.
+  // Register refresh callbacks with the realtime layer.
+  // - 'product-settings': fires on product.settings.updated events.
+  // - 'categories': fires on category.created / category.updated /
+  //   category.deleted / category.reordered events from other devices.
   useEffect(() => {
     return registerRefetch('product-settings', refreshSettings)
   }, [refreshSettings])
+
+  useEffect(() => {
+    return registerRefetch('categories', refreshCategories)
+  }, [refreshCategories])
 
   const createCategory = useCallback(
     async (name: string): Promise<ProductCategory | null> => {

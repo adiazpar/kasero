@@ -106,6 +106,25 @@ export function dispatchRealtimeEvent(
       callRefetch('product-settings')
       return
 
+    case 'category.created':
+      callRefetch('categories')
+      return
+
+    case 'category.updated':
+      callRefetch('categories')
+      if (!isSelfEcho) emitEntityUpdated('category', event.categoryId)
+      return
+
+    case 'category.deleted':
+      callRefetch('categories')
+      callRefetch('products')
+      if (!isSelfEcho) emitEntityDeleted('category', event.categoryId)
+      return
+
+    case 'category.reordered':
+      callRefetch('categories')
+      return
+
     case 'profile.updated':
       callRefetch('profile')
       return
