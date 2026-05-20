@@ -73,6 +73,18 @@ export type BusinessRealtimeEvent =
     } & WithOrigin)
   | ({ type: 'category.deleted'; categoryId: string } & WithOrigin)
   | ({ type: 'category.reordered' } & WithOrigin)
+  // Provider (supplier) events. The mutable columns on providers are `name`,
+  // `phone`, `email`, and `active` (all touched by PATCH /providers/[id]).
+  // Notes mutations (POST/PATCH/DELETE on provider_notes rows) are collapsed
+  // under provider.updated with fields: ['notes'] — same pattern as how
+  // order_items rewrites are published as order.updated fields: ['items'].
+  | ({ type: 'provider.created'; providerId: string } & WithOrigin)
+  | ({
+      type: 'provider.updated'
+      providerId: string
+      fields: Array<'name' | 'phone' | 'email' | 'active' | 'notes'>
+    } & WithOrigin)
+  | ({ type: 'provider.deleted'; providerId: string } & WithOrigin)
   // Sales (customer-facing transactions). POST /sales is the only mutation
   // — there is no PATCH or DELETE route, so no `sale.updated` /
   // `sale.deleted` variants are declared. The handler for `sale.created`
