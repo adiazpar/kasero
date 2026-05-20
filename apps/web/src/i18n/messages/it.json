@@ -434,6 +434,8 @@
   "navigation.join": "Entra",
   "navigation.load_failed": "Caricamento pagina non riuscito. Controlli la connessione e riprovi.",
   "network.offline_banner": "È offline. Visualizzazione dati in cache.",
+  "network.sw_update_available": "È disponibile una nuova versione.",
+  "network.sw_update_reload": "Ricarica",
   "account.page_eyebrow": "Profilo",
   "account.page_title": "Il suo account.",
   "account.page_title_emphasis": "account",

@@ -434,6 +434,8 @@
   "navigation.join": "参加",
   "navigation.load_failed": "ページを読み込めませんでした。接続を確認してもう一度お試しください",
   "network.offline_banner": "オフラインです。キャッシュデータを表示しています",
+  "network.sw_update_available": "新しいバージョンが利用可能です。",
+  "network.sw_update_reload": "再読み込み",
   "account.page_eyebrow": "プロフィール",
   "account.page_title": "アカウント",
   "account.page_title_emphasis": "アカウント",

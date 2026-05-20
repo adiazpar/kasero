@@ -434,6 +434,8 @@
   "navigation.join": "Rejoindre",
   "navigation.load_failed": "Impossible de charger la page. Vérifiez votre connexion et réessayez.",
   "network.offline_banner": "Vous êtes hors ligne. Affichage des données en cache.",
+  "network.sw_update_available": "Une nouvelle version est disponible.",
+  "network.sw_update_reload": "Recharger",
   "account.page_eyebrow": "Profil",
   "account.page_title": "Votre compte.",
   "account.page_title_emphasis": "compte",

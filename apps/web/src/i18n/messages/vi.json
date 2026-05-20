@@ -434,6 +434,8 @@
   "navigation.join": "Tham gia",
   "navigation.load_failed": "Không thể tải trang. Kiểm tra kết nối và thử lại.",
   "network.offline_banner": "Bạn đang ngoại tuyến. Đang hiển thị dữ liệu đã lưu.",
+  "network.sw_update_available": "Có phiên bản mới.",
+  "network.sw_update_reload": "Tải lại",
   "account.page_eyebrow": "Hồ sơ",
   "account.page_title": "Tài khoản của bạn.",
   "account.page_title_emphasis": "tài khoản",

@@ -434,6 +434,8 @@
   "navigation.join": "Join",
   "navigation.load_failed": "Couldn't load page. Check your connection and try again.",
   "network.offline_banner": "You're offline. Showing cached data.",
+  "network.sw_update_available": "A new version is available.",
+  "network.sw_update_reload": "Reload",
   "account.page_eyebrow": "Profile",
   "account.page_title": "Your account.",
   "account.page_title_emphasis": "account",

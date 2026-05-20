@@ -665,6 +665,8 @@ export type MessageId =
   | 'navigation.settings'
   | 'navigation.team'
   | 'network.offline_banner'
+  | 'network.sw_update_available'
+  | 'network.sw_update_reload'
   | 'oauth_apple_continue'
   | 'oauth_google_continue'
   | 'oauth_or_divider'

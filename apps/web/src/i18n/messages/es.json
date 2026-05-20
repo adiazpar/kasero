@@ -434,6 +434,8 @@
   "navigation.join": "Unirse",
   "navigation.load_failed": "No se pudo cargar la página. Verifica tu conexión e inténtalo de nuevo.",
   "network.offline_banner": "Sin conexión. Mostrando datos en caché.",
+  "network.sw_update_available": "Hay una nueva versión disponible.",
+  "network.sw_update_reload": "Recargar",
   "account.page_eyebrow": "Perfil",
   "account.page_title": "Su cuenta.",
   "account.page_title_emphasis": "cuenta",

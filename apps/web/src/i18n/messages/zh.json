@@ -434,6 +434,8 @@
   "navigation.join": "加入",
   "navigation.load_failed": "无法加载页面，请检查网络连接后重试",
   "network.offline_banner": "您当前离线，正在显示缓存数据",
+  "network.sw_update_available": "有新版本可用。",
+  "network.sw_update_reload": "重新加载",
   "account.page_eyebrow": "个人资料",
   "account.page_title": "您的账户",
   "account.page_title_emphasis": "账户",

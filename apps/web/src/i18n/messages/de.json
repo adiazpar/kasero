@@ -434,6 +434,8 @@
   "navigation.join": "Beitreten",
   "navigation.load_failed": "Seite konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
   "network.offline_banner": "Sie sind offline. Zwischengespeicherte Daten werden angezeigt.",
+  "network.sw_update_available": "Eine neue Version ist verfügbar.",
+  "network.sw_update_reload": "Neu laden",
   "account.page_eyebrow": "Profil",
   "account.page_title": "Ihr Konto.",
   "account.page_title_emphasis": "Konto",

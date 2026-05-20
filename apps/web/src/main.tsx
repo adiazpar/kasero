@@ -1,6 +1,5 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { registerSW } from 'virtual:pwa-register'
 import { App } from './App'
 
 // Order matters:
@@ -74,6 +73,10 @@ root.render(
 
 // PWA service worker handling.
 // - Prod builds: register the Workbox SW that vite-plugin-pwa emits.
+//   `registerServiceWorkerWithUpdatePrompt` is called with a callback that
+//   sets a flag on window so the App shell can surface the update banner.
+//   The returned `updateSW` function is stashed on window so the banner
+//   can call it without needing a React prop chain or context.
 // - Dev: actively unregister any SW from a prior production-preview session.
 //   `vite-plugin-pwa`'s `devOptions.enabled = false` only prevents registering
 //   a NEW SW in dev — it doesn't unregister one that's already installed.
@@ -92,11 +95,21 @@ if ('serviceWorker' in navigator) {
       })
     })
   } else {
-    registerSW({
-      immediate: true,
-      onRegisterError(error) {
-        console.warn('[pwa] SW registration failed:', error)
-      },
+    import('./pwa/register').then(({ registerServiceWorkerWithUpdatePrompt }) => {
+      const updateSW = registerServiceWorkerWithUpdatePrompt(() => {
+        // Signal the React tree that a new SW is waiting. The App shell
+        // checks this flag in a useEffect and surfaces the update banner.
+        window.__swUpdateReady = true
+        window.__swUpdateFn = updateSW
+        window.dispatchEvent(new Event('sw-update-ready'))
+      })
     })
+  }
+}
+
+declare global {
+  interface Window {
+    __swUpdateReady?: boolean
+    __swUpdateFn?: () => Promise<void>
   }
 }

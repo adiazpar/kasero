@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { IonApp } from '@ionic/react'
 import { IonReactRouter } from '@ionic/react-router'
 import { Route, Switch } from 'react-router-dom'
@@ -6,6 +7,7 @@ import { AuthGateOverlay } from '@/components/layout/auth-gate-overlay'
 import { ErrorBoundary } from '@/components/layout/error-boundary'
 import { HapticFeedbackProvider } from '@/components/layout/haptic-feedback-provider'
 import { OfflineBadge } from '@/components/layout/OfflineBadge'
+import { SWUpdateBanner } from '@/components/layout/SWUpdateBanner'
 import { AuthGateProvider } from '@/contexts/auth-gate-context'
 import { AuthProvider } from '@/contexts/auth-context'
 import { RealtimeProvider } from '@/contexts/realtime-context'
@@ -27,6 +29,26 @@ import { AuthWizardPage } from '@/routes/AuthWizardPage'
 //     ion-back-button, ion-menu-button, and any element marked
 //     [data-haptic]. Renders no DOM.
 export function App() {
+  const [showUpdateBanner, setShowUpdateBanner] = useState(
+    () => typeof window !== 'undefined' && !!window.__swUpdateReady,
+  )
+
+  // Listen for the sw-update-ready event dispatched from main.tsx when
+  // vite-plugin-pwa detects a waiting service worker.
+  useEffect(() => {
+    const handler = () => setShowUpdateBanner(true)
+    window.addEventListener('sw-update-ready', handler)
+    return () => window.removeEventListener('sw-update-ready', handler)
+  }, [])
+
+  function handleReload() {
+    void window.__swUpdateFn?.()
+  }
+
+  function handleDismiss() {
+    setShowUpdateBanner(false)
+  }
+
   return (
     <IonApp>
       <ErrorBoundary>
@@ -38,6 +60,9 @@ export function App() {
                   <HapticFeedbackProvider />
                   <AuthGateOverlay />
                   <OfflineBadge />
+                  {showUpdateBanner && (
+                    <SWUpdateBanner onReload={handleReload} onDismiss={handleDismiss} />
+                  )}
                   <Switch>
                     <Route exact path="/auth">
                       <AuthWizardPage />

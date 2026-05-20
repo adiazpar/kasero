@@ -434,6 +434,8 @@
   "navigation.join": "Join",
   "navigation.load_failed": "Hindi ma-load ang page. Tignan ang connection mo at subukan ulit.",
   "network.offline_banner": "Offline ka. Nagpapakita ng cached data.",
+  "network.sw_update_available": "May bagong bersyon na available.",
+  "network.sw_update_reload": "I-reload",
   "account.page_eyebrow": "Profile",
   "account.page_title": "Ang iyong account.",
   "account.page_title_emphasis": "account",
