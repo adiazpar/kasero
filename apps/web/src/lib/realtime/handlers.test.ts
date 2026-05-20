@@ -3,9 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const callRefetch = vi.fn()
 const callAllRefetches = vi.fn()
 const emitEntityDeleted = vi.fn()
+const emitEntityUpdated = vi.fn()
 
 vi.mock('./refetch-registry', () => ({ callRefetch, callAllRefetches }))
-vi.mock('./entity-events', () => ({ emitEntityDeleted }))
+vi.mock('./entity-events', () => ({ emitEntityDeleted, emitEntityUpdated }))
 
 describe('dispatchRealtimeEvent', () => {
   const revokeBusinessContext = vi.fn()
@@ -23,6 +24,7 @@ describe('dispatchRealtimeEvent', () => {
     callRefetch.mockReset()
     callAllRefetches.mockReset()
     emitEntityDeleted.mockReset()
+    emitEntityUpdated.mockReset()
     revokeBusinessContext.mockReset()
     routeToLogin.mockReset()
     showToast.mockReset()
@@ -44,16 +46,78 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('invites')
   })
 
-  it('team.member.removed -> emitEntityDeleted(team-member, memberId)', async () => {
+  it('team.member.removed -> emitEntityDeleted(team-member, memberId) when remote', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
-    dispatchRealtimeEvent({ type: 'team.member.removed', memberId: 'm42' }, ctx)
+    dispatchRealtimeEvent(
+      { type: 'team.member.removed', memberId: 'm42', originDeviceId: 'other-device' },
+      ctx,
+    )
     expect(emitEntityDeleted).toHaveBeenCalledWith('team-member', 'm42')
+  })
+
+  it('team.member.removed -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.removed', memberId: 'm42', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    // refetch is still unconditional
+    expect(callRefetch).toHaveBeenCalledWith('team')
   })
 
   it('team.member.joined -> does NOT emitEntityDeleted', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent({ type: 'team.member.joined', memberId: 'm1' }, ctx)
     expect(emitEntityDeleted).not.toHaveBeenCalled()
+  })
+
+  it('team.member.role_changed -> callRefetch(team) + callRefetch(invites)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.role_changed', memberId: 'm1', role: 'employee', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('team')
+    expect(callRefetch).toHaveBeenCalledWith('invites')
+  })
+
+  it('team.member.role_changed -> emitEntityUpdated(team-member, memberId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.role_changed', memberId: 'm7', role: 'employee', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('team-member', 'm7')
+  })
+
+  it('team.member.role_changed -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.role_changed', memberId: 'm7', role: 'employee', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('team')
+  })
+
+  it('team.member.status_changed -> emitEntityUpdated(team-member, memberId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.status_changed', memberId: 'm8', status: 'disabled', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('team-member', 'm8')
+  })
+
+  it('team.member.status_changed -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.member.status_changed', memberId: 'm8', status: 'disabled', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('team')
   })
 
   it('team.invite.created -> callRefetch(invites)', async () => {
@@ -63,18 +127,44 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).not.toHaveBeenCalledWith('team')
   })
 
-  it('team.invite.deleted -> callRefetch(invites) + emitEntityDeleted(invite, inviteId)', async () => {
+  it('team.invite.deleted -> callRefetch(invites) + emitEntityDeleted(invite, inviteId) when remote', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
-    dispatchRealtimeEvent({ type: 'team.invite.deleted', inviteId: 'inv-del' }, ctx)
+    dispatchRealtimeEvent(
+      { type: 'team.invite.deleted', inviteId: 'inv-del', originDeviceId: 'other-device' },
+      ctx,
+    )
     expect(callRefetch).toHaveBeenCalledWith('invites')
     expect(emitEntityDeleted).toHaveBeenCalledWith('invite', 'inv-del')
   })
 
-  it('team.invite.consumed -> callRefetch(invites) + emitEntityDeleted(invite, inviteId)', async () => {
+  it('team.invite.deleted -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
-    dispatchRealtimeEvent({ type: 'team.invite.consumed', inviteId: 'inv-con', consumedByName: 'Alice' }, ctx)
+    dispatchRealtimeEvent(
+      { type: 'team.invite.deleted', inviteId: 'inv-del', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('invites')
+  })
+
+  it('team.invite.consumed -> callRefetch(invites) + emitEntityDeleted(invite, inviteId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.invite.consumed', inviteId: 'inv-con', consumedByName: 'Alice', originDeviceId: 'other-device' },
+      ctx,
+    )
     expect(callRefetch).toHaveBeenCalledWith('invites')
     expect(emitEntityDeleted).toHaveBeenCalledWith('invite', 'inv-con')
+  })
+
+  it('team.invite.consumed -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'team.invite.consumed', inviteId: 'inv-con', consumedByName: 'Alice', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('invites')
   })
 
   it('team.invite.created -> does NOT emitEntityDeleted', async () => {
@@ -113,6 +203,12 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('products')
   })
 
+  it('product.created -> does NOT emitEntityUpdated', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'product.created', productId: 'p1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+  })
+
   it('product.updated -> callRefetch(products)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent(
@@ -131,16 +227,49 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('products')
   })
 
+  it('product.updated -> emitEntityUpdated(product, productId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.updated', productId: 'prod-upd', fields: ['price'], originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('product', 'prod-upd')
+  })
+
+  it('product.updated -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.updated', productId: 'prod-upd', fields: ['price'], originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    // refetch is still unconditional
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
   it('product.deleted -> callRefetch(products)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent({ type: 'product.deleted', productId: 'p1' }, ctx)
     expect(callRefetch).toHaveBeenCalledWith('products')
   })
 
-  it('product.deleted -> emitEntityDeleted(product, productId)', async () => {
+  it('product.deleted -> emitEntityDeleted(product, productId) when remote', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
-    dispatchRealtimeEvent({ type: 'product.deleted', productId: 'prod-xyz' }, ctx)
+    dispatchRealtimeEvent(
+      { type: 'product.deleted', productId: 'prod-xyz', originDeviceId: 'other-device' },
+      ctx,
+    )
     expect(emitEntityDeleted).toHaveBeenCalledWith('product', 'prod-xyz')
+  })
+
+  it('product.deleted -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.deleted', productId: 'prod-xyz', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('products')
   })
 
   it('product.updated -> does NOT emitEntityDeleted', async () => {
@@ -208,13 +337,21 @@ describe('dispatchRealtimeEvent', () => {
     expect(routeToLogin).toHaveBeenCalled()
   })
 
-  // --- echo behavior ---
-  // Echo suppression was removed (see handlers.ts comment). The publisher's
-  // own device now receives its own events and refetches just like every
-  // other device. Tests below pin the new behavior so the suppression
-  // can't quietly return.
+  // --- echo suppression ---
+  // Entity-event emits (emitEntityDeleted, emitEntityUpdated) are suppressed
+  // when the event originates from this device. callRefetch calls are always
+  // unconditional — the publisher needs its list views refreshed too.
 
-  it('event with own deviceId still triggers refetch (no echo suppression)', async () => {
+  it('system.resync (no originDeviceId) -> callAllRefetches without error', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    // system.* events have no originDeviceId; the isSelfEcho check must be graceful
+    expect(() => {
+      dispatchRealtimeEvent({ type: 'system.resync' }, ctx)
+    }).not.toThrow()
+    expect(callAllRefetches).toHaveBeenCalled()
+  })
+
+  it('event with own deviceId still triggers refetch (refetch is not echo-suppressed)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent(
       { type: 'team.member.joined', memberId: 'm1', originDeviceId: 'device-me' },

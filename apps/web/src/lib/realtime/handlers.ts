@@ -10,7 +10,7 @@
 
 import type { RealtimeEvent } from '@kasero/shared/realtime'
 import { callRefetch, callAllRefetches } from './refetch-registry'
-import { emitEntityDeleted } from './entity-events'
+import { emitEntityDeleted, emitEntityUpdated } from './entity-events'
 
 export interface RealtimeHandlerContext {
   ownDeviceId: string
@@ -24,43 +24,49 @@ export interface RealtimeHandlerContext {
 }
 
 /**
- * Dispatch a realtime event. Echo-suppresses events tagged with the
- * own device id before reaching the switch, so no case branch needs to
- * handle it. The exhaustiveness assertion at the bottom ensures every
- * new event type in the shared union must be handled here.
+ * Dispatch a realtime event. The exhaustiveness assertion at the bottom
+ * ensures every new event type in the shared union must be handled here.
+ *
+ * Echo suppression policy:
+ *   - callRefetch / callAllRefetches: NOT suppressed. The publisher's
+ *     own refetch after its mutation may have raced; re-fetching on the
+ *     echo is cheap and keeps list views current on the publishing device.
+ *   - emitEntityDeleted / emitEntityUpdated: SUPPRESSED when the event
+ *     originates from this device (isSelfEcho). Entity-event signals
+ *     drive UI lifecycle (modal dismiss, snapshot resync). The publishing
+ *     device already manages its own modal state after the API call
+ *     returns; receiving the echo would cause premature dismissal or a
+ *     double-resync. Consumers that need to react on the publisher should
+ *     do so directly in the mutation callback, not via the bus.
+ *
+ * Never add blanket echo suppression for refetch calls — that restores
+ * the bug this comment was written to document.
  */
 export function dispatchRealtimeEvent(
   event: RealtimeEvent,
   ctx: RealtimeHandlerContext,
 ): void {
-  // Echo suppression was intentionally removed. The original design
-  // assumed the publishing device had already updated its local state
-  // from the API response, so re-dispatching the realtime echo was
-  // redundant. In practice, our existing mutation flows (team remove,
-  // role change, invite consume, etc.) don't optimistically patch
-  // local state — they rely on a follow-up refetch — so suppressing
-  // the echo left the publishing device showing stale data until
-  // useRevalidateOnFocus caught up (5s debounce, or 15s+ if focus
-  // didn't change). Dispatching the echo triggers the same refetch
-  // every other device performs. The extra GET on the publisher is
-  // idempotent and cheap.
-  //
-  // ctx.ownDeviceId is still passed in for future use (e.g., a
-  // dedicated optimistic-update path), but no longer filters events.
-  void ctx.ownDeviceId
+  // Graceful check: system.* events don't carry originDeviceId.
+  const isSelfEcho =
+    'originDeviceId' in event && event.originDeviceId === ctx.ownDeviceId
 
   switch (event.type) {
     case 'team.member.joined':
+      callRefetch('team')
+      callRefetch('invites')
+      return
+
     case 'team.member.role_changed':
     case 'team.member.status_changed':
       callRefetch('team')
       callRefetch('invites')
+      if (!isSelfEcho) emitEntityUpdated('team-member', event.memberId)
       return
 
     case 'team.member.removed':
       callRefetch('team')
       callRefetch('invites')
-      emitEntityDeleted('team-member', event.memberId)
+      if (!isSelfEcho) emitEntityDeleted('team-member', event.memberId)
       return
 
     case 'team.invite.created':
@@ -70,12 +76,12 @@ export function dispatchRealtimeEvent(
 
     case 'team.invite.consumed':
       callRefetch('invites')
-      emitEntityDeleted('invite', event.inviteId)
+      if (!isSelfEcho) emitEntityDeleted('invite', event.inviteId)
       return
 
     case 'team.invite.deleted':
       callRefetch('invites')
-      emitEntityDeleted('invite', event.inviteId)
+      if (!isSelfEcho) emitEntityDeleted('invite', event.inviteId)
       return
 
     case 'business.updated':
@@ -83,13 +89,17 @@ export function dispatchRealtimeEvent(
       return
 
     case 'product.created':
+      callRefetch('products')
+      return
+
     case 'product.updated':
       callRefetch('products')
+      if (!isSelfEcho) emitEntityUpdated('product', event.productId)
       return
 
     case 'product.deleted':
       callRefetch('products')
-      emitEntityDeleted('product', event.productId)
+      if (!isSelfEcho) emitEntityDeleted('product', event.productId)
       return
 
     case 'product.settings.updated':
