@@ -3,6 +3,7 @@ import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const receiveOrderSchema = z.object({
   // Per-line received quantities. Capped at 1M to match the create-
@@ -20,6 +21,7 @@ const receiveOrderSchema = z.object({
  * remain manager-only.
  */
 export const POST = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
   const id = routeParams?.id
   if (!id) {
     return errorResponse(ApiMessageCode.ORDER_ID_REQUIRED, 400)
@@ -132,6 +134,15 @@ export const POST = withBusinessAuth(async (request, access, routeParams) => {
     }
     throw err
   }
+
+  // Fire-and-forget hint. The receiving client's handler refetches both
+  // `orders` (status flip to 'received') and `products` (the stock
+  // increment cascade) — same pattern as `sale.created`.
+  await publishToBusiness(
+    access.businessId,
+    { type: 'order.received', orderId: id },
+    originDeviceId,
+  )
 
   return successResponse({})
 })

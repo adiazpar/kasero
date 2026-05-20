@@ -6,6 +6,7 @@ import { withBusinessAuth, validationError, errorResponse, successResponse } fro
 import { canManageBusiness, assertProductsInBusiness, assertProviderInBusiness } from '@/lib/business-auth'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const orderItemSchema = z.object({
   productId: Schemas.id(),
@@ -169,6 +170,7 @@ export const GET = withBusinessAuth(async (request, access) => {
  * Create a new order with items.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
   // Only partners and owners can create orders.
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.ORDER_FORBIDDEN_NOT_MANAGER, 403)
@@ -295,6 +297,13 @@ export const POST = withBusinessAuth(async (request, access) => {
     .from(users)
     .where(eq(users.id, access.userId))
     .get() || null
+
+  // Fire-and-forget hint to other devices in this business.
+  await publishToBusiness(
+    access.businessId,
+    { type: 'order.created', orderId },
+    originDeviceId,
+  )
 
   // Return full expanded order so client can append without refetching
   return successResponse({

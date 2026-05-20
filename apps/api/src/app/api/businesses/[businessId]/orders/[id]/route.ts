@@ -6,6 +6,7 @@ import { withBusinessAuth, validationError, errorResponse, successResponse } fro
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { canManageBusiness, assertProductsInBusiness, assertProviderInBusiness } from '@/lib/business-auth'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const orderItemSchema = z.object({
   productId: Schemas.id(),
@@ -22,6 +23,7 @@ const orderItemSchema = z.object({
  * Update an order and its items.
  */
 export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
   // Only partners and owners can modify orders
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.ORDER_FORBIDDEN_NOT_MANAGER, 403)
@@ -174,6 +176,26 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
       : []),
   ])
 
+  // Build the fields list mirroring exactly which columns the batch
+  // touched. `total` flips whenever updateData.total was set (either by
+  // the client or by the items-recompute branch); `items` flips when the
+  // items array was rewritten.
+  const changedFields: Array<'total' | 'estimatedArrival' | 'providerId' | 'items'> = []
+  if ('total' in updateData) changedFields.push('total')
+  if ('estimatedArrival' in updateData) changedFields.push('estimatedArrival')
+  if ('providerId' in updateData) changedFields.push('providerId')
+  if (itemRowsToInsert !== null) changedFields.push('items')
+
+  // Skip publish if nothing actually changed — a PATCH with an empty
+  // body is a no-op and shouldn't burn a refetch on other devices.
+  if (changedFields.length > 0) {
+    await publishToBusiness(
+      access.businessId,
+      { type: 'order.updated', orderId: id, fields: changedFields },
+      originDeviceId,
+    )
+  }
+
   return successResponse({})
 })
 
@@ -183,6 +205,7 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
  * Delete an order and its items.
  */
 export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
   // Only partners and owners can delete orders
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.ORDER_FORBIDDEN_NOT_MANAGER, 403)
@@ -211,6 +234,12 @@ export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
 
   // Delete order (cascade will delete items)
   await db.delete(orders).where(eq(orders.id, id))
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'order.deleted', orderId: id },
+    originDeviceId,
+  )
 
   return successResponse({})
 })
