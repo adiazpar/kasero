@@ -32,10 +32,21 @@ export function dispatchRealtimeEvent(
   event: RealtimeEvent,
   ctx: RealtimeHandlerContext,
 ): void {
-  // Echo suppression: drop events the publishing client tagged with our own id.
-  if ('originDeviceId' in event && event.originDeviceId === ctx.ownDeviceId) {
-    return
-  }
+  // Echo suppression was intentionally removed. The original design
+  // assumed the publishing device had already updated its local state
+  // from the API response, so re-dispatching the realtime echo was
+  // redundant. In practice, our existing mutation flows (team remove,
+  // role change, invite consume, etc.) don't optimistically patch
+  // local state — they rely on a follow-up refetch — so suppressing
+  // the echo left the publishing device showing stale data until
+  // useRevalidateOnFocus caught up (5s debounce, or 15s+ if focus
+  // didn't change). Dispatching the echo triggers the same refetch
+  // every other device performs. The extra GET on the publisher is
+  // idempotent and cheap.
+  //
+  // ctx.ownDeviceId is still passed in for future use (e.g., a
+  // dedicated optimistic-update path), but no longer filters events.
+  void ctx.ownDeviceId
 
   switch (event.type) {
     case 'team.member.joined':

@@ -117,19 +117,23 @@ describe('dispatchRealtimeEvent', () => {
     expect(routeToLogin).toHaveBeenCalled()
   })
 
-  // --- echo suppression ---
+  // --- echo behavior ---
+  // Echo suppression was removed (see handlers.ts comment). The publisher's
+  // own device now receives its own events and refetches just like every
+  // other device. Tests below pin the new behavior so the suppression
+  // can't quietly return.
 
-  it('event with own deviceId is dropped (echo suppression)', async () => {
+  it('event with own deviceId still triggers refetch (no echo suppression)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent(
       { type: 'team.member.joined', memberId: 'm1', originDeviceId: 'device-me' },
       ctx,
     )
-    expect(callRefetch).not.toHaveBeenCalled()
-    expect(revokeBusinessContext).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('team')
+    expect(callRefetch).toHaveBeenCalledWith('invites')
   })
 
-  it('event with different deviceId is not suppressed', async () => {
+  it('event with different deviceId triggers the same refetch', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent(
       { type: 'team.member.joined', memberId: 'm1', originDeviceId: 'other-device' },
