@@ -6,6 +6,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { MAX_PROVIDER_NOTES, NOTE_TITLE_MAX, NOTE_BODY_MAX } from '@kasero/shared/provider-notes'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const createNoteSchema = z.object({
   title: z.string().min(1).max(NOTE_TITLE_MAX),
@@ -18,6 +19,8 @@ const createNoteSchema = z.object({
  * Create a new note on a provider. Caps at MAX_PROVIDER_NOTES per provider.
  */
 export const POST = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -114,6 +117,12 @@ export const POST = withBusinessAuth(async (request, access, routeParams) => {
       eq(providerNotes.businessId, access.businessId),
     ))
     .orderBy(desc(providerNotes.createdAt))
+
+  await publishToBusiness(access.businessId, {
+    type: 'provider.updated',
+    providerId: providerId,
+    fields: ['notes'],
+  }, originDeviceId)
 
   return successResponse({ note: newNote, notes }, ApiMessageCode.PROVIDER_NOTE_CREATED)
 })

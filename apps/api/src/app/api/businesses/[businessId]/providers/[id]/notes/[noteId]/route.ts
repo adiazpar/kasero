@@ -5,6 +5,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { NOTE_TITLE_MAX, NOTE_BODY_MAX } from '@kasero/shared/provider-notes'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const updateNoteSchema = z.object({
   title: z.string().min(1).max(NOTE_TITLE_MAX).optional(),
@@ -28,6 +29,8 @@ async function fetchNotesList(providerId: string, businessId: string) {
  * Update a single note. Title and body are independently optional.
  */
 export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -69,13 +72,22 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
     .returning()
 
   const notes = await fetchNotesList(providerId, access.businessId)
+
+  await publishToBusiness(access.businessId, {
+    type: 'provider.updated',
+    providerId: providerId,
+    fields: ['notes'],
+  }, originDeviceId)
+
   return successResponse({ note: updated, notes }, ApiMessageCode.PROVIDER_NOTE_UPDATED)
 })
 
 /**
  * DELETE /api/businesses/[businessId]/providers/[id]/notes/[noteId]
  */
-export const DELETE = withBusinessAuth(async (_request, access, routeParams) => {
+export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -103,5 +115,12 @@ export const DELETE = withBusinessAuth(async (_request, access, routeParams) => 
   await db.delete(providerNotes).where(eq(providerNotes.id, noteId))
 
   const notes = await fetchNotesList(providerId, access.businessId)
+
+  await publishToBusiness(access.businessId, {
+    type: 'provider.updated',
+    providerId: providerId,
+    fields: ['notes'],
+  }, originDeviceId)
+
   return successResponse({ notes }, ApiMessageCode.PROVIDER_NOTE_DELETED)
 })

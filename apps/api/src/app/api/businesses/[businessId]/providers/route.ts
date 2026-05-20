@@ -6,6 +6,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const createProviderSchema = z.object({
   name: Schemas.name(),
@@ -44,6 +45,8 @@ export const GET = withBusinessAuth(async (request, access) => {
  * Create a new provider.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -68,6 +71,11 @@ export const POST = withBusinessAuth(async (request, access) => {
     active,
     createdAt: new Date(),
   }).returning()
+
+  await publishToBusiness(access.businessId, {
+    type: 'provider.created',
+    providerId: providerId,
+  }, originDeviceId)
 
   // Fresh providers have no notes yet; include the empty array so the
   // client sees the same shape as the GET response.

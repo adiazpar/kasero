@@ -5,6 +5,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const updateProviderSchema = z.object({
   name: Schemas.name().optional(),
@@ -75,6 +76,8 @@ export const GET = withBusinessAuth(async (_request, access, routeParams) => {
  * Update a provider. All fields optional — provide only what changes.
  */
 export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -102,10 +105,11 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
 
   const { name, phone, email, active } = validation.data
   const updateData: Record<string, unknown> = {}
-  if (name !== undefined) updateData.name = name
-  if (phone !== undefined) updateData.phone = phone || null
-  if (email !== undefined) updateData.email = email || null
-  if (active !== undefined) updateData.active = active
+  const changedFields: Array<'name' | 'phone' | 'email' | 'active'> = []
+  if (name !== undefined) { updateData.name = name; changedFields.push('name') }
+  if (phone !== undefined) { updateData.phone = phone || null; changedFields.push('phone') }
+  if (email !== undefined) { updateData.email = email || null; changedFields.push('email') }
+  if (active !== undefined) { updateData.active = active; changedFields.push('active') }
 
   const [updated] = await db
     .update(providers)
@@ -125,6 +129,14 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
     .orderBy(desc(providerNotes.createdAt))
     .limit(50)
 
+  if (changedFields.length > 0) {
+    await publishToBusiness(access.businessId, {
+      type: 'provider.updated',
+      providerId: id,
+      fields: changedFields,
+    }, originDeviceId)
+  }
+
   return successResponse({ provider: { ...updated, notes } })
 })
 
@@ -135,7 +147,9 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
  * with no onDelete cascade declared, so we null it out on dependent orders
  * first. Product name snapshots on each order item are unaffected.
  */
-export const DELETE = withBusinessAuth(async (_request, access, routeParams) => {
+export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.PROVIDER_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -165,6 +179,11 @@ export const DELETE = withBusinessAuth(async (_request, access, routeParams) => 
       .where(and(eq(orders.providerId, id), eq(orders.businessId, access.businessId))),
     db.delete(providers).where(eq(providers.id, id)),
   ])
+
+  await publishToBusiness(access.businessId, {
+    type: 'provider.deleted',
+    providerId: id,
+  }, originDeviceId)
 
   return successResponse({})
 })
