@@ -166,12 +166,21 @@ export function withAuth(
       const csrfReject = enforceSameOrigin(request)
       if (csrfReject) return csrfReject
 
-      // Body-size guard. Fires for any non-GET/HEAD; the cap is
+      // Body-size guard. Fires for non-GET/HEAD/DELETE; the cap is
       // either the route-supplied override or the default 256 KB.
       // Routes that pre-validated body already (legacy callers that
       // call enforceMaxContentLength themselves) re-trip safely —
       // this is idempotent.
-      if (request.method !== 'GET' && request.method !== 'HEAD') {
+      //
+      // DELETE is exempted because the method is semantically bodyless
+      // and some clients (notably iOS Safari and iOS PWAs) omit the
+      // Content-Length header on DELETE. Without this exemption every
+      // DELETE from those clients 411s with REQUEST_LENGTH_REQUIRED.
+      if (
+        request.method !== 'GET' &&
+        request.method !== 'HEAD' &&
+        request.method !== 'DELETE'
+      ) {
         const cap = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
         const oversize = enforceMaxContentLength(request, cap)
         if (oversize) return oversize
@@ -354,7 +363,14 @@ export function withBusinessAuth(
       // 15 MB receipts, products POST/PATCH with up to 5 MB icons)
       // override the cap explicitly. Without this default, dozens of
       // routes were unbounded in the audit (H-16).
-      if (request.method !== 'GET' && request.method !== 'HEAD') {
+      //
+      // DELETE is exempted — see the matching note in `withAuth`
+      // above (iOS Safari / iOS PWA omits Content-Length on DELETE).
+      if (
+        request.method !== 'GET' &&
+        request.method !== 'HEAD' &&
+        request.method !== 'DELETE'
+      ) {
         const cap = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES
         const oversize = enforceMaxContentLength(request, cap)
         if (oversize) return oversize
