@@ -329,10 +329,16 @@ export const RateLimits = {
    * Realtime SSE connect storms (GET /api/realtime). Each EventSource
    * stays open ~300s (Fluid Compute maxDuration), then the browser
    * reconnects automatically — so steady-state is ~12/hour/device.
-   * Multiple devices, refreshes, and business switches multiply the
-   * count, so 60/min/user is generous for normal use but still caps a
-   * runaway client. NOT failClosed — an Upstash blip should not lock
-   * a user out of the live layer.
+   *
+   * The limit must be FAR above the browser's auto-retry cadence (3s
+   * default for EventSource). If a transient bug causes the SSE stream
+   * to close immediately, EventSource retries every 3s = 20/min. A
+   * tight limit means the rate limiter PERMANENTLY 429s the user once
+   * tripped — because every retry within the sliding window keeps
+   * refreshing the limit, and EventSource has no JS-controllable
+   * backoff to escape the loop. 300/min/user gives ~15x headroom over
+   * the worst-case auto-retry rate. NOT failClosed — an Upstash blip
+   * should not lock a user out of the live layer.
    */
-  realtimeConnect: { limit: 60, windowSeconds: 60 },
+  realtimeConnect: { limit: 300, windowSeconds: 60 },
 } as const
