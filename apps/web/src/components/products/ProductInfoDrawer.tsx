@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useIntl } from 'react-intl'
 import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
+import { useResyncOnUpdate } from '@/hooks/useResyncOnUpdate'
+import { useProducts } from '@/contexts/products-context'
 import Image from '@/lib/Image'
 import { ImagePlus } from 'lucide-react'
 import { ModalShell } from '@/components/ui/modal-shell'
@@ -42,28 +44,47 @@ export function ProductInfoDrawer({
 }: ProductInfoDrawerProps) {
   const intl = useIntl()
   const { formatCurrency, formatDate } = useBusinessFormat()
+  const { products: productsList } = useProducts()
+
+  // Mirror the incoming product prop into local state so we can resync
+  // from the products context when a remote update arrives.
+  const [snapshot, setSnapshot] = useState(product)
+  useEffect(() => {
+    setSnapshot(product)
+  }, [product])
 
   const stableDismiss = useCallback(() => onClose(), [onClose])
-  useDismissOnDelete('product', product?.id ?? null, stableDismiss)
+  useDismissOnDelete('product', snapshot?.id ?? null, stableDismiss)
+
+  // When a remote device updates this product, callRefetch('products') has
+  // already fired in the handler before this callback runs, so productsList
+  // contains the latest data. If the product was concurrently deleted, the
+  // useDismissOnDelete above handles dismissal — we simply skip the resync.
+  const handleProductUpdate = useCallback(() => {
+    const fresh = productsList.find((p) => p.id === snapshot?.id)
+    if (fresh) setSnapshot(fresh)
+  }, [productsList, snapshot?.id])
+
+  useResyncOnUpdate('product', snapshot?.id ?? null, handleProductUpdate)
 
   // Render nothing if no product is set. The parent's open-state is
   // typically gated on `!!product`, so this branch only fires during the
   // brief window between close and onExitComplete-cleanup.
-  if (!product) return null
+  if (!snapshot) return null
 
-  const iconUrl = getProductIconUrl(product)
+  const iconUrl = getProductIconUrl(snapshot)
   const categoryName =
-    categories.find((c) => c.id === product.categoryId)?.name ??
+    categories.find((c) => c.id === snapshot.categoryId)?.name ??
     intl.formatMessage({ id: 'products.uncategorized' })
-  const formatLabel = product.barcodeFormat
-    ? BARCODE_FORMAT_LABELS[product.barcodeFormat]
+  const formatLabel = snapshot.barcodeFormat
+    ? BARCODE_FORMAT_LABELS[snapshot.barcodeFormat]
     : null
 
-  const stockValue = product.stock ?? 0
-  const threshold = product.lowStockThreshold ?? 10
-  const hasStock = product.stock !== null && product.stock !== undefined
+  const stockValue = snapshot.stock ?? 0
+  const threshold = snapshot.lowStockThreshold ?? 10
+  const hasStock = snapshot.stock !== null && snapshot.stock !== undefined
   const isLowStock = hasStock && stockValue <= threshold
-  const isActive = product.active
+  const isActive = snapshot.active
 
   const stockDisplay = hasStock
     ? intl.formatMessage({ id: 'products.units_count' }, { count: stockValue })
@@ -91,7 +112,7 @@ export function ProductInfoDrawer({
             ) : iconUrl ? (
               <Image
                 src={iconUrl}
-                alt={product.name}
+                alt={snapshot.name}
                 width={224}
                 height={224}
                 className="info-drawer__portrait-img"
@@ -120,7 +141,7 @@ export function ProductInfoDrawer({
                 </>
               )}
             </span>
-            <h2 className="info-drawer__name">{product.name}</h2>
+            <h2 className="info-drawer__name">{snapshot.name}</h2>
           </div>
         </header>
 
@@ -133,7 +154,7 @@ export function ProductInfoDrawer({
               {intl.formatMessage({ id: 'products.info_drawer_stat_price' })}
             </span>
             <span className="info-drawer__stat-value">
-              {formatCurrency(product.price)}
+              {formatCurrency(snapshot.price)}
             </span>
           </div>
           <div
@@ -204,11 +225,11 @@ export function ProductInfoDrawer({
                 aria-hidden="true"
               />
               <dd className="info-drawer__ledger-value info-drawer__ledger-value--strong">
-                {formatCurrency(product.price)}
+                {formatCurrency(snapshot.price)}
               </dd>
             </div>
 
-            {product.costPrice !== null && product.costPrice !== undefined && (
+            {snapshot.costPrice !== null && snapshot.costPrice !== undefined && (
               <div className="info-drawer__ledger-row">
                 <dt className="info-drawer__ledger-label">
                   {intl.formatMessage({
@@ -220,7 +241,7 @@ export function ProductInfoDrawer({
                   aria-hidden="true"
                 />
                 <dd className="info-drawer__ledger-value info-drawer__ledger-value--muted">
-                  {formatCurrency(product.costPrice)}
+                  {formatCurrency(snapshot.costPrice)}
                 </dd>
               </div>
             )}
@@ -281,7 +302,7 @@ export function ProductInfoDrawer({
               </div>
             )}
 
-            {product.updatedAt && (
+            {snapshot.updatedAt && (
               <div className="info-drawer__ledger-row">
                 <dt className="info-drawer__ledger-label">
                   {intl.formatMessage({
@@ -293,7 +314,7 @@ export function ProductInfoDrawer({
                   aria-hidden="true"
                 />
                 <dd className="info-drawer__ledger-value info-drawer__ledger-value--muted">
-                  {formatDate(new Date(product.updatedAt))}
+                  {formatDate(new Date(snapshot.updatedAt))}
                 </dd>
               </div>
             )}
@@ -305,7 +326,7 @@ export function ProductInfoDrawer({
             beneath in mono numerals. When it doesn't, the slot fills
             with an italic Fraunces "no barcode set" line. */}
         <section className="info-drawer__barcode">
-          {product.barcode && product.barcodeFormat ? (
+          {snapshot.barcode && snapshot.barcodeFormat ? (
             <>
               <div className="info-drawer__barcode-eyebrow">
                 <span
@@ -329,12 +350,12 @@ export function ProductInfoDrawer({
               </div>
               <div className="info-drawer__barcode-frame">
                 <BarcodeDisplay
-                  value={product.barcode}
-                  format={product.barcodeFormat}
+                  value={snapshot.barcode}
+                  format={snapshot.barcodeFormat}
                 />
               </div>
               <div className="info-drawer__barcode-value">
-                {product.barcode}
+                {snapshot.barcode}
               </div>
             </>
           ) : (
