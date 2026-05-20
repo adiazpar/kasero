@@ -73,6 +73,32 @@ export type BusinessRealtimeEvent =
     } & WithOrigin)
   | ({ type: 'category.deleted'; categoryId: string } & WithOrigin)
   | ({ type: 'category.reordered' } & WithOrigin)
+  // Sales (customer-facing transactions). POST /sales is the only mutation
+  // — there is no PATCH or DELETE route, so no `sale.updated` /
+  // `sale.deleted` variants are declared. The handler for `sale.created`
+  // also refetches `products` because the route decrements `products.stock`
+  // for every line item; that cascade is intentionally handled by the
+  // client refetch instead of an extra `product.updated` publish.
+  | ({ type: 'sale.created'; saleId: string } & WithOrigin)
+  // Orders (purchase orders / receiving from suppliers). `order.received`
+  // is a separate event from `order.updated` because the receive route
+  // also bumps `products.stock`, so the client handler refetches both
+  // `orders` and `products`; PATCH only touches order columns, so
+  // `order.updated` refetches `orders` only. The `fields` literal mirrors
+  // every column the PATCH route can mutate — `items` covers the
+  // line-items rewrite (deletes + re-inserts under order_items).
+  | ({ type: 'order.created'; orderId: string } & WithOrigin)
+  | ({
+      type: 'order.updated'
+      orderId: string
+      fields: Array<'total' | 'estimatedArrival' | 'providerId' | 'items'>
+    } & WithOrigin)
+  | ({ type: 'order.received'; orderId: string } & WithOrigin)
+  | ({ type: 'order.deleted'; orderId: string } & WithOrigin)
+  // Sales sessions (cash-drawer reconciliation framing a stretch of sales).
+  // Only open and close are mutations; both transitions are fired here.
+  | ({ type: 'sales_session.opened'; sessionId: string } & WithOrigin)
+  | ({ type: 'sales_session.closed'; sessionId: string } & WithOrigin)
 
 export type UserRealtimeEvent =
   | ({
