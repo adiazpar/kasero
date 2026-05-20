@@ -10,6 +10,7 @@ import {
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { canManageBusiness } from '@kasero/shared/business-role'
 import { openSessionSchema } from '../schema'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 import type { SalesSession } from '@kasero/shared/types/sale'
 
 const POST_MAX_BODY_BYTES = 1024  // tiny: { startingCash: number }
@@ -22,6 +23,7 @@ const POST_MAX_BODY_BYTES = 1024  // tiny: { startingCash: number }
  * business. Any active member may open.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.SESSION_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -68,6 +70,12 @@ export const POST = withBusinessAuth(async (request, access) => {
     }
     throw err
   }
+
+  await publishToBusiness(
+    access.businessId,
+    { type: 'sales_session.opened', sessionId: id },
+    originDeviceId,
+  )
 
   const session: SalesSession = {
     id,

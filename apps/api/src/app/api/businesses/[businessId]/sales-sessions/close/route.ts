@@ -11,6 +11,7 @@ import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { canManageBusiness } from '@kasero/shared/business-role'
 import { closeSessionSchema } from '../schema'
 import { computeExpectedCash, computeVariance } from '@kasero/shared/sales-helpers'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 import type { SalesSession } from '@kasero/shared/types/sale'
 
 const POST_MAX_BODY_BYTES = 4 * 1024  // notes can be up to ~500 chars
@@ -28,6 +29,7 @@ const POST_MAX_BODY_BYTES = 4 * 1024  // notes can be up to ~500 chars
  *   3. UPDATE the same session row with denormalized totals + counted + variance.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.SESSION_FORBIDDEN_NOT_MANAGER, 403)
   }
@@ -122,6 +124,12 @@ export const POST = withBusinessAuth(async (request, access) => {
     if (!fullRow) {
       return errorResponse(ApiMessageCode.SESSION_NOT_FOUND, 404)
     }
+
+    await publishToBusiness(
+      access.businessId,
+      { type: 'sales_session.closed', sessionId: closed.sessionId },
+      originDeviceId,
+    )
 
     return successResponse({
       session: serialize(fullRow),
