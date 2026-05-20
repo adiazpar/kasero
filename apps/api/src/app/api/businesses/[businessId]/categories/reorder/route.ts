@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const reorderSchema = z.object({
   categoryIds: z.array(z.string()).min(1),
@@ -16,6 +17,8 @@ const reorderSchema = z.object({
  * The order in the array determines the new sort order.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   // Only partners and owners can reorder categories
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.FORBIDDEN, 403)
@@ -68,6 +71,10 @@ export const POST = withBusinessAuth(async (request, access) => {
       inArray(productCategories.id, categoryIds),
       eq(productCategories.businessId, access.businessId),
     ))
+
+  await publishToBusiness(access.businessId, {
+    type: 'category.reordered',
+  }, originDeviceId)
 
   return successResponse({})
 })

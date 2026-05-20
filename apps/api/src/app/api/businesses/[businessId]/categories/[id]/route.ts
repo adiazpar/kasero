@@ -5,6 +5,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const updateCategorySchema = z.object({
   name: Schemas.name().max(50),
@@ -16,6 +17,7 @@ const updateCategorySchema = z.object({
  * Update a product category.
  */
 export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
   const id = routeParams?.id
   if (!id) {
     return errorResponse(ApiMessageCode.CATEGORY_ID_REQUIRED, 400)
@@ -59,6 +61,12 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
     .where(eq(productCategories.id, id))
     .returning()
 
+  await publishToBusiness(access.businessId, {
+    type: 'category.updated',
+    categoryId: id,
+    fields: ['name'],
+  }, originDeviceId)
+
   return successResponse({ category: updatedCategory })
 })
 
@@ -69,6 +77,7 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
  * Products with this category will have their categoryId set to null.
  */
 export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
+  const originDeviceId = getOriginDeviceId(request)
   const id = routeParams?.id
   if (!id) {
     return errorResponse(ApiMessageCode.CATEGORY_ID_REQUIRED, 400)
@@ -120,6 +129,11 @@ export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
       .where(and(eq(businesses.defaultCategoryId, id), eq(businesses.id, access.businessId))),
     db.delete(productCategories).where(eq(productCategories.id, id)),
   ])
+
+  await publishToBusiness(access.businessId, {
+    type: 'category.deleted',
+    categoryId: id,
+  }, originDeviceId)
 
   return successResponse({ affectedProducts })
 })

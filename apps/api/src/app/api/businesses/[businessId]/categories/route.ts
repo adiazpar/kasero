@@ -6,6 +6,7 @@ import { canManageBusiness } from '@/lib/business-auth'
 import { withBusinessAuth, validationError, errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { Schemas } from '@/lib/schemas'
+import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 
 const createCategorySchema = z.object({
   name: Schemas.name().max(50),
@@ -34,6 +35,8 @@ export const GET = withBusinessAuth(async (_request, access) => {
  * Create a new product category.
  */
 export const POST = withBusinessAuth(async (request, access) => {
+  const originDeviceId = getOriginDeviceId(request)
+
   if (!canManageBusiness(access.role)) {
     return errorResponse(ApiMessageCode.FORBIDDEN, 403)
   }
@@ -66,6 +69,11 @@ export const POST = withBusinessAuth(async (request, access) => {
     name: name.trim(),
     sortOrder: maxSortOrder + 1,
   }).returning()
+
+  await publishToBusiness(access.businessId, {
+    type: 'category.created',
+    categoryId: categoryId,
+  }, originDeviceId)
 
   return successResponse({ category: newCategory })
 })
