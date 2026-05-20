@@ -108,9 +108,6 @@ export function EntryPage() {
       <IonContent>
         <AuthLayout footer={footer} center>
           <header className="auth-hero">
-            <div className="auth-hero__eyebrow">
-              {intl.formatMessage({ id: 'auth.sign_in_eyebrow' })}
-            </div>
             <h1 className="auth-hero__title">{titleNode}</h1>
             <p className="auth-hero__subtitle">
               {intl.formatMessage({ id: 'auth.welcome_back_subtitle' })}
@@ -123,11 +120,6 @@ export function EntryPage() {
             data-testid="entry-form"
           >
             <div>
-              <OAuthButtons callbackURL="/" disabled={isLoading} />
-              <div className="oauth-divider">
-                {intl.formatMessage({ id: 'oauth_or_divider' })}
-              </div>
-
               <AuthField
                 label={intl.formatMessage({ id: 'auth.email_label' })}
                 type="email"
@@ -146,9 +138,7 @@ export function EntryPage() {
                   ) : null
                 }
               />
-            </div>
 
-            <div>
               <IonButton
                 expand="block"
                 type="submit"
@@ -162,6 +152,12 @@ export function EntryPage() {
                   intl.formatMessage({ id: 'auth.register_wizard.continue' })
                 )}
               </IonButton>
+
+              <div className="oauth-divider">
+                {intl.formatMessage({ id: 'oauth_or_divider' })}
+              </div>
+
+              <OAuthButtons callbackURL="/" disabled={isLoading} />
             </div>
           </form>
         </AuthLayout>
