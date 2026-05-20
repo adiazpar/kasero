@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const callRefetch = vi.fn()
 const callAllRefetches = vi.fn()
+const emitEntityDeleted = vi.fn()
 
 vi.mock('./refetch-registry', () => ({ callRefetch, callAllRefetches }))
+vi.mock('./entity-events', () => ({ emitEntityDeleted }))
 
 describe('dispatchRealtimeEvent', () => {
   const revokeBusinessContext = vi.fn()
@@ -20,6 +22,7 @@ describe('dispatchRealtimeEvent', () => {
   beforeEach(() => {
     callRefetch.mockReset()
     callAllRefetches.mockReset()
+    emitEntityDeleted.mockReset()
     revokeBusinessContext.mockReset()
     routeToLogin.mockReset()
     showToast.mockReset()
@@ -41,11 +44,43 @@ describe('dispatchRealtimeEvent', () => {
     expect(callRefetch).toHaveBeenCalledWith('invites')
   })
 
+  it('team.member.removed -> emitEntityDeleted(team-member, memberId)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'team.member.removed', memberId: 'm42' }, ctx)
+    expect(emitEntityDeleted).toHaveBeenCalledWith('team-member', 'm42')
+  })
+
+  it('team.member.joined -> does NOT emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'team.member.joined', memberId: 'm1' }, ctx)
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+  })
+
   it('team.invite.created -> callRefetch(invites)', async () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent({ type: 'team.invite.created', inviteId: 'i1' }, ctx)
     expect(callRefetch).toHaveBeenCalledWith('invites')
     expect(callRefetch).not.toHaveBeenCalledWith('team')
+  })
+
+  it('team.invite.deleted -> callRefetch(invites) + emitEntityDeleted(invite, inviteId)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'team.invite.deleted', inviteId: 'inv-del' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('invites')
+    expect(emitEntityDeleted).toHaveBeenCalledWith('invite', 'inv-del')
+  })
+
+  it('team.invite.consumed -> callRefetch(invites) + emitEntityDeleted(invite, inviteId)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'team.invite.consumed', inviteId: 'inv-con', consumedByName: 'Alice' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('invites')
+    expect(emitEntityDeleted).toHaveBeenCalledWith('invite', 'inv-con')
+  })
+
+  it('team.invite.created -> does NOT emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'team.invite.created', inviteId: 'i1' }, ctx)
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
   })
 
   // --- business events ---
@@ -100,6 +135,21 @@ describe('dispatchRealtimeEvent', () => {
     const { dispatchRealtimeEvent } = await import('./handlers')
     dispatchRealtimeEvent({ type: 'product.deleted', productId: 'p1' }, ctx)
     expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('product.deleted -> emitEntityDeleted(product, productId)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'product.deleted', productId: 'prod-xyz' }, ctx)
+    expect(emitEntityDeleted).toHaveBeenCalledWith('product', 'prod-xyz')
+  })
+
+  it('product.updated -> does NOT emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'product.updated', productId: 'p1', fields: ['price'] },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
   })
 
   it('product.settings.updated -> callRefetch(product-settings)', async () => {

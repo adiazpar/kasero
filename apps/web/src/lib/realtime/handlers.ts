@@ -10,6 +10,7 @@
 
 import type { RealtimeEvent } from '@kasero/shared/realtime'
 import { callRefetch, callAllRefetches } from './refetch-registry'
+import { emitEntityDeleted } from './entity-events'
 
 export interface RealtimeHandlerContext {
   ownDeviceId: string
@@ -50,18 +51,31 @@ export function dispatchRealtimeEvent(
 
   switch (event.type) {
     case 'team.member.joined':
-    case 'team.member.removed':
     case 'team.member.role_changed':
     case 'team.member.status_changed':
       callRefetch('team')
       callRefetch('invites')
       return
 
+    case 'team.member.removed':
+      callRefetch('team')
+      callRefetch('invites')
+      emitEntityDeleted('team-member', event.memberId)
+      return
+
     case 'team.invite.created':
     case 'team.invite.regenerated':
+      callRefetch('invites')
+      return
+
     case 'team.invite.consumed':
+      callRefetch('invites')
+      emitEntityDeleted('invite', event.inviteId)
+      return
+
     case 'team.invite.deleted':
       callRefetch('invites')
+      emitEntityDeleted('invite', event.inviteId)
       return
 
     case 'business.updated':
@@ -70,8 +84,12 @@ export function dispatchRealtimeEvent(
 
     case 'product.created':
     case 'product.updated':
+      callRefetch('products')
+      return
+
     case 'product.deleted':
       callRefetch('products')
+      emitEntityDeleted('product', event.productId)
       return
 
     case 'product.settings.updated':
