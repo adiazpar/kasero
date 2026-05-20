@@ -24,7 +24,8 @@ All project documentation lives in `.claude/docs/`. The `.claude/` directory is 
 | `.claude/docs/tab-system.md` | `TabContainer` in-page sub-tabs primitive (top-level shell is Ionic `IonTabs`) |
 | `.claude/docs/ai-product-pipeline.md` | AI snap-to-add pipeline |
 | `.claude/docs/barcode-system.md` | Barcode identifiers, cascade, scanner, live camera, validation, rendering |
-| `.claude/docs/realtime-system.md` | Adding a publish site, defining a new event type, working with SSE/Streams |
+| `.claude/docs/realtime-system.md` | Adding a publish site, defining a new event type, working with SSE/Streams (design intent) |
+| `.claude/docs/realtime-implementation-reference.md` | **READ FIRST before changing any realtime code.** As-implemented state, critical-decisions-do-not-revert list, gotcha→fix map, and the cookbook for adding a new domain |
 
 ## Critical rules
 
