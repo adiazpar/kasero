@@ -50,6 +50,9 @@ describe('realtime types', () => {
         case 'category.updated':
         case 'category.deleted':
         case 'category.reordered':
+        case 'provider.created':
+        case 'provider.updated':
+        case 'provider.deleted':
         case 'sale.created':
         case 'order.created':
         case 'order.updated':

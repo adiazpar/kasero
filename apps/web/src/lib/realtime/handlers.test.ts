@@ -376,6 +376,73 @@ describe('dispatchRealtimeEvent', () => {
     expect(emitEntityDeleted).not.toHaveBeenCalled()
   })
 
+  // --- provider events ---
+
+  it('provider.created -> callRefetch(providers)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'provider.created', providerId: 'prov1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('providers')
+  })
+
+  it('provider.created -> does NOT emitEntityUpdated', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'provider.created', providerId: 'prov1' }, ctx)
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+  })
+
+  it('provider.updated -> callRefetch(providers)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'provider.updated', providerId: 'prov2', fields: ['name'] },
+      ctx,
+    )
+    expect(callRefetch).toHaveBeenCalledWith('providers')
+  })
+
+  it('provider.updated -> emitEntityUpdated(provider, providerId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'provider.updated', providerId: 'prov-upd', fields: ['phone'], originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).toHaveBeenCalledWith('provider', 'prov-upd')
+  })
+
+  it('provider.updated -> does NOT emitEntityUpdated when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'provider.updated', providerId: 'prov-upd', fields: ['phone'], originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('providers')
+  })
+
+  it('provider.deleted -> callRefetch(providers)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'provider.deleted', providerId: 'prov3' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('providers')
+  })
+
+  it('provider.deleted -> emitEntityDeleted(provider, providerId) when remote', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'provider.deleted', providerId: 'prov-del', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityDeleted).toHaveBeenCalledWith('provider', 'prov-del')
+  })
+
+  it('provider.deleted -> does NOT emitEntityDeleted when own device (echo-suppressed)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'provider.deleted', providerId: 'prov-del', originDeviceId: 'device-me' },
+      ctx,
+    )
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+    expect(callRefetch).toHaveBeenCalledWith('providers')
+  })
+
   // --- sale events ---
 
   it('sale.created -> callRefetch(sales) + callRefetch(products)', async () => {

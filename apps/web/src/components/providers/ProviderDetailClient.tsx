@@ -42,6 +42,8 @@ import { useApiMessage } from '@/hooks/useApiMessage'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
 import { useGoBackTo, useDetailEntityGuard } from '@/hooks'
 import { useBusiness } from '@/contexts/business-context'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
+import { useResyncOnUpdate } from '@/hooks/useResyncOnUpdate'
 import { canManageBusiness } from '@kasero/shared/business-role'
 import { formatRelative } from '@/lib/formatRelative'
 import { getOrderDisplayStatus } from '@/lib/products'
@@ -246,6 +248,26 @@ export function ProviderDetailClient({ businessId, providerId }: ProviderDetailC
   }, [businessId, providerId, ensureActiveOrdersLoaded, ensureCompletedOrdersLoaded, ensureProvidersLoaded, ensureProductsLoaded, intl, translateApiMessage])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  // ===== Realtime: dismiss per-field modals when provider is deleted elsewhere =====
+  // stableCloseAllEdits: stable identity via useCallback so the subscription
+  // doesn't re-register on every render. Closes all per-field edit modals that
+  // might be open when a remote delete arrives.
+  const stableCloseAllEdits = useCallback(() => {
+    setNameEditOpen(false)
+    setPhoneEditOpen(false)
+    setEmailEditOpen(false)
+  }, [])
+  useDismissOnDelete('provider', provider?.id ?? null, stableCloseAllEdits)
+
+  // Resync local provider snapshot when a remote update arrives. By the time
+  // this fires, the providers context has already been refetched by callRefetch
+  // in the handler. Read the fresh provider from the shared list.
+  const handleProviderResync = useCallback(() => {
+    const fresh = allProvidersAll.find(p => p.id === providerId)
+    if (fresh) setProvider(fresh)
+  }, [allProvidersAll, providerId])
+  useResyncOnUpdate('provider', provider?.id ?? null, handleProviderResync)
 
   // ===== Per-field edit =====
   // Generic single-field PATCH helper. Each per-field modal hands us
