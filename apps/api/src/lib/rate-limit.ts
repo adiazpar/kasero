@@ -325,4 +325,14 @@ export const RateLimits = {
    * registers N fresh accounts to bypass per-user budgets.
    */
   ipMutation: { limit: 600, windowSeconds: 60 },
+  /**
+   * Realtime SSE connect storms (GET /api/realtime). Each EventSource
+   * stays open ~300s (Fluid Compute maxDuration), then the browser
+   * reconnects automatically — so steady-state is ~12/hour/device.
+   * Multiple devices, refreshes, and business switches multiply the
+   * count, so 60/min/user is generous for normal use but still caps a
+   * runaway client. NOT failClosed — an Upstash blip should not lock
+   * a user out of the live layer.
+   */
+  realtimeConnect: { limit: 60, windowSeconds: 60 },
 } as const

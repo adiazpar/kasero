@@ -71,8 +71,11 @@ export async function GET(request: NextRequest): Promise<Response> {
       if (!granted) return jsonError(ApiMessageCode.FORBIDDEN, 403)
     }
 
-    // Rate-limit reconnect storms per user.
-    const rl = await checkRateLimit(`realtime:${session.user.id}`, RateLimits.userMutation)
+    // Rate-limit reconnect storms per user. Uses a dedicated, generous
+    // budget (60/min) rather than userMutation (30/min) because legitimate
+    // EventSource reconnects every ~5 min × N devices can otherwise share
+    // a window with interactive mutations and starve one or the other.
+    const rl = await checkRateLimit(`realtime:${session.user.id}`, RateLimits.realtimeConnect)
     if (!rl.success) {
       const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000))
       return jsonError(ApiMessageCode.RATE_LIMITED, 429, retryAfter)
