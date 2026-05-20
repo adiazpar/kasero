@@ -16,6 +16,7 @@ import { usePageTransition } from './page-transition-context'
 import type { BusinessRole } from '@kasero/shared/business-role'
 import { ApiError, apiRequest } from '@/lib/api-client'
 import { registerRefetch } from '@/lib/realtime/refetch-registry'
+import { useRealtime } from '@/contexts/realtime-context'
 
 // Re-export for backwards compatibility
 export type { BusinessRole }
@@ -119,6 +120,20 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
   useEffect(() => {
     return registerRefetch('business', validateAccess)
   }, [validateAccess])
+
+  // Subscribe the realtime layer to this business's channel while the
+  // user is inside it. Without this the SSE route only subscribes to
+  // user:{id}, so team/invite/business events published to business:{id}
+  // never reach the client — the UI only catches up via the 5s focus
+  // refetch backstop. Pairs with revokeBusinessContext which clears
+  // activeBusinessId on logout/removal.
+  const { setActiveBusinessId } = useRealtime()
+  useEffect(() => {
+    setActiveBusinessId(businessId ?? null)
+    return () => {
+      setActiveBusinessId(null)
+    }
+  }, [businessId, setActiveBusinessId])
 
   useEffect(() => {
     // No business ID - reset state and skip validation
