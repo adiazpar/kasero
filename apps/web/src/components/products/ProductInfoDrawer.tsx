@@ -1,6 +1,8 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useIntl } from 'react-intl'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
 import Image from '@/lib/Image'
 import { ImagePlus } from 'lucide-react'
 import { ModalShell } from '@/components/ui/modal-shell'
@@ -40,6 +42,9 @@ export function ProductInfoDrawer({
 }: ProductInfoDrawerProps) {
   const intl = useIntl()
   const { formatCurrency, formatDate } = useBusinessFormat()
+
+  const stableDismiss = useCallback(() => onClose(), [onClose])
+  useDismissOnDelete('product', product?.id ?? null, stableDismiss)
 
   // Render nothing if no product is set. The parent's open-state is
   // typically gated on `!!product`, so this branch only fires during the

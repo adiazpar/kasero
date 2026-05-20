@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useIntl } from 'react-intl'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
 import {
   IonHeader,
   IonToolbar,
@@ -27,6 +28,9 @@ export interface InviteModalProps {
   isOpen: boolean
   onClose: () => void
   onExitComplete: () => void
+
+  /** ID of the currently displayed invite code; used to auto-dismiss when deleted remotely. */
+  inviteId: string | null
 
   selectedRole: InviteRole
   setSelectedRole: (role: InviteRole) => void
@@ -69,6 +73,7 @@ export function InviteModal({
   isOpen,
   onClose,
   onExitComplete,
+  inviteId,
   selectedRole,
   setSelectedRole,
   selectedDuration,
@@ -86,6 +91,9 @@ export function InviteModal({
   codeDeleted,
 }: InviteModalProps) {
   const t = useIntl()
+  const stableDismiss = useCallback(() => onClose(), [onClose])
+  useDismissOnDelete('invite', inviteId, stableDismiss)
+
   const [step, setStep] = useState<Step>(newCode ? 'code' : 'role')
 
   // Sync step with parent state when the modal opens. If the parent

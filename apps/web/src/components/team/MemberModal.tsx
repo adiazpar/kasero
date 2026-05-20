@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useIntl } from 'react-intl'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
 import {
   IonHeader,
   IonToolbar,
@@ -87,6 +88,9 @@ export function MemberModal({
   onRemoveMember,
 }: MemberModalProps) {
   const t = useIntl()
+  const stableDismiss = useCallback(() => onClose(), [onClose])
+  useDismissOnDelete('team-member', member?.id ?? null, stableDismiss)
+
   const [step, setStep] = useState<Step>('details')
   // Snapshot identity + intent before the parent's state mutation so the
   // success copy still reads the right name + direction after the row

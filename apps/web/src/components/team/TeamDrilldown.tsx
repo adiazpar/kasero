@@ -55,6 +55,7 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
     setSelectedDuration,
     newCode,
     newCodeExpiresAt,
+    generatedCodeId,
     qrDataUrl,
     isGenerating,
     copyFeedback,
@@ -239,6 +240,7 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onExitComplete={handleModalExitComplete}
+        inviteId={generatedCodeId}
         selectedRole={selectedRole}
         setSelectedRole={setSelectedRole}
         selectedDuration={selectedDuration}

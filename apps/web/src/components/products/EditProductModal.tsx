@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ModalShell } from '@/components/ui'
+import { useDismissOnDelete } from '@/hooks/useDismissOnDelete'
 import type { Product, ProductCategory } from '@kasero/shared/types'
 import type { ProductFormData, StockAdjustmentData } from './ProductModal'
 import {
@@ -88,6 +89,9 @@ function EditProductModalInner({
   const rootStep = ROOT_FOR_STEP_INDEX[initialStep] ?? 'review'
   const [stack, setStack] = useState<Step[]>([rootStep])
   const { populateFromProduct, resetForm } = useProductForm()
+
+  const stableDismiss = useCallback(() => onClose(), [onClose])
+  useDismissOnDelete('product', editingProduct?.id ?? null, stableDismiss)
 
   // Reset the stack to the configured root every time the modal opens.
   // The same modal component is reused across consecutive edit flows; if
