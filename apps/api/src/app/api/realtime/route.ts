@@ -156,10 +156,21 @@ export async function GET(request: NextRequest): Promise<Response> {
 
         // Heartbeat every 15s. Comment-only frame; clients reset their
         // watchdog timer on any bytes received.
+        //
+        // CRITICAL: do NOT call hb.unref(). In Vercel Fluid Compute, once
+        // the ReadableStream's start() callback returns, the function's
+        // event loop only has ref'd timers / pending I/O to stay alive.
+        // The HTTP response stream itself is owned by the runtime and
+        // doesn't ref the loop. If we unref the heartbeat, the function
+        // drains immediately after start() finishes — Vercel ends the
+        // request, EventSource sees a 0.1 kB completed response, and
+        // reconnects ~170 times/minute. The unref'd version blew past
+        // even the dedicated 60/min realtime rate-limit budget.
+        // Keep the timer ref'd; the route's maxDuration: 300 caps the
+        // process lifetime cleanly regardless.
         const hb = setInterval(() => {
           safeEnqueue(`:hb\n\n`)
         }, 15_000)
-        hb.unref?.()
         cleanupFns.push(() => clearInterval(hb))
 
         // Abort handling.
