@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useIntl } from 'react-intl'
 import { Plus, Receipt } from 'lucide-react'
 
@@ -9,13 +9,15 @@ import { useExpenses } from '@/contexts/expenses-context'
 import { useExpenseCategories } from '@/contexts/expense-categories-context'
 import { ExpenseTotalsStrip } from './ExpenseTotalsStrip'
 import { ExpenseListItem } from './ExpenseListItem'
+import { AddExpenseModal } from './AddExpenseModal'
+import { ExpenseDetailModal } from './ExpenseDetailModal'
 import type { Expense } from '@kasero/shared/types'
 
 // Main content for the Expenses sub-tab.
 //   - Header: ExpenseTotalsStrip
 //   - Empty state when no expenses and not loading
 //   - List of ExpenseListItem rows
-//   - Add-expense FAB (bottom-right, opens Task 18's modal once built)
+//   - Add-expense FAB (bottom-right)
 export function ExpensesView() {
   const t = useIntl()
   const { business } = useBusiness()
@@ -23,6 +25,9 @@ export function ExpensesView() {
 
   const { expenses, isLoading, ensureLoaded } = useExpenses()
   const { ensureLoaded: ensureCategories } = useExpenseCategories()
+
+  const [addOpen, setAddOpen] = useState(false)
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
 
   useEffect(() => {
     if (!businessId) return
@@ -33,11 +38,11 @@ export function ExpensesView() {
   if (!businessId) return null
 
   const handleTap = (expense: Expense) => {
-    console.warn('ExpenseDetailModal will land in Task 19', expense.id)
+    setSelectedExpense(expense)
   }
 
   const handleAdd = () => {
-    console.warn('AddExpenseModal will land in Task 18')
+    setAddOpen(true)
   }
 
   const showEmptyState = !isLoading && expenses.length === 0
@@ -89,6 +94,19 @@ export function ExpensesView() {
           <Plus size={20} strokeWidth={2.5} />
         </button>
       )}
+
+      <AddExpenseModal
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        onExitComplete={() => setAddOpen(false)}
+      />
+
+      <ExpenseDetailModal
+        isOpen={selectedExpense !== null}
+        expense={selectedExpense}
+        onClose={() => setSelectedExpense(null)}
+        onExitComplete={() => setSelectedExpense(null)}
+      />
     </div>
   )
 }
