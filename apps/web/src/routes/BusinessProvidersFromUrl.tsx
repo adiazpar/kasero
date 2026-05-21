@@ -7,6 +7,7 @@ import { ContentGuard } from '@/components/auth'
 import { BusinessProvider } from '@/contexts/business-context'
 import { ExpenseCategoriesProvider } from '@/contexts/expense-categories-context'
 import { ExpensesProvider } from '@/contexts/expenses-context'
+import { InventoryAdjustmentsProvider } from '@/contexts/inventory-adjustments-context'
 import { IncomingTransferProvider } from '@/contexts/incoming-transfer-context'
 import { OrdersProvider } from '@/contexts/orders-context'
 import { PageTransitionProvider } from '@/contexts/page-transition-context'
@@ -70,11 +71,13 @@ export function BusinessProvidersFromUrl({ children }: { children: ReactNode }) 
                       <ProductSettingsProvider key={`product-settings-${businessId}`} businessId={businessId}>
                         <ExpenseCategoriesProvider key={`expense-categories-${businessId}`} businessId={businessId}>
                           <ExpensesProvider key={`expenses-${businessId}`} businessId={businessId}>
+                            <InventoryAdjustmentsProvider key={`inventory-adjustments-${businessId}`} businessId={businessId}>
                             <ContentGuard>
                               <BusinessDataPreloader businessId={businessId} />
                               <NavigationErrorNotice />
                               {children}
                             </ContentGuard>
+                            </InventoryAdjustmentsProvider>
                           </ExpensesProvider>
                         </ExpenseCategoriesProvider>
                       </ProductSettingsProvider>
