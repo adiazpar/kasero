@@ -405,7 +405,7 @@ export const expenseCategories = sqliteTable('expense_categories', {
   businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
   name: text('name').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (table) => [
   index('idx_expense_categories_business_id').on(table.businessId),
 ])
@@ -417,14 +417,17 @@ export const expenses = sqliteTable('expenses', {
   id: text('id').primaryKey(),
   businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
   createdByUserId: text('created_by_user_id').references(() => users.id).notNull(),
+  // Per-business sequential reference ("expense #47"). Nullable so the
+  // column can be added without backfill; the POST route always computes
+  // and writes a value, mirroring the orderNumber pattern.
   expenseNumber: integer('expense_number'),
   date: integer('date', { mode: 'timestamp' }).notNull(),
   amount: real('amount').notNull(),
   categoryId: text('category_id').references(() => expenseCategories.id, { onDelete: 'set null' }),
   note: text('note'),
   photoUrl: text('photo_url'),
-  createdAt: integer('created_at').notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at').notNull().default(sql`(unixepoch())`),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 }, (table) => [
   index('idx_expenses_business_id').on(table.businessId),
   index('idx_expenses_business_date').on(table.businessId, table.date),
