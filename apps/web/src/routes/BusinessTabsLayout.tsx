@@ -6,7 +6,7 @@ import {
   IonTabButton,
   IonTabs,
 } from '@ionic/react'
-import { Home, ShoppingCart, Package, Settings } from 'lucide-react'
+import { Home, BookOpen, Package, Settings } from 'lucide-react'
 import { useIntl } from 'react-intl'
 
 import { HomeTab } from '@/routes/tabs/HomeTab'
@@ -60,7 +60,7 @@ export function BusinessTabsLayout() {
           <IonLabel>{intl.formatMessage({ id: 'navigation.home' })}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="sales" href={`/${businessId}/sales`}>
-          <ShoppingCart {...TAB_ICON_PROPS} />
+          <BookOpen {...TAB_ICON_PROPS} />
           <IonLabel>{intl.formatMessage({ id: 'ledger.tab_label' })}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="products" href={`/${businessId}/products`}>
