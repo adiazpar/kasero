@@ -9,12 +9,10 @@ import { ExpenseCategoriesProvider } from '@/contexts/expense-categories-context
 import { ExpensesProvider } from '@/contexts/expenses-context'
 import { InventoryAdjustmentsProvider } from '@/contexts/inventory-adjustments-context'
 import { IncomingTransferProvider } from '@/contexts/incoming-transfer-context'
-import { OrdersProvider } from '@/contexts/orders-context'
 import { PageTransitionProvider } from '@/contexts/page-transition-context'
 import { PendingTransferProvider } from '@/contexts/pending-transfer-context'
 import { ProductsProvider } from '@/contexts/products-context'
 import { ProductSettingsProvider } from '@/contexts/product-settings-context'
-import { ProvidersProvider } from '@/contexts/providers-context'
 import { SalesProvider } from '@/contexts/sales-context'
 import { SalesSessionsProvider } from '@/contexts/sales-sessions-context'
 
@@ -63,29 +61,25 @@ export function BusinessProvidersFromUrl({ children }: { children: ReactNode }) 
       <IncomingTransferProvider>
         <BusinessProvider businessId={businessId}>
           <PendingTransferProvider>
-            <OrdersProvider key={`orders-${businessId}`} businessId={businessId}>
-              <SalesSessionsProvider key={`sales-sessions-${businessId}`} businessId={businessId}>
-                <SalesProvider key={`sales-${businessId}`} businessId={businessId}>
-                  <ProvidersProvider key={`providers-${businessId}`} businessId={businessId}>
-                    <ProductsProvider key={`products-${businessId}`} businessId={businessId}>
-                      <ProductSettingsProvider key={`product-settings-${businessId}`} businessId={businessId}>
-                        <ExpenseCategoriesProvider key={`expense-categories-${businessId}`} businessId={businessId}>
-                          <ExpensesProvider key={`expenses-${businessId}`} businessId={businessId}>
-                            <InventoryAdjustmentsProvider key={`inventory-adjustments-${businessId}`} businessId={businessId}>
-                            <ContentGuard>
-                              <BusinessDataPreloader businessId={businessId} />
-                              <NavigationErrorNotice />
-                              {children}
-                            </ContentGuard>
-                            </InventoryAdjustmentsProvider>
-                          </ExpensesProvider>
-                        </ExpenseCategoriesProvider>
-                      </ProductSettingsProvider>
-                    </ProductsProvider>
-                  </ProvidersProvider>
-                </SalesProvider>
-              </SalesSessionsProvider>
-            </OrdersProvider>
+            <SalesSessionsProvider key={`sales-sessions-${businessId}`} businessId={businessId}>
+              <SalesProvider key={`sales-${businessId}`} businessId={businessId}>
+                <ProductsProvider key={`products-${businessId}`} businessId={businessId}>
+                  <ProductSettingsProvider key={`product-settings-${businessId}`} businessId={businessId}>
+                    <ExpenseCategoriesProvider key={`expense-categories-${businessId}`} businessId={businessId}>
+                      <ExpensesProvider key={`expenses-${businessId}`} businessId={businessId}>
+                        <InventoryAdjustmentsProvider key={`inventory-adjustments-${businessId}`} businessId={businessId}>
+                          <ContentGuard>
+                            <BusinessDataPreloader businessId={businessId} />
+                            <NavigationErrorNotice />
+                            {children}
+                          </ContentGuard>
+                        </InventoryAdjustmentsProvider>
+                      </ExpensesProvider>
+                    </ExpenseCategoriesProvider>
+                  </ProductSettingsProvider>
+                </ProductsProvider>
+              </SalesProvider>
+            </SalesSessionsProvider>
           </PendingTransferProvider>
         </BusinessProvider>
       </IncomingTransferProvider>

@@ -1,5 +1,5 @@
 // Freshness window for the per-business data caches in
-// products-context.tsx, providers-context.tsx, orders-context.tsx.
+// products-context.tsx and similar context files.
 //
 // Within the window: ensureLoaded() returns cached data without a network
 // call. Outside the window: cached data is returned immediately AND a
