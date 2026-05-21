@@ -1,0 +1,207 @@
+/* Inventory sub-tab — stock list and adjust-stock modal.
+ * Shares the Modern Mercantile typographic system: Fraunces italic for
+ * amounts, mono uppercase tracked for stock counts, hairline card borders.
+ */
+
+/* ===== Inventory view shell ============================================ */
+
+.inventory-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + 72px);
+}
+
+/* ===== Stock list card ================================================= */
+
+.inventory-list-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Inventory row =================================================== */
+
+.inventory-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) ease-out;
+}
+
+.inventory-row:last-child {
+  border-bottom: 0;
+}
+
+@media (hover: hover) {
+  .inventory-row:hover {
+    background-color: var(--color-bg-muted);
+  }
+}
+
+.inventory-row:active {
+  background-color: var(--color-bg-muted);
+}
+
+.inventory-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.inventory-row__name {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inventory-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 2px;
+}
+
+.inventory-row__stock-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.inventory-row__stock-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.inventory-row__stock-value--low {
+  color: var(--color-warning, #d97706);
+}
+
+.inventory-row__stock-value--zero {
+  color: var(--color-error);
+}
+
+.inventory-row__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Empty state ===================================================== */
+
+.inventory-empty {
+  min-height: calc(100dvh - 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-4);
+  gap: var(--space-3);
+}
+
+.inventory-empty__icon {
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.inventory-empty__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.inventory-empty__desc {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  max-width: 32ch;
+  margin: 0;
+}
+
+/* ===== Adjust stock modal ============================================== */
+
+/* Stock context line displayed above the delta input. */
+.adjust-stock-modal__context {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--space-2);
+}
+
+/* Signed integer delta input — mono so positive/negative reads at a glance. */
+.adjust-stock-modal__delta-input {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Log as expense" checkbox row. */
+.adjust-stock-modal__checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.adjust-stock-modal__checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.adjust-stock-modal__checkbox-label {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+/* Expense sub-form that slides in when the checkbox is checked. */
+.adjust-stock-modal__expense-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}

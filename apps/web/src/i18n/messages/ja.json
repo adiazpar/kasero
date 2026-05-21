@@ -1733,5 +1733,27 @@
   "success.EXPENSE_DELETED": "支出を削除しました。",
   "success.EXPENSE_CATEGORY_CREATED": "カテゴリを追加しました。",
   "success.EXPENSE_CATEGORY_UPDATED": "カテゴリを更新しました。",
-  "success.EXPENSE_CATEGORY_DELETED": "カテゴリを削除しました。"
+  "success.EXPENSE_CATEGORY_DELETED": "カテゴリを削除しました。",
+
+  "inventory.tab_label": "在庫",
+  "inventory.empty_title": "商品がありません",
+  "inventory.empty_body": "まず商品を追加してから、ここで在庫レベルを調整してください。",
+  "inventory.list_current_stock": "在庫数",
+
+  "adjust_stock_modal.title": "在庫を調整 — {productName}",
+  "adjust_stock_modal.label_delta": "在庫変更",
+  "adjust_stock_modal.label_reason": "理由",
+  "adjust_stock_modal.reason_placeholder": "例：入荷、破損品...",
+  "adjust_stock_modal.checkbox_log_as_expense": "支出として記録",
+  "adjust_stock_modal.label_amount": "金額",
+  "adjust_stock_modal.label_category": "カテゴリ",
+  "adjust_stock_modal.save": "保存",
+  "adjust_stock_modal.cancel": "キャンセル",
+
+  "products.tab_inventory": "在庫",
+
+  "error.INVENTORY_ADJUSTMENT_INVALID_DELTA": "在庫変更はゼロにできません。",
+  "error.INVENTORY_ADJUSTMENT_FORBIDDEN_NOT_MANAGER": "オーナーとパートナーのみが在庫を調整できます。",
+  "error.PRODUCT_NOT_FOUND_FOR_ADJUSTMENT": "商品が見つかりません。",
+  "success.INVENTORY_ADJUSTMENT_CREATED": "在庫を更新しました。"
 }

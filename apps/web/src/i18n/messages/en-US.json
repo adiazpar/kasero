@@ -1733,5 +1733,27 @@
   "success.EXPENSE_DELETED": "Expense deleted.",
   "success.EXPENSE_CATEGORY_CREATED": "Category added.",
   "success.EXPENSE_CATEGORY_UPDATED": "Category updated.",
-  "success.EXPENSE_CATEGORY_DELETED": "Category deleted."
+  "success.EXPENSE_CATEGORY_DELETED": "Category deleted.",
+
+  "inventory.tab_label": "Inventory",
+  "inventory.empty_title": "No products yet",
+  "inventory.empty_body": "Add products first, then return here to adjust stock levels.",
+  "inventory.list_current_stock": "In stock",
+
+  "adjust_stock_modal.title": "Adjust stock — {productName}",
+  "adjust_stock_modal.label_delta": "Stock change",
+  "adjust_stock_modal.label_reason": "Reason",
+  "adjust_stock_modal.reason_placeholder": "e.g. Received shipment, damaged goods...",
+  "adjust_stock_modal.checkbox_log_as_expense": "Log as expense",
+  "adjust_stock_modal.label_amount": "Amount",
+  "adjust_stock_modal.label_category": "Category",
+  "adjust_stock_modal.save": "Save",
+  "adjust_stock_modal.cancel": "Cancel",
+
+  "products.tab_inventory": "Inventory",
+
+  "error.INVENTORY_ADJUSTMENT_INVALID_DELTA": "Stock change cannot be zero.",
+  "error.INVENTORY_ADJUSTMENT_FORBIDDEN_NOT_MANAGER": "Only owners and partners can adjust stock.",
+  "error.PRODUCT_NOT_FOUND_FOR_ADJUSTMENT": "Product not found.",
+  "success.INVENTORY_ADJUSTMENT_CREATED": "Stock updated."
 }

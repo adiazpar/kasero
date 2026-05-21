@@ -1733,5 +1733,27 @@
   "success.EXPENSE_DELETED": "Gasto eliminado.",
   "success.EXPENSE_CATEGORY_CREATED": "Categoría añadida.",
   "success.EXPENSE_CATEGORY_UPDATED": "Categoría actualizada.",
-  "success.EXPENSE_CATEGORY_DELETED": "Categoría eliminada."
+  "success.EXPENSE_CATEGORY_DELETED": "Categoría eliminada.",
+
+  "inventory.tab_label": "Inventario",
+  "inventory.empty_title": "Sin productos aún",
+  "inventory.empty_body": "Añade productos primero y luego vuelve aquí para ajustar los niveles de stock.",
+  "inventory.list_current_stock": "En stock",
+
+  "adjust_stock_modal.title": "Ajustar stock — {productName}",
+  "adjust_stock_modal.label_delta": "Cambio de stock",
+  "adjust_stock_modal.label_reason": "Motivo",
+  "adjust_stock_modal.reason_placeholder": "Ej. Se recibió envío, productos dañados...",
+  "adjust_stock_modal.checkbox_log_as_expense": "Registrar como gasto",
+  "adjust_stock_modal.label_amount": "Monto",
+  "adjust_stock_modal.label_category": "Categoría",
+  "adjust_stock_modal.save": "Guardar",
+  "adjust_stock_modal.cancel": "Cancelar",
+
+  "products.tab_inventory": "Inventario",
+
+  "error.INVENTORY_ADJUSTMENT_INVALID_DELTA": "El cambio de stock no puede ser cero.",
+  "error.INVENTORY_ADJUSTMENT_FORBIDDEN_NOT_MANAGER": "Solo los propietarios y socios pueden ajustar el stock.",
+  "error.PRODUCT_NOT_FOUND_FOR_ADJUSTMENT": "Producto no encontrado.",
+  "success.INVENTORY_ADJUSTMENT_CREATED": "Stock actualizado."
 }
