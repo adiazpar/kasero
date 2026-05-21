@@ -1,17 +1,17 @@
 import { IonContent, IonPage } from '@ionic/react'
 
 import { BusinessHeader } from '@/components/layout'
-import { SalesView } from '@/components/tab-shell/views/SalesView'
+import { LedgerView } from '@/components/tab-shell/views/LedgerView'
 
 // SalesContext / SalesSessionsContext are mounted above the route in
 // BusinessProvidersFromUrl, so an open POS session survives tab switches
 // (this page unmounts on tab change but the session state does not).
-export function SalesTab() {
+export function LedgerTab() {
   return (
     <IonPage>
       <BusinessHeader />
       <IonContent>
-        <SalesView />
+        <LedgerView />
       </IonContent>
     </IonPage>
   )

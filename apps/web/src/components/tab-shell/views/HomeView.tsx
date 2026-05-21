@@ -17,6 +17,7 @@ import {
   RevenueCard,
   WeekTrendCard,
   AlertsSection,
+  MonthlySummaryCard,
 } from '@/components/home'
 
 export function HomeView() {
@@ -160,6 +161,7 @@ export function HomeView() {
   return (
     <div className="home-body">
       <HomeHero />
+      <MonthlySummaryCard />
       <RevenueCard
         isLoading={!salesLoaded}
         amount={stats?.todayRevenue ?? null}

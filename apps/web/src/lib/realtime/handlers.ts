@@ -177,6 +177,30 @@ export function dispatchRealtimeEvent(
       if (!isSelfEcho) emitEntityUpdated('sales-session', event.sessionId)
       return
 
+    case 'expense.created':
+      callRefetch('expenses')
+      return
+
+    case 'expense.updated':
+      callRefetch('expenses')
+      if (!isSelfEcho) emitEntityUpdated('expense', event.expenseId)
+      return
+
+    case 'expense.deleted':
+      callRefetch('expenses')
+      if (!isSelfEcho) emitEntityDeleted('expense', event.expenseId)
+      return
+
+    case 'expense_category.created':
+    case 'expense_category.updated':
+      callRefetch('expense-categories')
+      return
+
+    case 'expense_category.deleted':
+      callRefetch('expense-categories')
+      if (!isSelfEcho) emitEntityDeleted('expense-category', event.categoryId)
+      return
+
     case 'profile.updated':
       callRefetch('profile')
       return

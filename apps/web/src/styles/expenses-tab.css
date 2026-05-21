@@ -1,0 +1,390 @@
+/* Expenses sub-tab — ledger vocabulary for the expenses surface.
+ * Shares the same Modern Mercantile typographic system as the Products
+ * and Sales tabs: Fraunces italic for amounts, mono uppercase tracked
+ * for category chips and dates, hairline-bordered card wrappers.
+ */
+
+/* ===== View shell ===================================================== */
+
+.expenses-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + 72px);
+  position: relative;
+}
+
+/* ===== Totals strip =================================================== */
+
+.expenses-totals-strip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+/* ===== Expense list card ============================================== */
+
+.expenses-list-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Expense row ==================================================== */
+
+.expense-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) ease-out;
+}
+
+.expense-row:last-child {
+  border-bottom: 0;
+}
+
+@media (hover: hover) {
+  .expense-row:hover {
+    background-color: var(--color-bg-muted);
+  }
+}
+
+.expense-row:active {
+  background-color: var(--color-bg-muted);
+}
+
+.expense-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.expense-row__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.expense-row__category-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+  background: var(--color-brand-subtle);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+
+.expense-row__date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.expense-row__note {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expense-row__trail {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.expense-row__amount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.016em;
+  line-height: 1;
+  color: var(--color-error);
+  font-variant-numeric: tabular-nums;
+}
+
+.expense-row__photo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+}
+
+/* ===== Empty state ==================================================== */
+
+.expenses-empty {
+  min-height: calc(100dvh - 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-4);
+  gap: var(--space-3);
+}
+
+.expenses-empty__icon {
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.expenses-empty__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.expenses-empty__desc {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  max-width: 32ch;
+  margin: 0;
+}
+
+.expenses-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-inverse);
+  background: var(--color-brand);
+  border: 0;
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    filter var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+}
+
+@media (hover: hover) {
+  .expenses-empty__cta:hover {
+    filter: brightness(0.95);
+  }
+}
+
+.expenses-empty__cta:active {
+  transform: scale(0.97);
+}
+
+/* ===== Floating add button ============================================ */
+
+.expenses-fab {
+  position: fixed;
+  right: var(--space-5);
+  bottom: calc(var(--space-5) + 72px); /* clear the bottom tab bar */
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  border: 0;
+  background: var(--color-brand);
+  color: var(--color-text-inverse);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 1px 0 0 rgba(0, 0, 0, 0.08),
+    0 8px 20px -6px rgba(var(--color-brand-rgb), 0.45);
+  transition:
+    transform var(--duration-fast) ease-out,
+    box-shadow var(--duration-fast) ease-out;
+  z-index: 10;
+}
+
+@media (hover: hover) {
+  .expenses-fab:hover {
+    filter: brightness(0.95);
+  }
+}
+
+.expenses-fab:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 1px 0 0 rgba(0, 0, 0, 0.08),
+    0 4px 10px -4px rgba(var(--color-brand-rgb), 0.45);
+}
+
+/* ===== Expense category picker ======================================== */
+
+.expense-category-picker {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--color-bg-surface);
+}
+
+.expense-category-picker__add-row {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-brand);
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.expense-category-picker__add-row .sort-sheet-row__label {
+  color: var(--color-brand);
+}
+
+/* ===== Expense modal helpers ========================================== */
+
+/* Neutral cancel link used next to the primary save pill.
+   Overrides the oxblood color from provider-modal__delete-link. */
+.expense-modal__cancel-link {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+@media (hover: hover) {
+  .expense-modal__cancel-link:hover:not(:disabled) {
+    background: var(--color-bg-muted);
+    border-color: var(--color-border);
+  }
+}
+
+/* Wraps PriceInput so it inherits the same field frame as pv-field__input. */
+.expense-modal__price-wrap {
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-xl);
+  padding: 0 var(--space-4);
+  transition:
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out;
+}
+
+.expense-modal__price-wrap:focus-within {
+  border-color: var(--color-brand);
+  background: var(--color-brand-subtle);
+}
+
+/* Date input — same field frame as pv-field__input. */
+.expense-modal__date-input {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Expense detail view ============================================ */
+
+.expense-detail__amount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 40px;
+  letter-spacing: -0.020em;
+  line-height: 1;
+  color: var(--color-error);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.expense-detail__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.expense-detail__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.expense-detail__row--block {
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expense-detail__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.expense-detail__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.expense-detail__note {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.expense-detail__photo {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}

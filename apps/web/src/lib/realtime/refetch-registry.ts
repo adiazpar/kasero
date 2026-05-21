@@ -20,6 +20,8 @@ export type RefetchKey =
   | 'orders'
   | 'sales-sessions'
   | 'providers'
+  | 'expenses'
+  | 'expense-categories'
 
 type Listener = () => Promise<void> | void
 

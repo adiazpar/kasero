@@ -24,6 +24,9 @@ export const businesses = sqliteTable('businesses', {
   // on each product insert so the success-step stamp ("PRODUCT 0042 ·
   // CREATED") and any audit references stay stable across deletes.
   nextProductNumber: integer('next_product_number').default(1).notNull(),
+  // Monotonic counter for expenses.expense_number. Incremented atomically
+  // on each expense insert so references are stable even after deletes.
+  nextExpenseNumber: integer('next_expense_number').notNull().default(1),
 })
 
 // ===========================================
@@ -392,6 +395,42 @@ export const salesSessions = sqliteTable('sales_sessions', {
   uniqueIndex('idx_unique_sales_sessions_open_per_business')
     .on(table.businessId)
     .where(sql`${table.closedAt} IS NULL`),
+])
+
+// ===========================================
+// EXPENSE CATEGORIES
+// ===========================================
+export const expenseCategories = sqliteTable('expense_categories', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('idx_expense_categories_business_id').on(table.businessId),
+])
+
+// ===========================================
+// EXPENSES
+// ===========================================
+export const expenses = sqliteTable('expenses', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
+  createdByUserId: text('created_by_user_id').references(() => users.id).notNull(),
+  // Per-business sequential reference ("expense #47"). Nullable so the
+  // column can be added without backfill; the POST route always computes
+  // and writes a value, mirroring the orderNumber pattern.
+  expenseNumber: integer('expense_number'),
+  date: integer('date', { mode: 'timestamp' }).notNull(),
+  amount: real('amount').notNull(),
+  categoryId: text('category_id').references(() => expenseCategories.id, { onDelete: 'set null' }),
+  note: text('note'),
+  photoUrl: text('photo_url'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('idx_expenses_business_id').on(table.businessId),
+  index('idx_expenses_business_date').on(table.businessId, table.date),
 ])
 
 // ===========================================

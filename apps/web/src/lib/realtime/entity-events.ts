@@ -18,6 +18,8 @@ export type EntityType =
   | 'order'
   | 'sales-session'
   | 'provider'
+  | 'expense'
+  | 'expense-category'
 
 /**
  * @deprecated Use EntityType instead.

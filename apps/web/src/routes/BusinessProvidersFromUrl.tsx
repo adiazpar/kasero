@@ -5,6 +5,8 @@ import { BusinessDataPreloader } from '@/components/layout/BusinessDataPreloader
 import { NavigationErrorNotice } from '@/components/layout/NavigationErrorNotice'
 import { ContentGuard } from '@/components/auth'
 import { BusinessProvider } from '@/contexts/business-context'
+import { ExpenseCategoriesProvider } from '@/contexts/expense-categories-context'
+import { ExpensesProvider } from '@/contexts/expenses-context'
 import { IncomingTransferProvider } from '@/contexts/incoming-transfer-context'
 import { OrdersProvider } from '@/contexts/orders-context'
 import { PageTransitionProvider } from '@/contexts/page-transition-context'
@@ -66,11 +68,15 @@ export function BusinessProvidersFromUrl({ children }: { children: ReactNode }) 
                   <ProvidersProvider key={`providers-${businessId}`} businessId={businessId}>
                     <ProductsProvider key={`products-${businessId}`} businessId={businessId}>
                       <ProductSettingsProvider key={`product-settings-${businessId}`} businessId={businessId}>
-                        <ContentGuard>
-                          <BusinessDataPreloader businessId={businessId} />
-                          <NavigationErrorNotice />
-                          {children}
-                        </ContentGuard>
+                        <ExpenseCategoriesProvider key={`expense-categories-${businessId}`} businessId={businessId}>
+                          <ExpensesProvider key={`expenses-${businessId}`} businessId={businessId}>
+                            <ContentGuard>
+                              <BusinessDataPreloader businessId={businessId} />
+                              <NavigationErrorNotice />
+                              {children}
+                            </ContentGuard>
+                          </ExpensesProvider>
+                        </ExpenseCategoriesProvider>
                       </ProductSettingsProvider>
                     </ProductsProvider>
                   </ProvidersProvider>
