@@ -1,6 +1,6 @@
 import 'server-only'
 import { headers } from 'next/headers'
-import { db, businessUsers, businesses, products, providers, productCategories } from '@/db'
+import { db, businessUsers, businesses, products, providers, productCategories, expenseCategories, expenses } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { auth } from './auth'
 
@@ -246,6 +246,36 @@ export async function assertCategoryInBusiness(
     .select({ id: productCategories.id })
     .from(productCategories)
     .where(and(eq(productCategories.id, categoryId), eq(productCategories.businessId, businessId)))
+    .get()
+  return row != null
+}
+
+/**
+ * Confirm an expense category ID belongs to the given business.
+ */
+export async function assertExpenseCategoryInBusiness(
+  categoryId: string,
+  businessId: string,
+): Promise<boolean> {
+  const row = await db
+    .select({ id: expenseCategories.id })
+    .from(expenseCategories)
+    .where(and(eq(expenseCategories.id, categoryId), eq(expenseCategories.businessId, businessId)))
+    .get()
+  return row != null
+}
+
+/**
+ * Confirm an expense ID belongs to the given business.
+ */
+export async function assertExpenseInBusiness(
+  expenseId: string,
+  businessId: string,
+): Promise<boolean> {
+  const row = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.businessId, businessId)))
     .get()
   return row != null
 }
