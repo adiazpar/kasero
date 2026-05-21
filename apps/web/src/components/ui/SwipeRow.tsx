@@ -19,19 +19,23 @@ export interface SwipeAction {
 
 export interface SwipeRowProps {
   actions: SwipeAction[]
-  threshold?: number
   children: ReactNode
 }
 
 const MAX_ACTIONS = 3
-const STAGGER_STEP = 0.10
 
-// Per-chip lerp speed in [0,1]. Rightmost is fastest, leftmost is slowest;
-// the speed gap is what produces the visible stagger when the user swipes
-// fast enough that the ratio jumps from 0 to 1 in a single ionDrag tick.
-// Lower speed = more lag = more visible right-to-left reveal.
-const SPEED_RIGHTMOST = 0.45
-const SPEED_STEP = 0.12
+// Single lerp speed used for every chip. The right-to-left reveal stagger
+// now comes from per-chip thresholds (each chip owns a 1/N slice of the
+// drag ratio), so the lerp only smooths fast flicks where the ratio jumps
+// in a single ionDrag tick.
+const LERP_SPEED = 0.45
+
+// Fraction of a chip's slice that must be uncovered by the sliding row
+// edge before the chip starts growing. 0 = chip begins growing the moment
+// the edge enters its slot; 1 = chip would only start growing after the
+// edge fully clears its slot. Keep < 1 or the leftmost chip never reaches
+// full scale by ratio = 1.
+const REVEAL_OFFSET = 0.35
 
 type DragDetail = { amount: number; ratio: number }
 
@@ -41,25 +45,26 @@ function clamp01(n: number): number {
   return n
 }
 
-// Per-chip target scale from the live drag ratio. Right-to-left reveal:
-// position 0 = leftmost, count-1 = rightmost. Rightmost uses the base
-// threshold; each chip further left needs an extra STAGGER_STEP of drag
-// before it starts scaling in.
+// Per-chip target scale from the live drag ratio. Each chip owns a
+// non-overlapping 1/count slice of the ratio, revealed right-to-left:
+// position 0 = leftmost, count-1 = rightmost. Within its slice, a chip
+// only starts growing once REVEAL_OFFSET of the slice has been uncovered,
+// then grows to full by the slice's end. Stays at full once ratio passes
+// the slice end.
 function chipTarget(
   ratio: number,
   idx: number,
   count: number,
-  threshold: number,
 ): number {
   const reverseIdx = count - 1 - idx
-  const eff = threshold + reverseIdx * STAGGER_STEP
-  if (eff >= 1) return 0
-  return clamp01((ratio - eff) / (1 - eff))
+  const slice = 1 / count
+  const start = (reverseIdx + REVEAL_OFFSET) * slice
+  const end = (reverseIdx + 1) * slice
+  return clamp01((ratio - start) / (end - start))
 }
 
 export function SwipeRow({
   actions,
-  threshold = 0.5,
   children,
 }: SwipeRowProps) {
   const slidingRef = useRef<HTMLIonItemSlidingElement | null>(null)
@@ -95,13 +100,11 @@ export function SwipeRow({
     for (let i = 0; i < count; i++) {
       const target = targetScales.current[i]
       const current = displayScales.current[i]
-      const reverseIdx = count - 1 - i
-      const speed = SPEED_RIGHTMOST - reverseIdx * SPEED_STEP
       const delta = target - current
       if (Math.abs(delta) < 0.005) {
         displayScales.current[i] = target
       } else {
-        displayScales.current[i] = current + delta * speed
+        displayScales.current[i] = current + delta * LERP_SPEED
         needsMore = true
       }
       writeChip(i)
@@ -118,7 +121,7 @@ export function SwipeRow({
   const onDrag = (e: CustomEvent<DragDetail>) => {
     const ratio = clamp01(Math.abs(e.detail.ratio))
     for (let i = 0; i < count; i++) {
-      targetScales.current[i] = chipTarget(ratio, i, count, threshold)
+      targetScales.current[i] = chipTarget(ratio, i, count)
     }
     kick()
   }
