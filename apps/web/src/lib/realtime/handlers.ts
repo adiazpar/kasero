@@ -177,6 +177,12 @@ export function dispatchRealtimeEvent(
       if (!isSelfEcho) emitEntityUpdated('sales-session', event.sessionId)
       return
 
+    case 'inventory.adjusted':
+      callRefetch('products')
+      callRefetch('inventory-adjustments')
+      if (event.relatedExpenseId) callRefetch('expenses')
+      return
+
     case 'expense.created':
       callRefetch('expenses')
       return
