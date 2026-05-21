@@ -93,7 +93,7 @@ export function sortProducts(
 // TAB TYPES
 // ============================================
 
-export type PageTab = 'products' | 'orders'
+export type PageTab = 'products' | 'inventory'
 
 // ============================================
 // EXPANDED ORDER TYPE

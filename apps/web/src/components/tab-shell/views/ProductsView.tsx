@@ -18,6 +18,7 @@ import {
   type ProductFormData,
   type StockAdjustmentData,
 } from '@/components/products'
+import { InventoryView } from '@/components/inventory/InventoryView'
 
 const AddProductModal = dynamic(
   () => import('@/components/products/AddProductModal').then(m => m.AddProductModal),
@@ -235,7 +236,7 @@ export function ProductsView() {
   // Tab state — initialized from the URL so browser back/forward and
   // router.back() restore the tab the user was on.
   const [activeTab, setActiveTab] = useState<PageTab>(() =>
-    searchParams?.get('tab') === 'orders' ? 'orders' : 'products'
+    searchParams?.get('tab') === 'inventory' ? 'inventory' : 'products'
   )
 
   const urlTab = searchParams?.get('tab') ?? null
@@ -248,14 +249,14 @@ export function ProductsView() {
     // mount and on URL change. No infinite loop: setState bails out on equal
     // values, and the sub-tab click handlers update both URL and state in the
     // same render cycle.
-    setActiveTab(urlTab === 'orders' ? 'orders' : 'products')
+    setActiveTab(urlTab === 'inventory' ? 'inventory' : 'products')
   }, [urlTab])
 
   // Build the canonical URL for a given tab so we can keep the URL in sync
   // with tab state. Products is the default and carries no query param.
   const urlForTab = useCallback(
     (tab: PageTab) =>
-      tab === 'products' ? `/${businessId}/products` : `/${businessId}/products?tab=orders`,
+      tab === 'products' ? `/${businessId}/products` : `/${businessId}/products?tab=inventory`,
     [businessId]
   )
 
@@ -349,8 +350,8 @@ export function ProductsView() {
     if (urlFilter === 'low_stock') {
       setSelectedFilter('low_stock')
     } else if (urlFilter === 'overdue') {
-      setActiveTab('orders')
-      setOrderStatusFilter('overdue')
+      // Orders sub-tab removed; overdue filter deep-link is a no-op until
+      // orders are fully cleaned up in a later task.
     }
     // Intentional: react only to the URL value. Once applied, in-app
     // selectedFilter changes are not echoed back to the URL.
@@ -421,21 +422,14 @@ export function ProductsView() {
     const deepLinkedOrderId = searchParams?.get('orderId')
 
     if (newOrderFlag === '1') {
-      setActiveTab('orders')
-      orderFlows.openNewOrder(preselectedProviderId || undefined)
-      // Drop the deep-link params but keep ?tab=orders so tab state
-      // persists across back/forward navigation.
-      router.replace(urlForTab('orders'))
+      // Orders sub-tab removed; newOrder deep-link is a no-op until
+      // order infrastructure is fully cleaned up in a later task.
       return
     }
 
     if (deepLinkedOrderId && orders.length > 0) {
-      const target = orders.find(o => o.id === deepLinkedOrderId)
-      if (target) {
-        setActiveTab('orders')
-        orderFlows.openOrderDetail(target)
-        router.replace(urlForTab('orders'))
-      }
+      // Orders sub-tab removed; order deep-link is a no-op until
+      // order infrastructure is fully cleaned up in a later task.
     }
     // Intentional: we only want this effect to react when orders load or
     // when the user navigates here with a different query. No exhaustive-deps
@@ -786,7 +780,7 @@ export function ProductsView() {
             business the user has no signal that orders even exist, so a
             "PRODUCTS / ORDERS" toggle on an empty page reads as a stub.
             The empty state below carries its own primary CTA. */}
-        {(products.length > 0 || orders.length > 0) && (
+        {products.length > 0 && (
           <div role="tablist" aria-label={t.formatMessage({ id: 'products.tab_switcher_aria' })} className="products-segment">
             <button
               type="button"
@@ -800,11 +794,11 @@ export function ProductsView() {
             <button
               type="button"
               role="tab"
-              aria-selected={activeTab === 'orders'}
+              aria-selected={activeTab === 'inventory'}
               className="products-segment__button"
-              onClick={() => handleSegmentChange('orders')}
+              onClick={() => handleSegmentChange('inventory')}
             >
-              {t.formatMessage({ id: 'products.tab_orders' })}
+              {t.formatMessage({ id: 'products.tab_inventory' })}
             </button>
           </div>
         )}
@@ -850,32 +844,8 @@ export function ProductsView() {
               scanHiddenInput={barcodeScanInput}
             />
           </TabContainer.Tab>
-          <TabContainer.Tab id="orders">
-            <OrdersTab
-              products={products}
-              orders={orders}
-              filteredOrders={filteredOrders}
-              searchQuery={orderSearchQuery}
-              onSearchChange={setOrderSearchQuery}
-              sortBy={orderSortBy}
-              onSortChange={setOrderSortBy}
-              statusFilter={orderStatusFilter}
-              onStatusFilterChange={setOrderStatusFilter}
-              viewMode={orderViewMode}
-              onViewModeChange={handleOrderViewModeChange}
-              onNewOrder={() => orderFlows.openNewOrder()}
-              onViewOrder={(order) => orderFlows.openOrderDetail(order)}
-              onReceiveOrder={(order) => orderFlows.openOrderDetail(order, 'receive')}
-              onEditOrder={(order) => orderFlows.openOrderDetail(order, 'edit')}
-              onDeleteOrder={(order) => orderFlows.openOrderDetail(order, 'delete')}
-              canManage={canManage}
-              canDelete={canDelete}
-              error={error || orderFlows.error}
-              isModalOpen={orderFlows.isNewOrderOpen}
-              isLoading={orderViewMode === 'completed'
-                ? !isCompletedOrdersLoaded
-                : !isActiveOrdersLoaded}
-            />
+          <TabContainer.Tab id="inventory">
+            <InventoryView />
           </TabContainer.Tab>
         </TabContainer>
       </div>
