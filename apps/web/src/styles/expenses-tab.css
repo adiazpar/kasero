@@ -257,3 +257,134 @@
     0 1px 0 0 rgba(0, 0, 0, 0.08),
     0 4px 10px -4px rgba(var(--color-brand-rgb), 0.45);
 }
+
+/* ===== Expense category picker ======================================== */
+
+.expense-category-picker {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--color-bg-surface);
+}
+
+.expense-category-picker__add-row {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-brand);
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.expense-category-picker__add-row .sort-sheet-row__label {
+  color: var(--color-brand);
+}
+
+/* ===== Expense modal helpers ========================================== */
+
+/* Neutral cancel link used next to the primary save pill.
+   Overrides the oxblood color from provider-modal__delete-link. */
+.expense-modal__cancel-link {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+@media (hover: hover) {
+  .expense-modal__cancel-link:hover:not(:disabled) {
+    background: var(--color-bg-muted);
+    border-color: var(--color-border);
+  }
+}
+
+/* Wraps PriceInput so it inherits the same field frame as pv-field__input. */
+.expense-modal__price-wrap {
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-xl);
+  padding: 0 var(--space-4);
+  transition:
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out;
+}
+
+.expense-modal__price-wrap:focus-within {
+  border-color: var(--color-brand);
+  background: var(--color-brand-subtle);
+}
+
+/* Date input — same field frame as pv-field__input. */
+.expense-modal__date-input {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Expense detail view ============================================ */
+
+.expense-detail__amount {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 40px;
+  letter-spacing: -0.020em;
+  line-height: 1;
+  color: var(--color-error);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.expense-detail__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.expense-detail__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.expense-detail__row--block {
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.expense-detail__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.expense-detail__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.expense-detail__note {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.expense-detail__photo {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
