@@ -14,9 +14,6 @@ export const businesses = sqliteTable('businesses', {
   // Product settings (inline - no separate table needed)
   defaultCategoryId: text('default_category_id'),
   sortPreference: text('sort_preference').default('name_asc'),
-  // Monotonic counter for orders.order_number. Incremented atomically
-  // on each order insert so references are stable even after deletes.
-  nextOrderNumber: integer('next_order_number').default(1).notNull(),
   // Monotonic counter for sales.sale_number. Incremented atomically on each
   // sale insert so references are stable even after deletes.
   nextSaleNumber: integer('next_sale_number').default(1).notNull(),
@@ -221,90 +218,6 @@ export const products = sqliteTable('products', {
 ])
 
 // ===========================================
-// PROVIDERS (Suppliers)
-// ===========================================
-export const providers = sqliteTable('providers', {
-  id: text('id').primaryKey(),
-  businessId: text('business_id').references(() => businesses.id).notNull(),
-  name: text('name').notNull(),
-  phone: text('phone'),
-  email: text('email'),
-  active: integer('active', { mode: 'boolean' }).default(true),
-  // Functional timestamp: displayed on the provider detail page ("Since Oct 2025").
-  // Nullable so pre-existing rows without a stamp gracefully omit the line.
-  createdAt: integer('created_at', { mode: 'timestamp' }),
-}, (table) => [
-  index('idx_providers_business_id').on(table.businessId),
-])
-
-// ===========================================
-// PROVIDER NOTES
-// ===========================================
-// Up to MAX_PROVIDER_NOTES (5) per provider. Cap is enforced in the
-// POST /providers/[id]/notes route.
-export const providerNotes = sqliteTable('provider_notes', {
-  id: text('id').primaryKey(),
-  providerId: text('provider_id').references(() => providers.id, { onDelete: 'cascade' }).notNull(),
-  // Denormalized for multi-tenant scoping without a join.
-  businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
-  title: text('title').notNull(),
-  body: text('body').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-}, (table) => [
-  index('idx_provider_notes_provider_id').on(table.providerId),
-  index('idx_provider_notes_business_provider').on(table.businessId, table.providerId),
-])
-
-// ===========================================
-// ORDERS (Purchase orders from suppliers)
-// ===========================================
-export const orders = sqliteTable('orders', {
-  id: text('id').primaryKey(),
-  businessId: text('business_id').references(() => businesses.id).notNull(),
-  providerId: text('provider_id').references(() => providers.id),
-  // User who created the order. Nullable so legacy rows from before this
-  // column existed stay valid; new inserts always set it.
-  createdByUserId: text('created_by_user_id').references(() => users.id),
-  // User who received the order. Null until status transitions to
-  // 'received'; stamped with the acting user at receive time.
-  receivedByUserId: text('received_by_user_id').references(() => users.id),
-  // Human-readable reference, auto-numbered per business ("#47"). Nullable
-  // so existing rows can be backfilled post-migration; new inserts always
-  // compute it in the create route.
-  orderNumber: integer('order_number'),
-  date: integer('date', { mode: 'timestamp' }).notNull(),
-  receivedDate: integer('received_date', { mode: 'timestamp' }),
-  total: real('total').notNull(),
-  status: text('status', { enum: ['pending', 'received'] }).default('pending').notNull(),
-  estimatedArrival: integer('estimated_arrival', { mode: 'timestamp' }),
-}, (table) => [
-  index('idx_orders_business_id').on(table.businessId),
-  index('idx_orders_provider_id').on(table.providerId),
-  index('idx_orders_date').on(table.date),
-])
-
-// ===========================================
-// ORDER ITEMS
-// ===========================================
-export const orderItems = sqliteTable('order_items', {
-  id: text('id').primaryKey(),
-  orderId: text('order_id').references(() => orders.id, { onDelete: 'cascade' }).notNull(),
-  productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
-  productName: text('product_name').notNull(), // Snapshot at order time
-  quantity: integer('quantity').notNull(),
-  unitCost: real('unit_cost'),
-  subtotal: real('subtotal'),
-  receivedQuantity: integer('received_quantity'),
-}, (table) => [
-  index('idx_order_items_order_id').on(table.orderId),
-  // Used by the product-delete blocking-order check (join on productId to
-  // find pending orders referencing this product). Without this index that
-  // query scans order_items.
-  index('idx_order_items_product_id').on(table.productId),
-])
-
-// ===========================================
 // SALES (Customer transactions)
 // ===========================================
 export const sales = sqliteTable('sales', {
@@ -493,8 +406,6 @@ export const businessesRelations = relations(businesses, ({ many }) => ({
   businessUsers: many(businessUsers),
   products: many(products),
   productCategories: many(productCategories),
-  providers: many(providers),
-  orders: many(orders),
   sales: many(sales),
   inviteCodes: many(inviteCodes),
   ownershipTransfers: many(ownershipTransfers),
@@ -524,7 +435,6 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.categoryId],
     references: [productCategories.id],
   }),
-  orderItems: many(orderItems),
   saleItems: many(saleItems),
 }))
 
@@ -534,49 +444,6 @@ export const productCategoriesRelations = relations(productCategories, ({ one, m
     references: [businesses.id],
   }),
   products: many(products),
-}))
-
-export const providersRelations = relations(providers, ({ one, many }) => ({
-  business: one(businesses, {
-    fields: [providers.businessId],
-    references: [businesses.id],
-  }),
-  orders: many(orders),
-  notes: many(providerNotes),
-}))
-
-export const providerNotesRelations = relations(providerNotes, ({ one }) => ({
-  provider: one(providers, {
-    fields: [providerNotes.providerId],
-    references: [providers.id],
-  }),
-  business: one(businesses, {
-    fields: [providerNotes.businessId],
-    references: [businesses.id],
-  }),
-}))
-
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-  business: one(businesses, {
-    fields: [orders.businessId],
-    references: [businesses.id],
-  }),
-  provider: one(providers, {
-    fields: [orders.providerId],
-    references: [providers.id],
-  }),
-  items: many(orderItems),
-}))
-
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderItems.orderId],
-    references: [orders.id],
-  }),
-  product: one(products, {
-    fields: [orderItems.productId],
-    references: [products.id],
-  }),
 }))
 
 export const salesRelations = relations(sales, ({ one, many }) => ({
