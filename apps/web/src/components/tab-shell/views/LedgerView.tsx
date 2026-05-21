@@ -7,16 +7,25 @@ import { TabContainer } from '@/components/ui'
 import { SalesView } from '@/components/tab-shell/views/SalesView'
 import { ExpensesView } from '@/components/expenses/ExpensesView'
 import { useFeatureFlag } from '@/lib/feature-flags'
+import { useSearchParams } from '@/lib/next-navigation-shim'
 
 type LedgerTab = 'sales' | 'expenses'
 
 // LedgerView wraps the Sales and Expenses sub-tabs inside a TabContainer.
 // When the expenses_v1 feature flag is OFF, renders SalesView directly
 // (no sub-tabs, identical to the previous SalesTab behavior).
+//
+// Deep-link: navigate to `/:bid/sales?tab=expenses` to land on the
+// Expenses sub-tab. The MonthlySummaryCard on Home uses this to let
+// users tap income/expenses and arrive at the right sub-tab.
 export function LedgerView() {
   const t = useIntl()
   const expensesEnabled = useFeatureFlag('expenses_v1')
-  const [activeTab, setActiveTab] = useState<LedgerTab>('sales')
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get('tab')
+  const initialTab: LedgerTab =
+    tabParam === 'expenses' ? 'expenses' : 'sales'
+  const [activeTab, setActiveTab] = useState<LedgerTab>(initialTab)
 
   if (!expensesEnabled) {
     return <SalesView />
