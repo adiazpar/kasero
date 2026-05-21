@@ -146,7 +146,6 @@ export function InventoryView({ onAdjustStock }: InventoryViewProps) {
             className="inventory-tally-pill__segment"
             onClick={() => setFilter('all')}
           >
-            <span className="inventory-tally-pill__count">{totalCount}</span>
             <span className="inventory-tally-pill__label">
               {t.formatMessage({ id: 'inventory.header_on_hand' })}
             </span>
