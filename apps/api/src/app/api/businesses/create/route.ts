@@ -1,4 +1,4 @@
-import { db, businesses, businessUsers } from '@/db'
+import { db, businesses, businessUsers, expenseCategories } from '@/db'
 import { nanoid } from 'nanoid'
 import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -81,9 +81,10 @@ export const POST = withAuth(async (request, user) => {
     // Auto-derive currency from locale if the client didn't specify it.
     const finalCurrency = currency || getCurrencyForLocale(locale)
 
-    // Create business + owner membership atomically
+    // Create business + owner membership + default expense categories atomically
     const businessId = nanoid()
     const membershipId = nanoid()
+    const defaultExpenseCategories = ['Supplies', 'Fees', 'Transport', 'Other']
     await db.batch([
       db.insert(businesses).values({
         id: businessId,
@@ -100,6 +101,14 @@ export const POST = withAuth(async (request, user) => {
         status: 'active',
         createdAt: now,
       }),
+      ...defaultExpenseCategories.map((catName, idx) =>
+        db.insert(expenseCategories).values({
+          id: nanoid(),
+          businessId,
+          name: catName,
+          sortOrder: idx,
+        }),
+      ),
     ])
 
     await publishToUser(user.userId, {

@@ -79,6 +79,12 @@ vi.mock('@/db', () => ({
     role: 'business_users.role',
     status: 'business_users.status',
   },
+  expenseCategories: {
+    id: 'expense_categories.id',
+    businessId: 'expense_categories.business_id',
+    name: 'expense_categories.name',
+    sortOrder: 'expense_categories.sort_order',
+  },
 }))
 
 vi.mock('@/lib/api-middleware', async () => {
