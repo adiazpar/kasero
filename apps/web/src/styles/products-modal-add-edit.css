@@ -2328,3 +2328,25 @@ ion-footer.pm-footer ion-toolbar {
     color: var(--color-error);
   }
 }
+
+/* ===== Active toggle row (ReviewStep) ===================================
+   Previously lived in providers-detail.css. Kept here since ReviewStep
+   is the sole consumer after the provider subsystem was removed. */
+
+.pd-toggle-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.pd-toggle-value[data-active='true'] {
+  color: var(--color-success);
+}
+.pd-toggle-value ion-toggle {
+  --handle-width: 18px;
+  --handle-height: 18px;
+}

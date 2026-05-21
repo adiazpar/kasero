@@ -172,5 +172,6 @@ export interface OrderItem {
 }
 
 export * from './expense'
+export * from './inventory'
 
 

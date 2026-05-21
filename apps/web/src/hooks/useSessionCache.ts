@@ -89,8 +89,6 @@ export const CACHE_KEYS = {
   // together by clearPerBusinessCaches on leave / delete-business /
   // account-delete.
   PRODUCTS: 'products_cache',
-  PROVIDERS: 'providers_cache',
-  ORDERS: 'orders_cache',
   SALES: 'sales_cache',
   SALES_CART: 'sales_cart',
   SALES_SESSIONS: 'sales_sessions_cache',
@@ -109,8 +107,6 @@ export const CACHE_KEYS = {
 // Per-business sessionStorage keys — wiped together by clearPerBusinessCaches.
 const SESSION_PER_BUSINESS_KEYS = [
   CACHE_KEYS.PRODUCTS,
-  CACHE_KEYS.PROVIDERS,
-  CACHE_KEYS.ORDERS,
   CACHE_KEYS.SALES,
   CACHE_KEYS.SALES_CART,
   CACHE_KEYS.CATEGORIES,

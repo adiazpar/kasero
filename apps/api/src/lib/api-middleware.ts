@@ -359,8 +359,7 @@ export function withBusinessAuth(
       if (csrfReject) return csrfReject
 
       // Body-size backstop. Most business routes parse small JSON;
-      // the few file-upload routes (orders create/update with up to
-      // 15 MB receipts, products POST/PATCH with up to 5 MB icons)
+      // file-upload routes (products POST/PATCH with up to 5 MB icons)
       // override the cap explicitly. Without this default, dozens of
       // routes were unbounded in the audit (H-16).
       //

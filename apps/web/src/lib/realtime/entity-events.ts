@@ -15,9 +15,7 @@ export type EntityType =
   | 'invite'
   | 'category'
   | 'sale'
-  | 'order'
   | 'sales-session'
-  | 'provider'
   | 'expense'
   | 'expense-category'
 

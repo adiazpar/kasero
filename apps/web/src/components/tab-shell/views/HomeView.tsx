@@ -7,11 +7,8 @@ import { useBusiness } from '@/contexts/business-context'
 import { useSales } from '@/contexts/sales-context'
 import { useSalesSessions } from '@/contexts/sales-sessions-context'
 import { useProducts } from '@/contexts/products-context'
-import { useOrders } from '@/contexts/orders-context'
-import { useProviders } from '@/contexts/providers-context'
 import { useSalesAggregate } from '@/hooks/useSalesAggregate'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
-import { getOrderDisplayStatus } from '@/lib/products'
 import {
   HomeHero,
   RevenueCard,
@@ -29,12 +26,6 @@ export function HomeView() {
     ensureLoaded: ensureSessionsLoaded,
   } = useSalesSessions()
   const { products, ensureLoaded: ensureProductsLoaded } = useProducts()
-  const {
-    orders,
-    ensureActiveLoaded,
-    ensureCompletedLoaded,
-  } = useOrders()
-  const { providers, ensureLoaded: ensureProvidersLoaded } = useProviders()
   const aggregate = useSalesAggregate(businessId ?? '')
   const { formatCurrency } = useBusinessFormat()
   // Ionic-aware router. Used for cross-tab navigation (Home -> Sales /
@@ -50,20 +41,11 @@ export function HomeView() {
     void ensureSalesLoaded()
     void ensureSessionsLoaded()
     void ensureProductsLoaded()
-    void ensureActiveLoaded()
-    // Completed orders feed the "spent this week" sub-line on the trend
-    // card. ensureCompletedLoaded is idempotent.
-    void ensureCompletedLoaded()
-    // Providers feed the Manage tile's provider count.
-    void ensureProvidersLoaded()
   }, [
     businessId,
     ensureSalesLoaded,
     ensureSessionsLoaded,
     ensureProductsLoaded,
-    ensureActiveLoaded,
-    ensureCompletedLoaded,
-    ensureProvidersLoaded,
   ])
 
   // Mirror SalesStatsCard — open-session running total is computed from
@@ -85,40 +67,6 @@ export function HomeView() {
         .length,
     [products],
   )
-
-  // Overdue = pending + estimatedArrival in the past (per
-  // getOrderDisplayStatus in lib/products.ts).
-  const overdueCount = useMemo(
-    () => orders.filter((o) => getOrderDisplayStatus(o) === 'overdue').length,
-    [orders],
-  )
-
-  // Pending excludes overdue so the two alert rows don't double-count.
-  const pendingOrdersCount = useMemo(
-    () => orders.filter((o) => getOrderDisplayStatus(o) === 'pending').length,
-    [orders],
-  )
-
-  // This-week spend = sum of order totals whose date falls in the last 7
-  // calendar days (UTC). Mirrors the aggregate API's dailyRevenue window
-  // so "earned" and "spent" cover the same range.
-  const thisWeekSpend = useMemo(() => {
-    if (!orders.length) return 0
-    const now = new Date()
-    const startOfTodayUtc = Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-    )
-    // Inclusive 7-day window: [startOfTodayUtc - 6d, startOfTodayUtc + 1d).
-    // Matches the aggregate API's existing convention.
-    const sevenDaysAgo = startOfTodayUtc - 6 * 24 * 60 * 60 * 1000
-    const tomorrow = startOfTodayUtc + 24 * 60 * 60 * 1000
-    return orders.reduce((sum, o) => {
-      const t = new Date(o.date).getTime()
-      return t >= sevenDaysAgo && t < tomorrow ? sum + o.total : sum
-    }, 0)
-  }, [orders])
 
   // 7-day total from the server-aggregated dailyRevenue.
   const thisWeekTotal = useMemo(() => {
@@ -142,20 +90,8 @@ export function HomeView() {
     if (businessId) pushTab(`/${businessId}/products`)
   }
 
-  const handleProvidersClick = () => {
-    if (businessId) pushTab(`/${businessId}/providers`)
-  }
-
   const handleLowStockClick = () => {
     if (businessId) pushTab(`/${businessId}/products?filter=low_stock`)
-  }
-
-  const handleOverdueClick = () => {
-    if (businessId) pushTab(`/${businessId}/products?tab=orders&filter=overdue`)
-  }
-
-  const handlePendingOrdersClick = () => {
-    if (businessId) pushTab(`/${businessId}/products?tab=orders`)
   }
 
   return (
@@ -200,16 +136,6 @@ export function HomeView() {
               {intl.formatMessage({ id: 'navigation.products' })}
             </span>
           </button>
-          <button
-            type="button"
-            className="home-mini__stat-row"
-            onClick={handleProvidersClick}
-          >
-            <span className="home-mini__stat-value">{providers.length}</span>
-            <span className="home-mini__stat-label">
-              {intl.formatMessage({ id: 'navigation.providers' })}
-            </span>
-          </button>
         </div>
       </div>
       <WeekTrendCard
@@ -217,15 +143,11 @@ export function HomeView() {
         dailyRevenue={aggregate.data?.dailyRevenue ?? null}
         thisWeekTotal={thisWeekTotal}
         previousWeekTotal={aggregate.data?.previousWeekRevenue ?? null}
-        thisWeekSpend={thisWeekSpend}
+        thisWeekSpend={null}
       />
       <AlertsSection
         lowStockCount={lowStockCount}
-        overdueCount={overdueCount}
-        pendingOrdersCount={pendingOrdersCount}
         onLowStockClick={handleLowStockClick}
-        onOverdueClick={handleOverdueClick}
-        onPendingOrdersClick={handlePendingOrdersClick}
       />
     </div>
   )

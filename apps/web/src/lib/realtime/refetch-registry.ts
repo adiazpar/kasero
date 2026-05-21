@@ -17,11 +17,10 @@ export type RefetchKey =
   | 'product-settings'
   | 'categories'
   | 'sales'
-  | 'orders'
   | 'sales-sessions'
-  | 'providers'
   | 'expenses'
   | 'expense-categories'
+  | 'inventory-adjustments'
 
 type Listener = () => Promise<void> | void
 

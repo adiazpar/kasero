@@ -317,10 +317,8 @@ export function ReviewStep() {
           </div>
 
           {/* Manager-only inline status toggle + footer trash affordance.
-              The toggle row mirrors ProviderDetailClient's status row chrome
-              (Power icon + label + IonToggle); we reuse the .pd-toggle-value
-              class from providers-detail.css — the selectors there are
-              unscoped, so the class works anywhere it's applied. */}
+              The toggle row uses .pd-toggle-value (defined in
+              products-modal-add-edit.css). */}
           {!isEdit && pipelineStep === 'complete' && (
             <p className="pm-review__ai-disclaimer">
               {t.formatMessage({ id: 'productAddEdit.review_ai_disclaimer' })}

@@ -1,11 +1,10 @@
 'use client';
 import { useIntl } from 'react-intl';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from '@/lib/next-dynamic-shim'
 import { useRouter, useSearchParams } from '@/lib/next-navigation-shim'
 import { useBusiness } from '@/contexts/business-context'
-import { useAuth } from '@/contexts/auth-context'
 import { useProductFilters, useProductSettings } from '@/hooks'
 import { TabContainer, PageSpinner } from '@/components/ui'
 // Tabs render on mount so they stay static. Add/edit/settings modals are
@@ -14,10 +13,10 @@ import { TabContainer, PageSpinner } from '@/components/ui'
 // the initial products-page chunk.
 import {
   ProductsTab,
-  OrdersTab,
   type ProductFormData,
   type StockAdjustmentData,
 } from '@/components/products'
+import { InventoryView } from '@/components/inventory/InventoryView'
 
 const AddProductModal = dynamic(
   () => import('@/components/products/AddProductModal').then(m => m.AddProductModal),
@@ -41,21 +40,13 @@ const ProductInfoDrawer = dynamic(
 import type { PipelineStep } from '@/hooks'
 import {
   type PageTab,
-  type OrderStatusFilter,
-  type OrderSortOption,
-  type OrderViewMode,
   type SortOption,
-  getOrderDisplayStatus,
 } from '@/lib/products'
 // getProductIconUrl no longer needed at this level — populateFromProduct
 // lives inside EditProductModal now and imports it directly.
 import { useAiProductPipeline, useImageCompression, useBusinessFormat } from '@/hooks'
-import { useOrderFlows } from '@/hooks/useOrderFlows'
-import { useOrders } from '@/contexts/orders-context'
-import { useProviders } from '@/contexts/providers-context'
 import { useProducts } from '@/contexts/products-context'
 import { useBarcodeScan } from '@/hooks/useBarcodeScan'
-import { scrollToTop } from '@/lib/scroll'
 import { useApiMessage } from '@/hooks/useApiMessage'
 import type { Product, SortPreference, ProductCategory } from '@kasero/shared/types'
 import {
@@ -223,19 +214,17 @@ function EditProductModalWrapper({
 
 export function ProductsView() {
   const t = useIntl()
-  const tOrders = useIntl()
-  const tProductForm = useIntl()
+  const tProductForm = t
   const translateApiMessage = useApiMessage()
-  const { user } = useAuth()
   const { canManage, businessId } = useBusiness()
-  const { formatDate, locale, currency } = useBusinessFormat()
+  const { locale, currency } = useBusinessFormat()
   const searchParams = useSearchParams()
   const router = useRouter()
 
   // Tab state — initialized from the URL so browser back/forward and
   // router.back() restore the tab the user was on.
   const [activeTab, setActiveTab] = useState<PageTab>(() =>
-    searchParams?.get('tab') === 'orders' ? 'orders' : 'products'
+    searchParams?.get('tab') === 'inventory' ? 'inventory' : 'products'
   )
 
   const urlTab = searchParams?.get('tab') ?? null
@@ -248,22 +237,19 @@ export function ProductsView() {
     // mount and on URL change. No infinite loop: setState bails out on equal
     // values, and the sub-tab click handlers update both URL and state in the
     // same render cycle.
-    setActiveTab(urlTab === 'orders' ? 'orders' : 'products')
+    setActiveTab(urlTab === 'inventory' ? 'inventory' : 'products')
   }, [urlTab])
 
   // Build the canonical URL for a given tab so we can keep the URL in sync
   // with tab state. Products is the default and carries no query param.
   const urlForTab = useCallback(
     (tab: PageTab) =>
-      tab === 'products' ? `/${businessId}/products` : `/${businessId}/products?tab=orders`,
+      tab === 'products' ? `/${businessId}/products` : `/${businessId}/products?tab=inventory`,
     [businessId]
   )
 
-  // Business-scoped caches (only products remain page-local; orders and
-  // Products, orders, and providers all live in shared contexts now. Any
-  // mutation anywhere in the app updates these single sources of truth, so
-  // e.g. the Orders tab automatically stays in sync with a provider
-  // deletion from the provider detail page.
+  // Products live in a shared context so every mutation anywhere in the
+  // app updates this single source of truth.
   const {
     products,
     setProducts,
@@ -273,20 +259,6 @@ export function ProductsView() {
   } = useProducts()
   const [isLoading, setIsLoading] = useState(() => !productsLoaded)
   const [error, setError] = useState('')
-
-  const {
-    orders,
-    ensureActiveLoaded: ensureActiveOrdersLoaded,
-    ensureCompletedLoaded: ensureCompletedOrdersLoaded,
-    isActiveLoaded: isActiveOrdersLoaded,
-    isCompletedLoaded: isCompletedOrdersLoaded,
-  } = useOrders()
-  const {
-    providers,
-    ensureLoaded: ensureProvidersLoaded,
-  } = useProviders()
-  // The new-order modal dropdown should only surface usable providers.
-  const activeProviders = useMemo(() => providers.filter(p => p.active), [providers])
 
   // Surface the context's fetch error through the page's error banner.
   useEffect(() => {
@@ -343,14 +315,10 @@ export function ProductsView() {
 
   // Deep-link from Home's alerts:
   //   ?filter=low_stock  → Products sub-tab + low_stock filter category
-  //   ?filter=overdue    → Orders sub-tab + overdue order status filter
   // Subsequent in-app filter changes (user clicking pills) supersede.
   useEffect(() => {
     if (urlFilter === 'low_stock') {
       setSelectedFilter('low_stock')
-    } else if (urlFilter === 'overdue') {
-      setActiveTab('orders')
-      setOrderStatusFilter('overdue')
     }
     // Intentional: react only to the URL value. Once applied, in-app
     // selectedFilter changes are not echoed back to the URL.
@@ -370,78 +338,14 @@ export function ProductsView() {
   const pipeline = useAiProductPipeline()
   const compression = useImageCompression()
 
-  // Order search/filter state (not part of the modal flow)
-  const [orderSearchQuery, setOrderSearchQuery] = useState('')
-  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all')
-  const [orderSortBy, setOrderSortBy] = useState<OrderSortOption>('date_desc')
-  const [orderViewMode, setOrderViewMode] = useState<OrderViewMode>('active')
-
-  const handleOrderViewModeChange = useCallback((mode: OrderViewMode) => {
-    setOrderViewMode(mode)
-    // Reset transient view-specific state; preserve search query.
-    setOrderSortBy('date_desc')
-    setOrderStatusFilter('all')
-    scrollToTop()
-  }, [])
-
   // Permission check
   const canDelete = canManage
 
-  // New/Edit/Receive/Delete order flows are encapsulated in this hook so
-  // multiple pages can reuse them (products tab, provider detail, etc.).
-  const orderFlows = useOrderFlows({
-    businessId: businessId || '',
-    providers: activeProviders,
-    canDelete,
-    canManage,
-  })
-
-  // Products, providers, and active orders all prime eagerly on mount —
-  // active orders specifically so flipping to the Orders tab from a cold
-  // boot doesn't flash the empty state while the fetch resolves.
-  // ensureLoaded is idempotent and lazy. Completed orders only fetch when
-  // the user toggles to the completed view (handled below).
+  // Prime products eagerly on mount — idempotent and lazy.
   useEffect(() => {
     if (!businessId) return
     ensureProductsLoaded()
-    ensureProvidersLoaded()
-    ensureActiveOrdersLoaded()
-  }, [businessId, ensureProductsLoaded, ensureProvidersLoaded, ensureActiveOrdersLoaded])
-
-  // Lazy load completed orders when the user toggles to that view.
-  useEffect(() => {
-    if (!businessId || orderViewMode !== 'completed') return
-    ensureCompletedOrdersLoaded()
-  }, [orderViewMode, businessId, ensureCompletedOrdersLoaded])
-
-  // Open modals from query string (deep-links from provider detail page)
-  useEffect(() => {
-    const newOrderFlag = searchParams?.get('newOrder')
-    const preselectedProviderId = searchParams?.get('providerId')
-    const deepLinkedOrderId = searchParams?.get('orderId')
-
-    if (newOrderFlag === '1') {
-      setActiveTab('orders')
-      orderFlows.openNewOrder(preselectedProviderId || undefined)
-      // Drop the deep-link params but keep ?tab=orders so tab state
-      // persists across back/forward navigation.
-      router.replace(urlForTab('orders'))
-      return
-    }
-
-    if (deepLinkedOrderId && orders.length > 0) {
-      const target = orders.find(o => o.id === deepLinkedOrderId)
-      if (target) {
-        setActiveTab('orders')
-        orderFlows.openOrderDetail(target)
-        router.replace(urlForTab('orders'))
-      }
-    }
-    // Intentional: we only want this effect to react when orders load or
-    // when the user navigates here with a different query. No exhaustive-deps
-    // on the setters; they are stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, orders, businessId])
+  }, [businessId, ensureProductsLoaded])
 
   // Track which product is being edited (for passing to modal wrapper)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -450,64 +354,6 @@ export function ProductsView() {
   // Read-only product view used by employees — managers tap rows into the
   // edit modal; non-managers land here.
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
-
-  // Filtered orders
-  const filteredOrders = useMemo(() => {
-    // Stage 1: partition by view mode (received = "completed"; anything else = "active")
-    let result = orders.filter(o => {
-      const display = getOrderDisplayStatus(o)
-      return orderViewMode === 'completed'
-        ? display === 'received'
-        : display !== 'received'
-    })
-
-    // Stage 2: status sub-filter, scoped to the current view
-    if (orderStatusFilter !== 'all') {
-      result = result.filter(o => getOrderDisplayStatus(o) === orderStatusFilter)
-    }
-
-    if (orderSearchQuery.trim()) {
-      const query = orderSearchQuery.toLowerCase()
-      result = result.filter(o => {
-        const providerName = o.expand?.provider?.name?.toLowerCase() || ''
-        const d = new Date(o.date)
-        const dateStr = formatDate(d).toLowerCase()
-        const dayNum = d.getDate().toString()
-        const year = d.getFullYear().toString()
-        // Generate month/day names in both business locale and user language
-        const userLang = user?.language || 'en-US'
-        const seen = new Set<string>()
-        const langs = [locale, userLang].filter(l => {
-          const base = l.split('-')[0]
-          if (seen.has(base)) return false
-          seen.add(base)
-          return true
-        })
-        const names = langs.flatMap(l => [
-          d.toLocaleDateString(l, { month: 'long' }),
-          d.toLocaleDateString(l, { month: 'short' }),
-          d.toLocaleDateString(l, { weekday: 'long' }),
-          d.toLocaleDateString(l, { weekday: 'short' }),
-        ]).join(' ').toLowerCase()
-        const orderNumber = o.orderNumber != null ? `#${o.orderNumber} ${o.orderNumber}` : ''
-        const searchable = `${orderNumber} ${dateStr} ${names} ${dayNum} ${year} ${providerName}`
-        return searchable.includes(query)
-      })
-    }
-
-    // Sort
-    result = [...result].sort((a, b) => {
-      switch (orderSortBy) {
-        case 'date_desc': return new Date(b.date).getTime() - new Date(a.date).getTime()
-        case 'date_asc': return new Date(a.date).getTime() - new Date(b.date).getTime()
-        case 'total_desc': return b.total - a.total
-        case 'total_asc': return a.total - b.total
-        default: return 0
-      }
-    })
-
-    return result
-  }, [orders, orderViewMode, orderStatusFilter, orderSearchQuery, orderSortBy, formatDate, locale, user?.language])
 
   // Product handlers - now receive data from modal context
   const handleSubmitProduct = useCallback(async (
@@ -700,11 +546,11 @@ export function ProductsView() {
         setSearchQuery(value)
       }
     } catch {
-      setError(tOrders.formatMessage({
-        id: 'orders.error_unable_to_lookup_barcode'
+      setError(t.formatMessage({
+        id: 'products.scan_lookup_error'
       }))
     }
-  }, [businessId, handleOpenEdit, setError, setSearchQuery, tOrders])
+  }, [businessId, handleOpenEdit, setError, setSearchQuery, t])
 
   const {
     open: openBarcodeScan,
@@ -786,7 +632,7 @@ export function ProductsView() {
             business the user has no signal that orders even exist, so a
             "PRODUCTS / ORDERS" toggle on an empty page reads as a stub.
             The empty state below carries its own primary CTA. */}
-        {(products.length > 0 || orders.length > 0) && (
+        {products.length > 0 && (
           <div role="tablist" aria-label={t.formatMessage({ id: 'products.tab_switcher_aria' })} className="products-segment">
             <button
               type="button"
@@ -800,11 +646,11 @@ export function ProductsView() {
             <button
               type="button"
               role="tab"
-              aria-selected={activeTab === 'orders'}
+              aria-selected={activeTab === 'inventory'}
               className="products-segment__button"
-              onClick={() => handleSegmentChange('orders')}
+              onClick={() => handleSegmentChange('inventory')}
             >
-              {t.formatMessage({ id: 'products.tab_orders' })}
+              {t.formatMessage({ id: 'products.tab_inventory' })}
             </button>
           </div>
         )}
@@ -850,32 +696,8 @@ export function ProductsView() {
               scanHiddenInput={barcodeScanInput}
             />
           </TabContainer.Tab>
-          <TabContainer.Tab id="orders">
-            <OrdersTab
-              products={products}
-              orders={orders}
-              filteredOrders={filteredOrders}
-              searchQuery={orderSearchQuery}
-              onSearchChange={setOrderSearchQuery}
-              sortBy={orderSortBy}
-              onSortChange={setOrderSortBy}
-              statusFilter={orderStatusFilter}
-              onStatusFilterChange={setOrderStatusFilter}
-              viewMode={orderViewMode}
-              onViewModeChange={handleOrderViewModeChange}
-              onNewOrder={() => orderFlows.openNewOrder()}
-              onViewOrder={(order) => orderFlows.openOrderDetail(order)}
-              onReceiveOrder={(order) => orderFlows.openOrderDetail(order, 'receive')}
-              onEditOrder={(order) => orderFlows.openOrderDetail(order, 'edit')}
-              onDeleteOrder={(order) => orderFlows.openOrderDetail(order, 'delete')}
-              canManage={canManage}
-              canDelete={canDelete}
-              error={error || orderFlows.error}
-              isModalOpen={orderFlows.isNewOrderOpen}
-              isLoading={orderViewMode === 'completed'
-                ? !isCompletedOrdersLoaded
-                : !isActiveOrdersLoaded}
-            />
+          <TabContainer.Tab id="inventory">
+            <InventoryView />
           </TabContainer.Tab>
         </TabContainer>
       </div>
@@ -955,8 +777,6 @@ export function ProductsView() {
         error={settingsError}
         onClearError={clearSettingsError}
       />
-      {/* New Order + Order Detail modals (encapsulated in useOrderFlows) */}
-      {orderFlows.modals}
     </>
   );
 }

@@ -34,7 +34,6 @@ vi.mock('@/lib/storage', () => ({
 
 // Drizzle mocks. DELETE path:
 //   db.select().from().where().limit() -> [{ ... existing product ... }]
-//   db.select().from().innerJoin().where().limit() -> [] (no pending orders)
 //   db.delete().where() -> void
 const selectResults: unknown[] = []
 
@@ -125,10 +124,8 @@ beforeEach(() => {
 
 describe('DELETE /api/businesses/[businessId]/products/[id] — realtime publishes', () => {
   it('publishes product.deleted on happy path', async () => {
-    // First select: existing product row.
+    // Select: existing product row.
     selectResults.push([{ id: PRODUCT_ID, icon: null }])
-    // Second select: no pending orders blocking.
-    selectResults.push([])
 
     const { DELETE } = await import('./route')
     const res = await DELETE(
@@ -195,22 +192,4 @@ describe('DELETE /api/businesses/[businessId]/products/[id] — realtime publish
     expect(publishToBusiness).not.toHaveBeenCalled()
   })
 
-  it('does not publish when a pending order blocks deletion (409)', async () => {
-    selectResults.push([{ id: PRODUCT_ID, icon: null }])
-    selectResults.push([{ id: 'blocking-order' }])
-
-    const { DELETE } = await import('./route')
-    const res = await DELETE(
-      makeRequest() as Parameters<typeof DELETE>[0],
-      {
-        params: Promise.resolve({
-          businessId: BUSINESS_ID,
-          id: PRODUCT_ID,
-        }),
-      },
-    )
-
-    expect(res.status).toBe(409)
-    expect(publishToBusiness).not.toHaveBeenCalled()
-  })
 })

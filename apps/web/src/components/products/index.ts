@@ -10,15 +10,4 @@
 export { ProductsTab } from './ProductsTab'
 export type { ProductsTabProps } from './ProductsTab'
 
-export { OrdersTab } from './OrdersTab'
-export type { OrdersTabProps } from './OrdersTab'
-
-export { OrderListItem } from './OrderListItem'
-
 export type { ProductFormData, StockAdjustmentData } from './ProductModal'
-
-export { NewOrderModal } from './NewOrderModal'
-export type { NewOrderModalProps } from './NewOrderModal'
-
-export { OrderDetailModal } from './OrderDetailModal'
-export type { OrderDetailModalProps } from './OrderDetailModal'

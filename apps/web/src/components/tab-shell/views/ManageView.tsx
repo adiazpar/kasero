@@ -8,7 +8,6 @@ import {
   Building2,
   MapPin,
   Users,
-  Handshake,
   ArrowRightLeft,
   LogOut,
   Trash2,
@@ -252,17 +251,6 @@ export function ManageView() {
             title={intl.formatMessage({ id: 'manage.shortcut_team' })}
             description={intl.formatMessage({ id: 'manage.shortcut_team_desc' })}
             onClick={() => slideTo(`/${businessId}/team`)}
-          />
-          <FeatureCard
-            kicker={
-              <span className="inline-flex items-center gap-1.5">
-                <Handshake style={{ width: 12, height: 12 }} />
-                {intl.formatMessage({ id: 'manage.shortcut_providers' })}
-              </span>
-            }
-            title={intl.formatMessage({ id: 'manage.shortcut_providers' })}
-            description={intl.formatMessage({ id: 'manage.shortcut_providers_desc' })}
-            onClick={() => slideTo(`/${businessId}/providers`)}
           />
         </div>
 

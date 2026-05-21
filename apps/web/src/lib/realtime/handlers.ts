@@ -125,47 +125,11 @@ export function dispatchRealtimeEvent(
       callRefetch('categories')
       return
 
-    case 'provider.created':
-      callRefetch('providers')
-      return
-
-    case 'provider.updated':
-      callRefetch('providers')
-      if (!isSelfEcho) emitEntityUpdated('provider', event.providerId)
-      return
-
-    case 'provider.deleted':
-      callRefetch('providers')
-      if (!isSelfEcho) emitEntityDeleted('provider', event.providerId)
-      return
-
     case 'sale.created':
       // Server decrements products.stock per line item. Refetch both
       // lists so receivers see the new sale AND the updated stock.
       callRefetch('sales')
       callRefetch('products')
-      return
-
-    case 'order.created':
-      callRefetch('orders')
-      return
-
-    case 'order.updated':
-      callRefetch('orders')
-      if (!isSelfEcho) emitEntityUpdated('order', event.orderId)
-      return
-
-    case 'order.received':
-      // Server increments products.stock per received line. Same dual-
-      // refetch pattern as sale.created.
-      callRefetch('orders')
-      callRefetch('products')
-      if (!isSelfEcho) emitEntityUpdated('order', event.orderId)
-      return
-
-    case 'order.deleted':
-      callRefetch('orders')
-      if (!isSelfEcho) emitEntityDeleted('order', event.orderId)
       return
 
     case 'sales_session.opened':
@@ -175,6 +139,12 @@ export function dispatchRealtimeEvent(
     case 'sales_session.closed':
       callRefetch('sales-sessions')
       if (!isSelfEcho) emitEntityUpdated('sales-session', event.sessionId)
+      return
+
+    case 'inventory.adjusted':
+      callRefetch('products')
+      callRefetch('inventory-adjustments')
+      if (event.relatedExpenseId) callRefetch('expenses')
       return
 
     case 'expense.created':

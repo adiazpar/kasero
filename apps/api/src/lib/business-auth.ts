@@ -1,6 +1,6 @@
 import 'server-only'
 import { headers } from 'next/headers'
-import { db, businessUsers, businesses, products, providers, productCategories, expenseCategories, expenses } from '@/db'
+import { db, businessUsers, businesses, products, productCategories, expenseCategories, expenses } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { auth } from './auth'
 
@@ -194,10 +194,9 @@ export async function requireBusinessAccess(
  * Confirm every product ID belongs to the given business.
  *
  * The business-auth wrapper pins the URL businessId, but FK references in
- * request bodies (e.g. order items' productId) need a separate check.
- * Without this, a manager in business A can write an order line that
- * references a product in business B — leaking name/price/stock when the
- * order is read back.
+ * request bodies need a separate check. Without this, a manager in
+ * business A could reference a product in business B, leaking
+ * name/price/stock data.
  *
  * Returns true only if EVERY id in `productIds` exists AND has the given
  * businessId. Empty input is vacuously true. Duplicates in `productIds`
@@ -216,22 +215,6 @@ export async function assertProductsInBusiness(
   if (rows.length !== uniqueIds.length) return false
   const found = new Set(rows.map((r) => r.id))
   return uniqueIds.every((id) => found.has(id))
-}
-
-/**
- * Confirm a provider ID belongs to the given business. Empty/null IDs
- * are caller's responsibility to filter out before invoking.
- */
-export async function assertProviderInBusiness(
-  providerId: string,
-  businessId: string,
-): Promise<boolean> {
-  const row = await db
-    .select({ id: providers.id })
-    .from(providers)
-    .where(and(eq(providers.id, providerId), eq(providers.businessId, businessId)))
-    .get()
-  return row != null
 }
 
 /**
