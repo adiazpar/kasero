@@ -68,6 +68,14 @@ export interface AddProductCallbacks extends ProductModalCallbacks {
 export interface EditProductCallbacks extends ProductModalCallbacks {
   onDelete: (productId: string) => Promise<boolean>
   onSaveAdjustment: (data: StockAdjustmentData) => Promise<void>
+  /**
+   * Requests opening the AdjustStockModal for the currently-editing
+   * product. Called by ReviewStep when the user taps the stock row in
+   * EDIT mode. The host (EditProductModalWrapper in ProductsView) is
+   * expected to close this Edit modal and open AdjustStockModal so
+   * stock adjustment lives in ONE place across the app.
+   */
+  onRequestAdjustStock: () => void
   canDelete: boolean
   /** Step the modal opened to. Steps pushed deeper into the stack always
    *  show a back button; the root step (matching this index) is the entry

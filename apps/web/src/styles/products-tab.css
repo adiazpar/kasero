@@ -186,6 +186,14 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Bulk-action variant — reserves the card header for future bulk
+ * actions. Currently carries the `+ Add` pill (left) and a circular
+ * Settings icon button (right). The Products tab uses this layout;
+ * the Inventory tab uses .inventory-ledger__header--context. */
+.inventory-ledger__header--bulk {
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+}
+
 .inventory-ledger__count {
   display: inline-flex;
   align-items: baseline;
@@ -268,6 +276,48 @@
 .inventory-ledger__add-button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* Settings button — mirrors the add-button shape but renders as an
+ * outlined ghost pill (icon + label) so the two read as a matched
+ * pair without competing for the eye. Same height + padding rhythm
+ * as the add button. */
+.inventory-ledger__settings-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 7px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--duration-fast) ease-out,
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+}
+
+@media (hover: hover) {
+  .inventory-ledger__settings-button:hover {
+    color: var(--color-brand);
+    border-color: var(--color-brand);
+    background: var(--color-brand-subtle);
+  }
+}
+
+.inventory-ledger__settings-button:active {
+  transform: scale(0.96);
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+  background: var(--color-brand-subtle);
 }
 
 /* IonList inside the ledger card — strip default chrome and let our
@@ -371,7 +421,17 @@
   background-color: var(--color-bg-muted);
 }
 
-/* The specimen portrait — 64px square tile, cream-tinted with a
+/* Positioned wrapper around the icon tile. Hosts the stock-state dot
+ * as a sibling so the dot is NOT trimmed by the tile's `overflow:
+ * hidden` (which still clips photos cleanly). */
+.product-row__icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+}
+
+/* The specimen portrait — 48px square tile, cream-tinted with a
  * hairline border. Preset glyphs render centered; custom photos
  * (AI-generated, background-removed) fill the tile edge-to-edge.
  * The inset hairline creates a "printed card" frame around either
@@ -421,6 +481,32 @@
   opacity: 0.55;
 }
 
+/* Stock-state dot anchored to the top-left corner of the icon tile.
+ * Small colored circle, no text — semantic color is the only signal
+ * (saffron for low, oxblood for out). Absolute-positioned so it does
+ * not affect row layout. */
+.product-row__icon-badge {
+  position: absolute;
+  top: -3px;
+  inset-inline-start: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  /* A hair ring matching the row background prevents the dot from
+   * blending into the icon tile's hairline edge. */
+  box-shadow: 0 0 0 2px var(--color-bg-surface);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.product-row__icon-badge--low {
+  background: var(--color-warning);
+}
+
+.product-row__icon-badge--out {
+  background: var(--color-error);
+}
+
 .product-row__body {
   flex: 1;
   min-width: 0;
@@ -453,12 +539,47 @@
   min-width: 0;
 }
 
-/* Single metaline — mono uppercase, printed-label vibe. Combines the
- * facets that are actually SET (category name, barcode) with a mono
- * middot. Hides entirely when nothing is set, so the row collapses
- * cleanly to {thumbnail + name + trail} instead of carrying a
- * "Uncategorized" placeholder. One-line ellipsis protects against
- * long barcodes pushing into the trail column. */
+/* Category caption beneath the name — always present (falls back to
+ * "Not categorized" for products without a categoryId). Same mono
+ * uppercase tracked family as the inventory row's status alert, so
+ * the two sister surfaces share one subtitle voice. The "not set"
+ * variant tints to tertiary ink so it reads as a placeholder. */
+.product-row__category {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.product-row__category[data-set="false"] {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/* Barcode caption — mono uppercase tracked, anchored under the price
+ * in the trail column. Replaces the previous Stock · N indicator;
+ * stock state is now signaled by the icon-tile badge instead. */
+.product-row__barcode {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Legacy meta selector — left here so any other surface that still
+ * renders `.product-row__meta` keeps its styling. The Products row
+ * itself no longer uses this. */
 .product-row__meta {
   display: flex;
   align-items: center;

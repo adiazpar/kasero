@@ -107,9 +107,12 @@ export function ReviewStep() {
   // `newStockValue` is the source of truth on both paths:
   //   - Add path: the value the user entered in CategoryStockStep.
   //   - Edit path: initialized to editingProduct.stock by
-  //     populateFromProduct, then mutated by AdjustInventoryStep when the
-  //     user revises stock. The stock API call is deferred until Save
-  //     changes, just like every other field.
+  //     populateFromProduct and not mutated from inside this modal —
+  //     stock adjustment lives entirely in AdjustStockModal (reached
+  //     via the Review stock row's onRequestAdjustStock callback). The
+  //     conditional save-stock branch below is therefore inert on edit
+  //     but kept defensively for the unlikely case where a future
+  //     refactor reintroduces in-form stock mutation.
   const stockValue = newStockValue
 
   const handleSave = async () => {
@@ -186,11 +189,20 @@ export function ReviewStep() {
   const editPrice = () => nav.push('price-edit')
   const editCategory = () => nav.push('category-stock-edit')
   const editBarcode = () => nav.push('barcode-edit')
-  // Edit-only: stock on hand routes to the dedicated adjust step
-  // (different endpoint, optimistic-locking, +/- delta UI). On Add the
-  // stock value is just an initial value collected by CategoryStockStep,
-  // so tapping the row there returns to that step.
-  const editStock = () => nav.push('adjust-inventory')
+  // Edit-only: stock on hand is owned by AdjustStockModal — the single
+  // canonical surface for stock adjustment across the app. Tapping the
+  // row asks the host to close this edit modal and open AdjustStockModal
+  // for the same product. On Add the stock value is just an initial
+  // value collected by CategoryStockStep, so the row routes there
+  // instead. This unifies the three former adjustment paths
+  // (Inventory-tab tap, Products-tab swipe, Review-stock-row) into one.
+  const editStock = () => {
+    if (isEdit && editCtx?.onRequestAdjustStock) {
+      editCtx.onRequestAdjustStock()
+    } else {
+      nav.push('category-stock-edit')
+    }
+  }
 
   return (
     <>
@@ -301,7 +313,7 @@ export function ReviewStep() {
                 { count: stockValue },
               )}
               valueIsSet={true}
-              onClick={isEdit ? editStock : editCategory}
+              onClick={editStock}
             />
             <ReviewRow
               label={t.formatMessage({ id: 'productForm.tab_barcode' })}

@@ -1,30 +1,255 @@
-/* Inventory sub-tab — stock list and adjust-stock modal.
- * Shares the Modern Mercantile typographic system: Fraunces italic for
- * amounts, mono uppercase tracked for stock counts, hairline card borders.
+/* Inventory sub-tab — sister surface to the Products tab.
+ *
+ * The Inventory row REUSES the Products tab's `.product-row` chassis
+ * verbatim (48px icon tile · Fraunces italic name · mono barcode · big
+ * Fraunces italic trail anchor + colored dot caption). The only
+ * differences are scoped behind `.inventory-row`:
+ *   - the trail anchor renders the stock count, color-shifted by state
+ *     (instead of price, which is always primary ink)
+ *   - the header line carries a count + inline filter links instead of
+ *     `· SETTINGS  [+ ADD]`
+ *
+ * Padding: this tab sits inside `.products-page` which already pads the
+ * outer page. The view container only manages vertical rhythm.
  */
 
-/* ===== Inventory view shell ============================================ */
+/* ===== View shell ====================================================== */
 
 .inventory-view {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) calc(var(--space-4) + 72px);
 }
 
-/* ===== Stock list card ================================================= */
+/* ===== Tools row — lives ABOVE the ledger card ========================= */
 
-.inventory-list-card {
-  border-radius: var(--radius-xl);
+/* Mirrors `.products-tools-row` shape from products-tab.css so the
+ * Inventory tab carries the same horizontal rhythm as Products: a
+ * 48px-tall pill that spans the row. */
+.inventory-tools-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* The tally pill — same chassis as `.app-search` (paper-warm bg,
+ * hair border, fully rounded, 48px tall). Carries a leading icon and
+ * three inline count segments separated by middots. Each segment is
+ * a clickable filter target. */
+/* Tally pill — same chassis family as `.products-segment` (the
+ * top-level Products/Inventory switcher). Container hugs segments
+ * with a single `--space-1` inset; each segment carries the height,
+ * so the active segment's border sits flush against the container's
+ * inner padding edge. */
+.inventory-tally-pill {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-bg-muted);
   border: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  overflow: hidden;
+  border-radius: var(--radius-full);
+  min-width: 0;
+}
+
+.inventory-tally-pill__icon {
+  color: var(--color-text-tertiary);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.inventory-tally-pill__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Clickable count segment. Padding keeps the hit area tap-friendly;
+ * the visible chrome is just text. Active state uses the existing
+ * pressed treatment from `.tools-button[aria-pressed=true]` — a soft
+ * brand-tinted backplate — applied to the segment's own background. */
+.inventory-tally-pill__segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: transparent;
+  /* Transparent border at rest so the active state can paint a visible
+   * border without shifting layout — same chassis as
+   * `.tools-button[aria-pressed]` and `.products-segment__button`. */
+  border: 1px solid transparent;
+  /* 2:1 horizontal/vertical padding using design tokens. Mirrors the
+   * `.products-segment__button` rhythm (--space-2 vertical / --space-4
+   * horizontal). */
+  padding: var(--space-2) var(--space-4);
+  margin: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--color-text-secondary);
+  transition:
+    color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out,
+    border-color var(--duration-fast) ease-out;
+  min-width: 0;
+}
+
+.inventory-tally-pill__count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.inventory-tally-pill__label {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.inventory-tally-pill__sep {
+  font-family: var(--font-body);
+  color: var(--color-ink-4);
+  font-size: 14px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Low / Out segments — tint the count + label by stock state so the
+ * pill reads as a printed status strip even when no filter is active. */
+.inventory-tally-pill__segment--low .inventory-tally-pill__count,
+.inventory-tally-pill__segment--low .inventory-tally-pill__label {
+  color: var(--color-warning);
+}
+
+.inventory-tally-pill__segment--out .inventory-tally-pill__count,
+.inventory-tally-pill__segment--out .inventory-tally-pill__label {
+  color: var(--color-error);
+}
+
+/* Pressed (active filter) — bg + matching border, same chassis as
+ * `.tools-button[aria-pressed=true]`. The "on hand" / all segment uses
+ * a NEUTRAL active treatment (paper-deep bg + ink border + ink text)
+ * because "show all products" isn't a status — it's just an
+ * interactive selection. Using moss here would falsely imply "all good";
+ * using brand (terracotta) reads salmon and gets confused with oxblood.
+ * Neutral ink keeps it semantically empty. Low / out segments keep
+ * their semantic state colors. */
+.inventory-tally-pill__segment[aria-selected="true"] {
+  background: var(--color-paper-deep);
+  border-color: var(--color-ink-3);
+}
+
+.inventory-tally-pill__segment[aria-selected="true"] .inventory-tally-pill__count,
+.inventory-tally-pill__segment[aria-selected="true"] .inventory-tally-pill__label {
+  color: var(--color-text-primary);
+}
+
+.inventory-tally-pill__segment--low[aria-selected="true"] {
+  background: var(--color-warning-subtle);
+  border-color: var(--color-warning);
+}
+
+.inventory-tally-pill__segment--low[aria-selected="true"] .inventory-tally-pill__count,
+.inventory-tally-pill__segment--low[aria-selected="true"] .inventory-tally-pill__label {
+  color: var(--color-warning);
+}
+
+.inventory-tally-pill__segment--out[aria-selected="true"] {
+  background: var(--color-error-subtle);
+  border-color: var(--color-error);
+}
+
+.inventory-tally-pill__segment--out[aria-selected="true"] .inventory-tally-pill__count,
+.inventory-tally-pill__segment--out[aria-selected="true"] .inventory-tally-pill__label {
+  color: var(--color-error);
+}
+
+.inventory-tally-pill__segment:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* ===== Card header — sort context strip =============================== */
+
+.inventory-ledger__header--context {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-hair);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.inventory-sort-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-tertiary);
+}
+
+.inventory-sort-strip svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.inventory-sort-strip__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Newspaper column header ========================================= */
+
+.inventory-columns {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  gap: var(--space-3);
+}
+
+.inventory-columns__label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.inventory-columns__label--right {
+  text-align: end;
+}
+
+/* ===== List + row ====================================================== */
+
+.inventory-ledger__list--inventory {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* ===== Inventory row =================================================== */
+/* Hairline separator lives on the <li>; the row button has no border. */
+.inventory-ledger__row {
+  display: block;
+  border-bottom: 1px solid var(--color-border);
+}
 
+.inventory-ledger__row:last-child {
+  border-bottom: 0;
+}
+
+/* Calm two-column row — no icon tile, no big number on the right. */
 .inventory-row {
   width: 100%;
   display: flex;
@@ -33,15 +258,15 @@
   padding: var(--space-4);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
   text-align: left;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background-color var(--duration-fast) ease-out;
+  min-height: 56px;
 }
 
-.inventory-row:last-child {
-  border-bottom: 0;
+.inventory-row--inactive {
+  opacity: 0.6;
 }
 
 @media (hover: hover) {
@@ -54,57 +279,150 @@
   background-color: var(--color-bg-muted);
 }
 
+.inventory-row:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+
 .inventory-row__body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
+/* Italic Fraunces name — matches the Products row's typographic anchor
+ * so both surfaces read in the same voice without the chassis being
+ * identical. */
 .inventory-row__name {
-  font-family: var(--font-body);
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
   font-weight: 500;
+  font-size: 19px;
+  letter-spacing: -0.014em;
+  line-height: 1.15;
   color: var(--color-text-primary);
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
+/* Optional mono SKU caption under the name (kept for compatibility
+ * with rows that may render a barcode in some other surface). */
 .inventory-row__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: 2px;
-}
-
-.inventory-row__stock-label {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
-}
-
-.inventory-row__stock-value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.inventory-row__stock-value--low {
-  color: var(--color-warning, #d97706);
+/* Persistent stock-status alert that lives under the product name on
+ * every inventory row. Replaces the barcode subtext so each row reads
+ * as `name + state` at a glance. Color carries the signal — moss for
+ * ok, saffron for low, oxblood for out, tertiary for untracked. Mono
+ * uppercase tracked so it sits in the same caption rhythm as other
+ * eyebrows + column labels in the app. */
+.inventory-row__status {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.inventory-row__stock-value--zero {
+.inventory-row__status[data-state="in-stock"] {
+  color: var(--color-success);
+}
+
+.inventory-row__status[data-state="low"] {
+  color: var(--color-warning);
+}
+
+.inventory-row__status[data-state="out"] {
   color: var(--color-error);
 }
 
-.inventory-row__chevron {
-  flex-shrink: 0;
+.inventory-row__status[data-state="untracked"] {
   color: var(--color-text-tertiary);
+}
+
+/* Right-side outline pill — Shopify-inspired. The pill itself
+ * (border + interior number) is the stock affordance; tap any part
+ * of the row to open the adjust modal. Color shifts: ink default,
+ * saffron for low, oxblood for out. */
+/* Every state uses the same bg + border chassis. In-stock gets a calm
+ * paper-deep neutral (no semantic color) so a screen full of healthy
+ * products doesn't read as a wall of green. Low / out / untracked get
+ * tinted backgrounds + matching borders so alert states pop. */
+.inventory-row__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 64px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition:
+    color var(--duration-fast) ease-out,
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out;
+}
+
+.inventory-row__pill[data-state="low"] {
+  color: var(--color-warning);
+  background: var(--color-warning-subtle);
+  border-color: var(--color-warning);
+}
+
+.inventory-row__pill[data-state="out"] {
+  color: var(--color-error);
+  background: var(--color-error-subtle);
+  border-color: var(--color-error);
+}
+
+.inventory-row__pill[data-state="untracked"] {
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-muted);
+  border-color: var(--color-hair);
+}
+
+.inventory-row:hover .inventory-row__pill {
+  border-color: var(--color-brand);
+}
+
+.inventory-row:hover .inventory-row__pill[data-state="low"] {
+  border-color: var(--color-warning);
+}
+
+.inventory-row:hover .inventory-row__pill[data-state="out"] {
+  border-color: var(--color-error);
 }
 
 /* ===== Empty state ===================================================== */
@@ -146,40 +464,458 @@
   margin: 0;
 }
 
-/* ===== Adjust stock modal ============================================== */
+/* ===== Adjust stock modal ==============================================
+ * The modal extends the Products modal vocabulary (`.pm-shell`,
+ * `.pm-hero`, etc. — see products-modal-add-edit.css). The classes
+ * below cover the inventory-specific surfaces: the eyebrow + Fraunces
+ * italic title + ON HAND hero, the delta entry (stepper + replace-style
+ * inline mono links), the AFTER preview, the stamp-as-expense pull-tab,
+ * and the success summary.
+ */
 
-/* Stock context line displayed above the delta input. */
-.adjust-stock-modal__context {
+.adjust-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+}
+
+/* ----- Hero ----- */
+
+.adjust-modal__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-hair);
+}
+
+.adjust-modal__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.adjust-modal__on-hand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.adjust-modal__on-hand-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal__on-hand-value {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
+  font-weight: 500;
+  font-size: 36px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* Inline arrow + projected value sit next to the ON HAND number when
+ * the user enters a delta. Replaces the previous standalone AFTER
+ * section — the result reads as part of the hero now. */
+.adjust-modal__on-hand-arrow {
+  font-family: var(--font-body);
+  color: var(--color-ink-4);
+  font-size: 22px;
+  margin-inline: 4px;
+}
+
+.adjust-modal__on-hand-projected {
+  /* Inherits the on-hand-value font sizing; the modifier classes
+   * (--warning / --error / --success) tint the projected number. */
+}
+
+.adjust-modal__on-hand-projected.adjust-modal__preview-value--warning {
+  color: var(--color-warning);
+}
+
+.adjust-modal__on-hand-projected.adjust-modal__preview-value--error {
+  color: var(--color-error);
+}
+
+.adjust-modal__on-hand-projected.adjust-modal__preview-value--success {
+  color: var(--color-success);
+}
+
+.adjust-modal__resync-notice {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+}
+
+/* ----- Section (Delta / Reason) ----- */
+
+.adjust-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.adjust-modal__section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ----- Stepper-in-pill ----- *
+ * Shopify-inspired geometry (Mobbin reference): two 56px circular
+ * buttons flanking a centered pill that carries the delta value.
+ * The pill is the typographic anchor; the buttons are the affordance.
+ */
+
+.adjust-modal__stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  justify-content: center;
+  padding-block: var(--space-2);
+}
+
+.adjust-modal__stepper-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-hair);
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--duration-fast) ease-out,
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+}
+
+@media (hover: hover) {
+  .adjust-modal__stepper-btn:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+    background: var(--color-paper-deep);
+  }
+}
+
+.adjust-modal__stepper-btn:active {
+  transform: scale(0.95);
+  background: var(--color-paper-deep);
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+/* The pill that frames the delta number. Wider than tall, matches
+ * the row pill geometry so the user reads "this is a stock value." */
+.adjust-modal__delta-pill {
+  min-width: 120px;
+  padding: 12px 22px;
+  border: 1px solid var(--color-hair);
+  border-radius: 999px;
+  background: var(--color-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--duration-fast) ease-out;
+}
+
+.adjust-modal__delta-pill:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px var(--color-brand-subtle);
+}
+
+.adjust-modal__delta-input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  outline: none;
+  line-height: 1;
+}
+
+.adjust-modal__delta-input::-webkit-outer-spin-button,
+.adjust-modal__delta-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.adjust-modal__delta-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ----- Quick-pick row — mono links, prefixed by a tiny label ----- */
+
+.adjust-modal__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.adjust-modal__chips-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal__chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  padding: 6px 8px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--duration-fast) ease-out;
+  position: relative;
+}
+
+.adjust-modal__chip::before {
+  content: "";
+  position: absolute;
+  inset: -10px -4px;
+}
+
+.adjust-modal__chip--pos {
+  color: var(--color-success);
+}
+
+.adjust-modal__chip--neg {
+  color: var(--color-error);
+}
+
+.adjust-modal__chip[aria-pressed="true"] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.5px;
+}
+
+/* ----- AFTER preview ----- */
+
+.adjust-modal__preview {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-hair);
+  flex-wrap: wrap;
+}
+
+.adjust-modal__preview-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal__preview-from {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
+  font-weight: 500;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+  letter-spacing: -0.015em;
+}
+
+.adjust-modal__preview-arrow {
+  font-family: var(--font-body);
+  color: var(--color-ink-4);
+  font-size: 18px;
+}
+
+.adjust-modal__preview-value {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50;
+  font-weight: 500;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.adjust-modal__preview-value--warning {
+  color: var(--color-warning);
+}
+
+.adjust-modal__preview-value--error {
+  color: var(--color-error);
+}
+
+.adjust-modal__preview-value--success {
+  color: var(--color-success);
+}
+
+.adjust-modal__preview-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
-  margin-bottom: var(--space-2);
 }
 
-/* Signed integer delta input — mono so positive/negative reads at a glance. */
-.adjust-stock-modal__delta-input {
+.adjust-modal__preview-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.adjust-modal__preview-state--low {
+  color: var(--color-warning);
+}
+
+.adjust-modal__preview-state--out {
+  color: var(--color-error);
+}
+
+/* ----- Reason textarea — app field frame ----- *
+ * Same chassis as expense-modal__price-wrap and other framed inputs:
+ * 1.5px border, surface bg, radius-xl, focus-within terracotta glow.
+ * The .pv-field__input--prose class is referenced across the app but
+ * has no central rule, so we anchor it here scoped to .adjust-modal. */
+
+.adjust-modal__textarea-wrap {
+  position: relative;
+}
+
+.adjust-modal .pv-field__input--prose {
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  padding-block-end: 28px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  outline: none;
+  resize: vertical;
+  min-height: 96px;
+  transition:
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out,
+    box-shadow var(--duration-fast) ease-out;
+}
+
+.adjust-modal .pv-field__input--prose::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal .pv-field__input--prose:focus-visible {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px var(--color-brand-subtle);
+}
+
+.adjust-modal__textarea-counter {
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline-end: 12px;
   font-family: var(--font-mono);
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-surface);
+  padding: 2px 6px;
+  border-radius: 2px;
+  pointer-events: none;
 }
 
-/* "Log as expense" checkbox row. */
-.adjust-stock-modal__checkbox-row {
+.adjust-modal__textarea-counter--warn {
+  color: var(--color-warning);
+}
+
+/* ----- Stamp as expense (between hairlines) ----- */
+
+.adjust-modal__expense {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border-block: 1px solid var(--color-hair);
+  padding-block: var(--space-3);
+}
+
+.adjust-modal__expense-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  min-height: 36px;
 }
 
-.adjust-stock-modal__checkbox-row input[type="checkbox"] {
+.adjust-modal__expense-toggle input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: var(--color-brand);
@@ -187,21 +923,120 @@
   flex-shrink: 0;
 }
 
-.adjust-stock-modal__checkbox-label {
-  font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 500;
+.adjust-modal__expense-toggle-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--color-text-primary);
-  cursor: pointer;
 }
 
-/* Expense sub-form that slides in when the checkbox is checked. */
-.adjust-stock-modal__expense-section {
+.adjust-modal__expense-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4);
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
+}
+
+/* ----- Success step ----- */
+
+.adjust-modal--success {
+  align-items: center;
+  text-align: center;
+  padding-block: var(--space-6);
+  gap: var(--space-4);
+}
+
+.adjust-modal__success-summary {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.adjust-modal__success-rule {
+  width: 48px;
+  height: 1px;
+  background: var(--color-hair);
+  margin-block: var(--space-2);
+}
+
+.adjust-modal__success-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.adjust-modal__success-name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 16px;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+
+.adjust-modal__success-sep {
+  color: var(--color-border);
+}
+
+.adjust-modal__success-nums {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.adjust-modal__success-from {
+  color: var(--color-text-tertiary);
+}
+
+.adjust-modal__success-arrow {
+  color: var(--color-ink-4);
+  font-family: var(--font-body);
+}
+
+.adjust-modal__success-to {
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.adjust-modal__success-expense {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-success);
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.adjust-modal__success-expense-amount {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.modal-footer--single {
+  justify-content: stretch;
+}
+
+.order-modal__primary-pill--full {
+  flex: 1;
+  width: 100%;
 }

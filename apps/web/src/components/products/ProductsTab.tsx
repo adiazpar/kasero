@@ -17,6 +17,7 @@ import {
   Printer,
   Trash2,
   Check,
+  Settings2,
 } from 'lucide-react'
 import {
   IonItem,
@@ -201,32 +202,15 @@ export function ProductsTab({
           </div>
           {scanHiddenInput}
 
-          {/* Inventory ledger card — header (count + settings + add)
-              followed by hairline-divided rows. */}
+          {/* Inventory ledger card.
+              Header row (manager-only): `+ Add` pill on the LEFT, circular
+              Settings icon button on the RIGHT. The count moved out of
+              the header and into the column-header strip below.
+              Then a newspaper column-header strip (`{N} PRODUCTS` /
+              `PRICE · STOCK`) sets the structure for the rows beneath. */}
           <div className="inventory-ledger">
-            <div className="inventory-ledger__header">
-              <div className="inventory-ledger__count">
-                <span className="inventory-ledger__count-num">
-                  {filteredProducts.length}
-                </span>
-                {intl.formatMessage(
-                  { id: 'products.product_count_unit' },
-                  { count: filteredProducts.length },
-                )}
-                {canManage && (
-                  <>
-                    <span className="inventory-ledger__sep">·</span>
-                    <button
-                      type="button"
-                      className="inventory-ledger__settings-link"
-                      onClick={onOpenSettings}
-                    >
-                      {intl.formatMessage({ id: 'products.settings_link' })}
-                    </button>
-                  </>
-                )}
-              </div>
-              {canManage && (
+            {canManage && (
+              <div className="inventory-ledger__header inventory-ledger__header--bulk">
                 <button
                   type="button"
                   className="inventory-ledger__add-button"
@@ -235,7 +219,27 @@ export function ProductsTab({
                   <Plus size={14} strokeWidth={2.5} />
                   {intl.formatMessage({ id: 'products.add_button' })}
                 </button>
-              )}
+                <button
+                  type="button"
+                  className="inventory-ledger__settings-button"
+                  onClick={onOpenSettings}
+                >
+                  <Settings2 size={14} strokeWidth={2.5} />
+                  {intl.formatMessage({ id: 'products.settings_link' })}
+                </button>
+              </div>
+            )}
+
+            <div className="inventory-columns" role="presentation">
+              <span className="inventory-columns__label">
+                {intl.formatMessage(
+                  { id: 'products.column_count' },
+                  { count: filteredProducts.length },
+                )}
+              </span>
+              <span className="inventory-columns__label inventory-columns__label--right">
+                {intl.formatMessage({ id: 'products.column_price_stock' })}
+              </span>
             </div>
 
             {filteredProducts.length === 0 ? (
@@ -248,6 +252,7 @@ export function ProductsTab({
                   <Fragment key={product.id}>
                     <ProductListItem
                       product={product}
+                      categories={categories}
                       onEdit={onEditProduct}
                       onView={onViewProduct}
                       onAdjustInventory={onAdjustInventory}
@@ -383,6 +388,7 @@ export function ProductsTab({
 
 interface ProductListItemProps {
   product: Product
+  categories: ProductCategory[]
   onEdit: (product: Product) => void
   onView?: (product: Product) => void
   onAdjustInventory?: (product: Product) => void
@@ -392,6 +398,7 @@ interface ProductListItemProps {
 
 const ProductListItem = memo(function ProductListItem({
   product,
+  categories,
   onEdit,
   onView,
   onAdjustInventory,
@@ -423,16 +430,21 @@ const ProductListItem = memo(function ProductListItem({
   //   in-stock  (moss)     — above threshold
   //   low       (saffron)  — at or below threshold (including zero)
   //   untracked (tertiary) — stock=null, no inventory tracking
-  const stockState: 'untracked' | 'low' | 'in-stock' = isUntracked
+  const stockState: 'untracked' | 'out' | 'low' | 'in-stock' = isUntracked
     ? 'untracked'
-    : isZero || isLowStock
-      ? 'low'
-      : 'in-stock'
-  const stockLabel = isUntracked
-    ? intl.formatMessage({ id: 'products.stock_count_untracked' })
-    : intl.formatMessage({ id: 'products.stock_count' }, { count: stockValue })
+    : isZero
+      ? 'out'
+      : isLowStock
+        ? 'low'
+        : 'in-stock'
   const hasBarcode = !!product.barcode
   const isActive = product.active
+  // Category lookup — falls back to a "Not categorized" label when the
+  // product has no categoryId or the id doesn't match any known
+  // category (defensive against stale categoryIds during a delete).
+  const categoryName = product.categoryId
+    ? categories.find((c) => c.id === product.categoryId)?.name ?? null
+    : null
 
   // Swipe actions render left-to-right. Same semantic contract as every
   // other list in the app: primary leftmost, secondary middle, destructive
@@ -499,56 +511,71 @@ const ProductListItem = memo(function ProductListItem({
               icons (background-removed product photos) actually have
               room to read. Custom photos fill the tile edge-to-edge;
               preset Lucide glyphs render centered on cream paper. */}
-          <div
-            className={`product-row__icon${
-              !isActive ? ' product-row__icon--inactive' : ''
-            }${
-              iconUrl && !isPresetIcon(iconUrl)
-                ? ' product-row__icon--photo'
-                : ''
-            }`}
-            aria-hidden="true"
-          >
-            {iconUrl && isPresetIcon(iconUrl) ? (
-              (() => {
-                const p = getPresetIcon(iconUrl)
-                return p ? <p.icon size={32} className="text-text-primary" /> : null
-              })()
-            ) : iconUrl ? (
-              <Image
-                src={iconUrl}
-                alt=""
-                width={64}
-                height={64}
-                className="object-cover w-full h-full"
-                unoptimized
+          {/* Icon wrap — keeps `overflow: hidden` scoped to the inner
+              .product-row__icon (so photos clip to the rounded tile)
+              while letting the stock-state dot sit OUTSIDE the clip
+              region without being trimmed. */}
+          <div className="product-row__icon-wrap">
+            <div
+              className={`product-row__icon${
+                !isActive ? ' product-row__icon--inactive' : ''
+              }${
+                iconUrl && !isPresetIcon(iconUrl)
+                  ? ' product-row__icon--photo'
+                  : ''
+              }`}
+            >
+              {iconUrl && isPresetIcon(iconUrl) ? (
+                (() => {
+                  const p = getPresetIcon(iconUrl)
+                  return p ? <p.icon size={32} className="text-text-primary" /> : null
+                })()
+              ) : iconUrl ? (
+                <Image
+                  src={iconUrl}
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="object-cover w-full h-full"
+                  unoptimized
+                />
+              ) : (
+                <ImagePlus size={22} className="text-text-tertiary" />
+              )}
+            </div>
+            {/* Stock-state dot — sibling of the icon tile so it lives
+                outside the parent's overflow clip. */}
+            {isActive && (stockState === 'low' || stockState === 'out') && (
+              <span
+                className={`product-row__icon-badge product-row__icon-badge--${stockState}`}
+                role="img"
+                aria-label={intl.formatMessage({
+                  id: stockState === 'out'
+                    ? 'inventory.row_status_out'
+                    : 'inventory.row_status_low',
+                })}
               />
-            ) : (
-              <ImagePlus size={22} className="text-text-tertiary" />
             )}
           </div>
 
           <div className="product-row__body">
             <h3 className="product-row__name">{product.name}</h3>
-            {hasBarcode && (
-              <span className="product-row__meta">{product.barcode}</span>
-            )}
+            <span className="product-row__category" data-set={categoryName ? 'true' : 'false'}>
+              {categoryName ?? intl.formatMessage({ id: 'products.uncategorized' })}
+            </span>
           </div>
 
-          {/* Trail anchor: italic Fraunces price (mirrors the italic
-              name so the row reads as a typographic call-and-response)
-              over a mono uppercase units chip, error-tinted when low. */}
+          {/* Trail anchor: italic Fraunces price + barcode caption
+              beneath. Stock state is now signaled by the icon-tile
+              badge + the column-header context, not a redundant
+              dot+label here. */}
           <div className="product-row__trail">
             <span className="product-row__price">
               {formatCurrency(product.price)}
             </span>
-            <span
-              className="product-row__stock"
-              data-state={isActive ? stockState : 'untracked'}
-            >
-              <span className="product-row__stock-dot" aria-hidden="true" />
-              {stockLabel}
-            </span>
+            {hasBarcode && (
+              <span className="product-row__barcode">{product.barcode}</span>
+            )}
           </div>
         </div>
       </IonItem>

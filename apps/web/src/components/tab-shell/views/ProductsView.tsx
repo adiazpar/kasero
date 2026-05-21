@@ -17,6 +17,7 @@ import {
   type StockAdjustmentData,
 } from '@/components/products'
 import { InventoryView } from '@/components/inventory/InventoryView'
+import { AdjustStockModal } from '@/components/inventory/AdjustStockModal'
 
 const AddProductModal = dynamic(
   () => import('@/components/products/AddProductModal').then(m => m.AddProductModal),
@@ -173,6 +174,7 @@ interface EditProductModalWrapperProps {
   onSubmit: (data: ProductFormData, editingProductId: string | null) => Promise<Product | null>
   onDelete: (productId: string) => Promise<boolean>
   onSaveAdjustment: (data: StockAdjustmentData) => Promise<void>
+  onRequestAdjustStock: () => void
   canDelete: boolean
   defaultCategoryId?: string | null
   initialStep?: number
@@ -187,6 +189,7 @@ function EditProductModalWrapper({
   onSubmit,
   onDelete,
   onSaveAdjustment,
+  onRequestAdjustStock,
   canDelete,
   defaultCategoryId,
   initialStep,
@@ -205,6 +208,7 @@ function EditProductModalWrapper({
       onSubmit={onSubmit}
       onDelete={onDelete}
       onSaveAdjustment={onSaveAdjustment}
+      onRequestAdjustStock={onRequestAdjustStock}
       canDelete={canDelete}
       defaultCategoryId={defaultCategoryId}
       initialStep={initialStep}
@@ -504,17 +508,16 @@ export function ProductsView() {
     setIsModalOpen(true)
   }, [pipeline, compression])
 
+  // Stock-adjustment surface — opens AdjustStockModal directly. Single
+  // canonical entry point for the Inventory tab tap, the Products tab
+  // swipe action, and the Review-step stock row (in edit mode). Replaces
+  // the previous flow that routed swipe-to-adjust through EditProductModal
+  // at initialStep=1 (AdjustInventoryStep). One modal, three callers.
+  const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null)
+
   const handleAdjustInventory = useCallback((product: Product) => {
-    if (pipeline.state.step !== 'idle') {
-      pipeline.reset()
-    }
-    if (compression.state.isProcessing) {
-      compression.cancel()
-    }
-    setEditInitialStep(1)
-    setEditingProduct(product)
-    setIsModalOpen(true)
-  }, [pipeline, compression])
+    setAdjustingProduct(product)
+  }, [])
 
   // Swipe-row delete entry — open the edit modal directly at the
   // DeleteConfirmStep root. Mirrors how Orders surfaces a swipe delete:
@@ -697,7 +700,7 @@ export function ProductsView() {
             />
           </TabContainer.Tab>
           <TabContainer.Tab id="inventory">
-            <InventoryView />
+            <InventoryView onAdjustStock={setAdjustingProduct} />
           </TabContainer.Tab>
         </TabContainer>
       </div>
@@ -741,6 +744,16 @@ export function ProductsView() {
         onSubmit={handleSubmitProduct}
         onDelete={handleDeleteProduct}
         onSaveAdjustment={handleSaveAdjustment}
+        onRequestAdjustStock={() => {
+          // Edit modal hands off to AdjustStockModal: close Edit, then
+          // open AdjustStockModal on the same product after the close
+          // animation so two modals never overlap.
+          const target = editingProduct
+          handleCloseModal()
+          if (target) {
+            window.setTimeout(() => setAdjustingProduct(target), 250)
+          }
+        }}
         canDelete={canDelete}
         defaultCategoryId={settings?.defaultCategoryId}
         initialStep={editInitialStep}
@@ -751,6 +764,12 @@ export function ProductsView() {
         onExitComplete={() => setViewingProduct(null)}
         product={viewingProduct}
         categories={categories}
+      />
+      {/* Canonical stock-adjustment surface — single mount for the
+          Inventory tab, Products tab swipe, and Review stock row. */}
+      <AdjustStockModal
+        product={adjustingProduct}
+        onClose={() => setAdjustingProduct(null)}
       />
       {/* Product Settings Modal */}
       <ProductSettingsModal

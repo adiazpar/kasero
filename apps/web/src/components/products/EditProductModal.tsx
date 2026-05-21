@@ -17,7 +17,6 @@ import {
   type ProductNav,
 } from './steps/ProductNavContext'
 import { ReviewStep } from './steps/ReviewStep'
-import { AdjustInventoryStep } from './steps/AdjustInventoryStep'
 import { DeleteConfirmStep } from './steps/DeleteConfirmStep'
 import { NameStep } from './steps/NameStep'
 import { PriceStep } from './steps/PriceStep'
@@ -28,7 +27,6 @@ import { DeleteSuccessStep } from './steps/DeleteSuccessStep'
 
 type Step =
   | 'review'
-  | 'adjust-inventory'
   | 'delete-confirm'
   | 'name-edit'
   | 'price-edit'
@@ -47,16 +45,22 @@ export interface EditProductModalProps {
   onSubmit: (data: ProductFormData, editingProductId: string | null) => Promise<Product | null>
   onDelete: (productId: string) => Promise<boolean>
   onSaveAdjustment: (data: StockAdjustmentData) => Promise<void>
+  /**
+   * Called when the user taps the stock row in Review. Host closes the
+   * Edit modal and opens AdjustStockModal — stock adjustment lives in
+   * one place across the app (Inventory tab tap, Products swipe, this
+   * Review row all route here).
+   */
+  onRequestAdjustStock: () => void
   canDelete: boolean
   /** Default category for resetForm (after modal closes). */
   defaultCategoryId?: string | null
-  /** Step the modal opens to. Defaults to 0 (Review). 1 = Adjust inventory, 2 = Delete confirm. */
+  /** Step the modal opens to. Defaults to 0 (Review). 2 = Delete confirm. */
   initialStep?: number
 }
 
 const ROOT_FOR_STEP_INDEX: Record<number, Step> = {
   0: 'review',
-  1: 'adjust-inventory',
   2: 'delete-confirm',
 }
 
@@ -82,6 +86,7 @@ function EditProductModalInner({
   onSubmit,
   onDelete,
   onSaveAdjustment,
+  onRequestAdjustStock,
   canDelete,
   defaultCategoryId,
   initialStep = 0,
@@ -138,6 +143,7 @@ function EditProductModalInner({
     onSubmit,
     onDelete,
     onSaveAdjustment,
+    onRequestAdjustStock,
     canDelete,
     entryStep: initialStep,
   }
@@ -149,7 +155,6 @@ function EditProductModalInner({
       <EditProductNavContext.Provider value={nav}>
         <ModalShell rawContent isOpen={isOpen} onClose={onClose}>
           {current === 'review' && <ReviewStep />}
-          {current === 'adjust-inventory' && <AdjustInventoryStep />}
           {current === 'delete-confirm' && <DeleteConfirmStep />}
           {current === 'name-edit' && <NameStep mode="edit" />}
           {current === 'price-edit' && <PriceStep mode="edit" />}

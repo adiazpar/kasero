@@ -1,7 +1,6 @@
 'use client'
 
 import { useIntl } from 'react-intl'
-import { ChevronRight } from 'lucide-react'
 import type { Product } from '@kasero/shared/types'
 
 interface InventoryListItemProps {
@@ -10,45 +9,78 @@ interface InventoryListItemProps {
 }
 
 /**
- * Single row in the Inventory sub-tab list.
+ * Inventory ledger row — two columns.
  *
- * Displays product name and current stock count. Tapping the row opens
- * the AdjustStockModal for that product. Stock value uses mono numerics
- * and is colour-coded: zero = error, low threshold = warning, else primary.
+ *   Mocha                                    ╭─────╮
+ *   KSR-7G8Z…                                │ 50  │
+ *                                            ╰─────╯
+ *
+ * Left: Fraunces italic product name + optional mono SKU.
+ * Right: an outline pill carrying the stock count. The pill itself is
+ * the stock affordance — border + number color shift by stock state
+ * (ink default, saffron for low, oxblood for out, tertiary dash for
+ * untracked). Tapping the row opens AdjustStockModal.
+ *
+ * Pattern lifted from Shopify's inventory list (Mobbin reference).
  */
 export function InventoryListItem({ product, onAdjust }: InventoryListItemProps) {
   const t = useIntl()
 
-  const stock = product.stock ?? 0
-  const isZero = stock <= 0
-  const isLow =
-    !isZero &&
-    product.lowStockThreshold != null &&
-    stock <= product.lowStockThreshold
+  const stockValue = product.stock ?? 0
+  const threshold = product.lowStockThreshold ?? 10
+  const isUntracked = product.stock == null
+  const isZero = !isUntracked && stockValue === 0
+  const isLowStock = !isUntracked && stockValue > 0 && stockValue <= threshold
 
-  const stockClass = isZero
-    ? 'inventory-row__stock-value inventory-row__stock-value--zero'
-    : isLow
-    ? 'inventory-row__stock-value inventory-row__stock-value--low'
-    : 'inventory-row__stock-value'
+  const stockState: 'untracked' | 'out' | 'low' | 'in-stock' = isUntracked
+    ? 'untracked'
+    : isZero
+    ? 'out'
+    : isLowStock
+    ? 'low'
+    : 'in-stock'
+
+  const ariaState =
+    stockState === 'out'
+      ? t.formatMessage({ id: 'inventory.row_aria_state_out' })
+      : stockState === 'low'
+      ? t.formatMessage({ id: 'inventory.row_aria_state_low' })
+      : t.formatMessage({ id: 'inventory.row_aria_state_ok' })
+
+  const ariaLabel = t.formatMessage(
+    { id: 'inventory.row_aria_label' },
+    { name: product.name, stock: stockValue, state: ariaState }
+  )
+
+  const isActive = product.active
+
+  const statusLabel =
+    stockState === 'out'
+      ? t.formatMessage({ id: 'inventory.row_status_out' })
+      : stockState === 'low'
+      ? t.formatMessage({ id: 'inventory.row_status_low' })
+      : stockState === 'untracked'
+      ? t.formatMessage({ id: 'inventory.row_status_untracked' })
+      : t.formatMessage({ id: 'inventory.row_status_ok' })
 
   return (
     <button
       type="button"
-      className="inventory-row"
       onClick={() => onAdjust(product)}
-      aria-label={`${product.name} — ${t.formatMessage({ id: 'inventory.list_current_stock' })}: ${stock}`}
+      aria-label={ariaLabel}
+      className={`inventory-row${!isActive ? ' inventory-row--inactive' : ''}`}
+      data-state={stockState}
     >
       <div className="inventory-row__body">
-        <div className="inventory-row__name">{product.name}</div>
-        <div className="inventory-row__meta">
-          <span className="inventory-row__stock-label">
-            {t.formatMessage({ id: 'inventory.list_current_stock' })}
-          </span>
-          <span className={stockClass}>{stock}</span>
-        </div>
+        <h3 className="inventory-row__name">{product.name}</h3>
+        <span className="inventory-row__status" data-state={stockState}>
+          {statusLabel}
+        </span>
       </div>
-      <ChevronRight size={16} className="inventory-row__chevron" aria-hidden="true" />
+
+      <span className="inventory-row__pill" data-state={stockState} aria-hidden="true">
+        {isUntracked ? '—' : stockValue}
+      </span>
     </button>
   )
 }
