@@ -517,8 +517,7 @@
 @media (hover: hover) {
   .edit-logo__upload:hover {
     border-color: var(--color-brand);
-    background: var(--color-bg-muted);
-    box-shadow: 0 0 0 4px var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -811,7 +810,7 @@
   .transfer-ownership__switch:hover {
     border-color: var(--color-brand);
     color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 .transfer-ownership__switch svg { width: 12px; height: 12px; }

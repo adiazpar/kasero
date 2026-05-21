@@ -15,6 +15,7 @@ import { close, chevronBack } from 'ionicons/icons'
 import { BarcodeFields } from '../BarcodeFields'
 import { useProductForm } from '@/contexts/product-form-context'
 import { useProductNav, useProductOnClose } from './ProductNavContext'
+import { WizardProgress } from './WizardProgress'
 
 interface BarcodeStepProps {
   mode: 'forward' | 'edit'
@@ -79,10 +80,8 @@ export function BarcodeStep({ mode }: BarcodeStepProps) {
 
       <IonContent className="pm-content">
         <div className="pm-shell">
+          <WizardProgress current={4} total={4} />
           <header className="pm-hero">
-            <span className="pm-hero__eyebrow">
-              {t.formatMessage({ id: 'productAddEdit.step_barcode_eyebrow' })}
-            </span>
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_barcode_title' },

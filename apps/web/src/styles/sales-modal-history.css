@@ -161,7 +161,7 @@
   .session-history-load-more:hover {
     border-color: var(--color-brand);
     color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -227,13 +227,13 @@
 
 @media (hover: hover) {
   .session-sales-row:hover {
-    background-color: var(--color-brand-subtle);
+    background-color: var(--color-paper-deep);
     padding-left: var(--space-2);
   }
 }
 
 .session-sales-row:active {
-  background-color: var(--color-brand-subtle);
+  background-color: var(--color-paper-deep);
 }
 
 .session-sales-row__lead {

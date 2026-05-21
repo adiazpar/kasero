@@ -191,7 +191,7 @@
   .pd-action-pill--ghost:hover:not(:disabled) {
     border-color: var(--color-brand);
     color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 .pd-action-pill--ghost:disabled { color: var(--color-text-tertiary); }

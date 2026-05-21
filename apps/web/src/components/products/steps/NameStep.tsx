@@ -17,6 +17,7 @@ import { ImagePlus } from 'lucide-react'
 import { PRESET_ICONS, isPresetIcon, getPresetIcon } from '@/lib/preset-icons'
 import { useProductForm } from '@/contexts/product-form-context'
 import { useProductNav, useProductOnClose } from './ProductNavContext'
+import { WizardProgress } from './WizardProgress'
 
 interface NameStepProps {
   /**
@@ -94,10 +95,8 @@ export function NameStep({ mode }: NameStepProps) {
 
       <IonContent className="pm-content">
         <div className="pm-shell">
+          <WizardProgress current={1} total={4} />
           <header className="pm-hero">
-            <span className="pm-hero__eyebrow">
-              {t.formatMessage({ id: 'productAddEdit.step_name_eyebrow' })}
-            </span>
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_name_title' },

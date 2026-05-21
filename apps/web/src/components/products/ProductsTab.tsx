@@ -3,7 +3,7 @@
 import { useIntl } from 'react-intl'
 
 import Image from '@/lib/Image'
-import { Fragment, memo, useMemo } from 'react'
+import { Fragment, memo } from 'react'
 import {
   X,
   Plus,
@@ -136,21 +136,6 @@ export function ProductsTab({
     stock_desc: intl.formatMessage({ id: 'products.sort_stock_desc' }),
   }
 
-  // Look up category name by ID in O(1). Without this map, rendering a
-  // list of N products with M categories cost O(N*M) .find() calls per
-  // render — noticeable once a business has 100+ products with
-  // categories set.
-  const categoryNameById = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const c of categories) map.set(c.id, c.name)
-    return map
-  }, [categories])
-
-  const getCategoryName = (categoryId: string | null | undefined) => {
-    if (!categoryId) return intl.formatMessage({ id: 'products.uncategorized' })
-    return categoryNameById.get(categoryId) ?? '-'
-  }
-
   const hasProducts = products.length > 0
 
   return (
@@ -263,7 +248,6 @@ export function ProductsTab({
                   <Fragment key={product.id}>
                     <ProductListItem
                       product={product}
-                      categoryName={getCategoryName(product.categoryId)}
                       onEdit={onEditProduct}
                       onView={onViewProduct}
                       onAdjustInventory={onAdjustInventory}
@@ -399,7 +383,6 @@ export function ProductsTab({
 
 interface ProductListItemProps {
   product: Product
-  categoryName: string
   onEdit: (product: Product) => void
   onView?: (product: Product) => void
   onAdjustInventory?: (product: Product) => void
@@ -409,7 +392,6 @@ interface ProductListItemProps {
 
 const ProductListItem = memo(function ProductListItem({
   product,
-  categoryName,
   onEdit,
   onView,
   onAdjustInventory,
@@ -421,7 +403,34 @@ const ProductListItem = memo(function ProductListItem({
   const iconUrl = getProductIconUrl(product)
   const stockValue = product.stock ?? 0
   const threshold = product.lowStockThreshold ?? 10
-  const isLowStock = stockValue <= threshold
+  const isUntracked = product.stock == null
+  const isZero = !isUntracked && stockValue === 0
+  const isLowStock = !isUntracked && stockValue > 0 && stockValue <= threshold
+  // Stock-state token: 4-state model.
+  //   UNTRACKED      — stock is null (inventory disabled for this row)
+  //   IN STOCK · n   — stock > 0 (moss)
+  //   LOW STOCK · n  — stock > 0 but ≤ lowStockThreshold (saffron)
+  //   OUT OF STOCK   — stock === 0 AND the product has sold before (saffron)
+  //   READY · SET    — stock === 0 AND the product has never sold (tertiary)
+  // Splitting the zero-stock case on hasSold means a freshly-created
+  // product never reads as an error (READY is calm), while a depleted
+  // SKU that has actually moved units surfaces the saffron alarm so the
+  // owner restocks before the next sale.
+  // Stock — single "Stock · n" label across all states; color (via a 6px
+  // leading dot) signals state. Drops the per-state labels (LOW STOCK,
+  // OUT OF STOCK, READY · SET STOCK) — the user just wants to see the
+  // count and a quick visual cue. Three color states:
+  //   in-stock  (moss)     — above threshold
+  //   low       (saffron)  — at or below threshold (including zero)
+  //   untracked (tertiary) — stock=null, no inventory tracking
+  const stockState: 'untracked' | 'low' | 'in-stock' = isUntracked
+    ? 'untracked'
+    : isZero || isLowStock
+      ? 'low'
+      : 'in-stock'
+  const stockLabel = isUntracked
+    ? intl.formatMessage({ id: 'products.stock_count_untracked' })
+    : intl.formatMessage({ id: 'products.stock_count' }, { count: stockValue })
   const hasBarcode = !!product.barcode
   const isActive = product.active
 
@@ -521,14 +530,8 @@ const ProductListItem = memo(function ProductListItem({
 
           <div className="product-row__body">
             <h3 className="product-row__name">{product.name}</h3>
-            <span className="product-row__category">{categoryName}</span>
             {hasBarcode && (
-              <span className="product-row__barcode">
-                <ScanLine size={12} strokeWidth={1.8} />
-                <span className="product-row__barcode-value">
-                  {product.barcode}
-                </span>
-              </span>
+              <span className="product-row__meta">{product.barcode}</span>
             )}
           </div>
 
@@ -540,14 +543,11 @@ const ProductListItem = memo(function ProductListItem({
               {formatCurrency(product.price)}
             </span>
             <span
-              className={`product-row__stock${
-                isLowStock && isActive ? ' product-row__stock--low' : ''
-              }`}
+              className="product-row__stock"
+              data-state={isActive ? stockState : 'untracked'}
             >
-              {intl.formatMessage(
-                { id: 'products.units_count' },
-                { count: stockValue },
-              )}
+              <span className="product-row__stock-dot" aria-hidden="true" />
+              {stockLabel}
             </span>
           </div>
         </div>

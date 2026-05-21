@@ -186,10 +186,8 @@ export function AccountPageContent() {
             <Mail slot="start" className="text-text-secondary w-5 h-5" />
             <IonLabel>
               <h3>{intl.formatMessage({ id: 'account.row_change_email' })}</h3>
+              <p className="account-list__email-value">{user.email}</p>
             </IonLabel>
-            <IonNote slot="end" className="account-list__email-note">
-              {user.email}
-            </IonNote>
           </IonItem>
           <IonItem button detail routerLink="/account/sessions" routerDirection="forward">
             <MonitorSmartphone slot="start" className="text-text-secondary w-5 h-5" />

@@ -329,13 +329,9 @@
 
 @media (hover: hover) {
   .order-product-row__qty-button:not(:disabled):hover {
+    /* paper-deep is theme-aware (deeper cream in light, lifted
+       warm-charcoal in dark) — single tonal token covers both. */
     background-color: var(--color-paper-deep);
-  }
-}
-
-@media (hover: hover) {
-  .dark .order-product-row__qty-button:not(:disabled):hover {
-    background-color: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -1258,7 +1254,7 @@
 @media (hover: hover) {
   .order-overview__icon-action--edit:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -1316,8 +1312,8 @@
  *
  * Mirrors the IonButton chrome rendered inside .modal-footer on the
  * product-modal wizard (ReviewStep, etc.) so every primary footer CTA
- * across the app reads as one design language: an ink-filled pill in
- * the body font, sentence-cased, no mono tracking. */
+ * across the app reads as one design language: a terracotta-filled pill
+ * in the body font, sentence-cased, no mono tracking. */
 
 .order-modal__primary-pill {
   flex: 1 1 0;
@@ -1328,7 +1324,7 @@
   height: 50px;
   border: 0;
   border-radius: var(--radius-full);
-  background: var(--color-ink);
+  background: var(--color-brand);
   color: var(--color-text-inverse);
   font-family: var(--font-body);
   font-size: 16px;
@@ -1345,12 +1341,12 @@
 
 @media (hover: hover) {
   .order-modal__primary-pill:hover:not(:disabled) {
-    background: var(--color-ink-2);
+    background: var(--color-brand-shade);
   }
 }
 
 .order-modal__primary-pill:active:not(:disabled) {
-  background: var(--color-ink-2);
+  background: var(--color-brand-shade);
   transform: translateY(1px);
 }
 
@@ -1388,7 +1384,7 @@
   .order-modal__secondary-pill:hover {
     border-color: var(--color-brand);
     color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 

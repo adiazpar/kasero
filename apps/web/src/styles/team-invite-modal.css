@@ -89,7 +89,7 @@
 @media (hover: hover) {
   .tm-invite__role-card:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 

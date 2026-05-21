@@ -102,9 +102,35 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
   // step 1's terracotta Charge pill. Default chrome on the confirm button
   // keeps the receipt step quiet so the line items + subtotal are the
   // moments of attention.
+  // Step 0 → 1 transition: default tender to the cart total (EXACT) so the
+  // Charge button is active from frame 1 for the 70%+ of small-vendor sales
+  // that are exact cash. Method stays 'cash' from resetState. Users can
+  // override by tapping a denomination chip or editing the input.
+  const handleConfirmCart = () => {
+    setTenderedStr(cart.total.toString())
+    setStep(1)
+  }
+
+  // Confirm + running total inline, mirroring the bottom-bar
+  // VIEW CART · N · S/ X.XX pattern so the user always sees the amount
+  // they're about to commit to. Total is rendered in mono so the digits
+  // sit on a tabular baseline next to the body-font label.
   const cartFooter = (
-    <IonButton disabled={isEmpty} onClick={() => setStep(1)}>
-      {t.formatMessage({ id: 'common.confirm' })}
+    <IonButton disabled={isEmpty} onClick={handleConfirmCart}>
+      <span>{t.formatMessage({ id: 'common.confirm' })}</span>
+      {!isEmpty && (
+        <>
+          <span
+            aria-hidden="true"
+            style={{ margin: '0 var(--space-2)' }}
+          >
+            ·
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>
+            {formatCurrency(cart.total)}
+          </span>
+        </>
+      )}
     </IonButton>
   )
 

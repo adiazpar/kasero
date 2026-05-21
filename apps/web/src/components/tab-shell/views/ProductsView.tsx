@@ -780,27 +780,34 @@ export function ProductsView() {
       <div className="products-page">
         {/* Custom pill segmented control — matches the mono uppercase
             tracked vocabulary used elsewhere (tab-bar labels, eyebrows,
-            stamp chips). Replaces IonSegment to keep the chrome on-brand. */}
-        <div role="tablist" aria-label={t.formatMessage({ id: 'products.tab_switcher_aria' })} className="products-segment">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'products'}
-            className="products-segment__button"
-            onClick={() => handleSegmentChange('products')}
-          >
-            {t.formatMessage({ id: 'products.tab_products' })}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'orders'}
-            className="products-segment__button"
-            onClick={() => handleSegmentChange('orders')}
-          >
-            {t.formatMessage({ id: 'products.tab_orders' })}
-          </button>
-        </div>
+            stamp chips). Replaces IonSegment to keep the chrome on-brand.
+
+            Hidden when both products and orders are empty: on a brand-new
+            business the user has no signal that orders even exist, so a
+            "PRODUCTS / ORDERS" toggle on an empty page reads as a stub.
+            The empty state below carries its own primary CTA. */}
+        {(products.length > 0 || orders.length > 0) && (
+          <div role="tablist" aria-label={t.formatMessage({ id: 'products.tab_switcher_aria' })} className="products-segment">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'products'}
+              className="products-segment__button"
+              onClick={() => handleSegmentChange('products')}
+            >
+              {t.formatMessage({ id: 'products.tab_products' })}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'orders'}
+              className="products-segment__button"
+              onClick={() => handleSegmentChange('orders')}
+            >
+              {t.formatMessage({ id: 'products.tab_orders' })}
+            </button>
+          </div>
+        )}
 
         <TabContainer
           activeTab={activeTab}

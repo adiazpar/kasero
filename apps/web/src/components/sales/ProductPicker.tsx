@@ -4,6 +4,7 @@ import { useIntl } from 'react-intl'
 import Image from '@/lib/Image'
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Loader2, Minus, Package, Plus, ScanLine, SearchX, X } from 'lucide-react'
+import { useIonRouter } from '@ionic/react'
 import { useBusiness } from '@/contexts/business-context'
 import { useProducts } from '@/contexts/products-context'
 import { useBarcodeScan } from '@/hooks/useBarcodeScan'
@@ -46,6 +47,7 @@ export function ProductPicker({ cart }: ProductPickerProps) {
   const { business } = useBusiness()
   const { products, ensureLoaded } = useProducts()
   const { formatCurrency } = useBusinessFormat()
+  const ionRouter = useIonRouter()
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -173,6 +175,16 @@ export function ProductPicker({ cart }: ProductPickerProps) {
                 ? t.formatMessage({ id: 'sales.search_no_results_desc' }, { query: search.trim() })
                 : t.formatMessage({ id: 'sales.empty_state.no_products_desc' })}
             </p>
+            {!isSearching && business?.id && (
+              <button
+                type="button"
+                className="pos-empty__cta"
+                onClick={() => ionRouter.push(`/${business.id}/products`, 'forward', 'push')}
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                {t.formatMessage({ id: 'sales.empty_state.no_products_cta' })}
+              </button>
+            )}
           </div>
         )}
 
@@ -243,42 +255,46 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
         </div>
       </div>
 
-      {outOfStock ? (
-        <div className="product-tile__sold-out-stamp">
-          {t.formatMessage({ id: 'sales.product.sold_out_stamp' })}
-        </div>
-      ) : (
-        <div
-          className={`product-tile__qty-row${isSelected ? '' : ' product-tile__qty-row--idle'}`}
-        >
-          <QtyButton
-            variant="minus"
-            active={isSelected}
-            disabled={!isSelected}
-            ariaLabel={t.formatMessage({ id: 'sales.cart.qty_decrease' })}
-            onClick={(e) => {
-              e.stopPropagation()
-              cart.updateQty(product.id, qty - 1)
-            }}
-          >
-            <Minus size={14} strokeWidth={2.5} />
-          </QtyButton>
-          <span className="product-tile__qty-value">{qty}</span>
-          <QtyButton
-            variant="plus"
-            active={isSelected}
-            disabled={!isSelected || atMaxQty}
-            ariaLabel={t.formatMessage({ id: 'sales.cart.qty_increase' })}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (atMaxQty) return
-              cart.addLine(product)
-            }}
-          >
-            <Plus size={14} strokeWidth={2.5} />
-          </QtyButton>
-        </div>
-      )}
+      <div className="product-tile__trailing">
+        {outOfStock ? (
+          <div className="product-tile__sold-out-stamp">
+            {t.formatMessage({ id: 'sales.product.sold_out_stamp' })}
+          </div>
+        ) : isSelected ? (
+          <div className="product-tile__qty-row">
+            <QtyButton
+              variant="minus"
+              active={isSelected}
+              disabled={!isSelected}
+              ariaLabel={t.formatMessage({ id: 'sales.cart.qty_decrease' })}
+              onClick={(e) => {
+                e.stopPropagation()
+                cart.updateQty(product.id, qty - 1)
+              }}
+            >
+              <Minus size={14} strokeWidth={2.5} />
+            </QtyButton>
+            <span className="product-tile__qty-value">{qty}</span>
+            <QtyButton
+              variant="plus"
+              active={isSelected}
+              disabled={!isSelected || atMaxQty}
+              ariaLabel={t.formatMessage({ id: 'sales.cart.qty_increase' })}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (atMaxQty) return
+                cart.addLine(product)
+              }}
+            >
+              <Plus size={14} strokeWidth={2.5} />
+            </QtyButton>
+          </div>
+        ) : (
+          <span className="product-tile__add-cta" aria-hidden="true">
+            {t.formatMessage({ id: 'sales.product.add_short' })}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

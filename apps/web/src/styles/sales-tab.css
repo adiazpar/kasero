@@ -85,7 +85,7 @@
 @media (hover: hover) {
   .sales-stats-link:hover {
     color: var(--color-brand);
-    background-color: var(--color-brand-subtle);
+    background-color: var(--color-paper-deep);
   }
 }
 
@@ -266,13 +266,13 @@
 
 @media (hover: hover) {
   .pos-scan-button:hover {
-    background-color: var(--color-brand-subtle);
+    background-color: var(--color-paper-deep);
   }
 }
 
 .pos-scan-button:active {
   transform: scale(0.95);
-  background-color: var(--color-brand-subtle);
+  background-color: var(--color-paper-deep);
 }
 
 .pos-scan-button:disabled {
@@ -286,9 +286,9 @@
 
 /* ===== Product grid + tiles ========================================== */
 .product-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   /* Hard-coded sentinel-shape padding handled by a child spacer (see
    * .product-grid-sentinel) because iOS Safari collapses padding-bottom
    * on flex-overflow containers during momentum scroll. */
@@ -298,12 +298,14 @@
   --tile-border: var(--color-border);
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-xl);
   border: 1.5px solid var(--tile-border);
   background: var(--color-bg-surface);
+  width: 100%;
   outline: none;
   cursor: pointer;
   transition:
@@ -339,8 +341,29 @@
 .product-tile__head {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.product-tile__trailing {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.product-tile__add-cta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+  padding: 0 var(--space-2);
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Sales product tile icon — adopts the same double-outline treatment as
@@ -421,23 +444,13 @@
 .product-tile__qty-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
+  justify-content: flex-end;
+  gap: var(--space-2);
   height: 32px;
-  transition: opacity var(--duration-fast) ease-out;
-}
-
-/* When the tile isn't selected the qty controls are inert — drop
-   pointer-events so taps fall through to the tile's own click
-   handler (which selects the product). The buttons are also
-   disabled in JSX so this is belt-and-braces. */
-.product-tile__qty-row--idle {
-  opacity: 0.4;
-  pointer-events: none;
 }
 
 .product-tile__qty-button {
-  width: 48px;
+  width: 32px;
   height: 32px;
   display: inline-flex;
   align-items: center;
@@ -465,13 +478,10 @@
 
 @media (hover: hover) {
   .product-tile__qty-button:not(:disabled):hover {
-    background-color: rgba(0, 0, 0, 0.04);
-  }
-}
-
-@media (hover: hover) {
-  .dark .product-tile__qty-button:not(:disabled):hover {
-    background-color: rgba(255, 255, 255, 0.06);
+    /* Tonal: paper-deep is a slightly deeper cream in light mode and a
+       slightly lifted warm-charcoal in dark mode, so a single theme-aware
+       token covers both schemes — no raw black/white wash. */
+    background-color: var(--color-paper-deep);
   }
 }
 
@@ -531,6 +541,39 @@
   font-size: 13px;
   color: var(--color-text-secondary);
   max-width: 28ch;
+}
+
+/* Primary terracotta CTA inside the POS empty catalog state. Tonal
+ * press feedback (darken to --color-brand-hover), no ink flash. */
+.pos-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-inverse, #ffffff);
+  background: var(--color-brand);
+  border: 0;
+  border-radius: var(--radius-full);
+  padding: 12px 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) ease-out, transform var(--duration-instant) ease-out;
+}
+
+@media (hover: hover) {
+  .pos-empty__cta:hover {
+    background: var(--color-brand-hover);
+  }
+}
+
+.pos-empty__cta:active {
+  background: var(--color-brand-hover);
+  transform: scale(0.97);
 }
 
 /* ===== Cart FAB (terracotta pill) ===================================== */
@@ -728,13 +771,25 @@
 }
 
 /* ===== Daily revenue (7-day bar chart) =============================== */
+.daily-revenue-chart {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
 .daily-revenue-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: stretch;
   gap: var(--space-2);
   height: 144px;
 }
 
+/* The column is a <button> covering the full per-day strip so the tap
+ * target is the whole column width (~40px+), not just the visible bar.
+ * Native chrome is reset; press feedback is tonal (paper-deep cream),
+ * and iOS tap flash is suppressed. */
 .daily-revenue-col {
   flex: 1;
   min-width: 0;
@@ -742,28 +797,39 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-1);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) ease-out;
 }
 
-.daily-revenue-col__amount {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-tertiary);
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-  text-align: center;
+.daily-revenue-col:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
-.daily-revenue-col__amount--current {
-  color: var(--color-brand);
-  font-weight: 700;
+.daily-revenue-col:active {
+  background-color: var(--color-paper-deep);
+}
+
+@media (hover: hover) {
+  .daily-revenue-col:hover {
+    background-color: var(--color-paper-deep);
+  }
+}
+
+.daily-revenue-col--active {
+  background-color: var(--color-paper-deep);
 }
 
 .daily-revenue-col__bar-track {
+  position: relative;
   flex: 1;
   width: 100%;
   display: flex;
@@ -771,21 +837,92 @@
   padding: 4px 0;
 }
 
+/* Tap-to-show tooltip anchored above the active bar. Cream surface +
+ * hairline border to match the printed-receipt vocabulary of the rest
+ * of the sales reports. Pointer-events disabled so a tap on the
+ * tooltip falls through to the document handler that closes it. */
+.daily-revenue-tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.daily-revenue-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -1px) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.daily-revenue-tooltip__day {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.daily-revenue-tooltip__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-brand);
+}
+
 .daily-revenue-col__bar {
   width: 100%;
-  background: var(--color-bg-muted);
-  border-radius: var(--radius-sm);
+  min-height: 2px;
+  background: var(--color-brand-tint);
+  opacity: 0.6;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transition: height var(--duration-base) ease-out;
 }
 
 .daily-revenue-col__bar--current {
   background: var(--color-brand);
+  opacity: 1;
 }
 
-.daily-revenue-col__bar--empty {
-  height: 3px !important;
-  border-radius: var(--radius-full);
-  opacity: 0.6;
+.daily-revenue-axis {
+  /* Track height (144px) minus the day-label row + gap below */
+  height: 144px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.daily-revenue-axis__tick {
+  line-height: 1;
 }
 
 .daily-revenue-col__day {
@@ -922,7 +1059,7 @@
 
 @media (hover: hover) {
   .recent-sessions-view-all:hover {
-    background-color: var(--color-brand-subtle);
+    background-color: var(--color-paper-deep);
   }
 }
 

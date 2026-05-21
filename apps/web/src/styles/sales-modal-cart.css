@@ -258,13 +258,9 @@
 
 @media (hover: hover) {
   .cart-line__qty-button:not(:disabled):hover {
+    /* paper-deep is theme-aware (deeper cream in light, lifted
+       warm-charcoal in dark) — single tonal token covers both. */
     background-color: var(--color-paper-deep);
-  }
-}
-
-@media (hover: hover) {
-  .dark .cart-line__qty-button:not(:disabled):hover {
-    background-color: rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -465,20 +461,24 @@
 @media (hover: hover) {
   .quick-bill:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
     color: var(--color-brand);
   }
 }
 
-/* "Exact" pill — distinguished as the canonical match (no change). */
-.quick-bill--exact {
+/* Selected quick-bill — terracotta ring around the chip whose value
+ * matches the current tender. Used for both EXACT (the auto-prefilled
+ * total) and denomination chips. Tonal feedback only — no ink flash. */
+.quick-bill--selected,
+.quick-bill--selected:active {
   border-color: var(--color-brand);
+  background: var(--color-brand-subtle);
   color: var(--color-brand);
-  background: var(--color-bg-surface);
+  box-shadow: 0 0 0 1px var(--color-brand) inset;
 }
 
 @media (hover: hover) {
-  .quick-bill--exact:hover {
+  .quick-bill--selected:hover {
     background: var(--color-brand-subtle);
   }
 }

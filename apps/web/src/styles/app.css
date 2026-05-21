@@ -382,11 +382,17 @@
   color: var(--color-text-tertiary);
   display: inline-flex;
   padding: 2px;
+  /* No iOS default brand-tinted tap highlight; press feedback is the
+     :active color shift to text-primary, in-family with the resting
+     tertiary color. */
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--duration-fast) ease-out;
 }
 .app-search__clear svg { width: 14px; height: 14px; }
 @media (hover: hover) {
   .app-search__clear:hover { color: var(--color-text-primary); }
 }
+.app-search__clear:active { color: var(--color-text-primary); }
 
 /* ===== Hub body padding + section spacing ===== */
 .hub-body {
@@ -399,6 +405,12 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Sheet-scoped variant: same cards rendered inside the half-drawer
+ * (flushContent ModalShell). Adds the page-padding the drawer skips. */
+.hub-actions--sheet {
+  padding: var(--space-4) var(--space-4) var(--space-5);
 }
 
 /* Empty-state layout: greeting/label/action cards sit at the top to
@@ -471,6 +483,65 @@
   margin: 0;
 }
 
+/* Slim "+ NEW · JOIN WITH CODE" affordance that sits below the OWNED /
+ * JOINED business lists. Demotes the dual Create/Join cards into a
+ * mono-cap link row — taps open an IonActionSheet with both destinations.
+ * Uses brand accent (terracotta) for "+ NEW" and a softer ink for the
+ * secondary verb so the row reads as a single sentence rather than a
+ * primary CTA. */
+.hub-compose-row {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease-out,
+    background var(--duration-fast) ease-out,
+    color var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+  /* Without this iOS paints a translucent ink/brand wash on tap
+     (the resting bg is transparent so the default tap-highlight
+     bleeds straight through). Press feedback comes from the
+     tonal bg + transform on :active below. */
+  -webkit-tap-highlight-color: transparent;
+}
+/* Tonal press — same cream-neutral family as the surrounding
+   .hub-body bg (--color-bg-base). bg-muted is a slightly warmer
+   neutral; reads as a quiet darken on touch without jumping to
+   the brand palette. */
+.hub-compose-row:active {
+  transform: scale(0.99);
+  background: var(--color-bg-muted);
+}
+@media (hover: hover) {
+  .hub-compose-row:hover {
+    border-color: var(--color-border-hover);
+    color: var(--color-text-secondary);
+  }
+}
+.hub-compose-row__new {
+  color: var(--color-brand);
+  font-weight: 600;
+}
+.hub-compose-row__sep {
+  color: var(--color-text-tertiary);
+}
+.hub-compose-row__join {
+  color: var(--color-text-secondary);
+}
+
 /* ==========================================================================
    Modal footer — standardised button layout
    ==========================================================================
@@ -494,12 +565,23 @@
   --padding-bottom: 0;
   --padding-start: var(--space-5);
   --padding-end: var(--space-5);
-  /* Tap / hover / focus flash one step up the ink ramp instead of the
-     default terracotta-shade, so the press feedback stays inside the
-     ink palette established by the resting button. */
-  --background-activated: var(--color-ink-2);
-  --background-hover: var(--color-ink-2);
-  --background-focused: var(--color-ink-2);
+  /* Tap / hover / focus flash to brand-shade so the press feedback
+     stays inside the terracotta palette established by the resting
+     button (--ion-color-primary → --color-brand). */
+  --background-activated: var(--color-brand-shade);
+  --background-hover: var(--color-brand-shade);
+  --background-focused: var(--color-brand-shade);
+  /* Ionic's internal rule for ion-button.in-toolbar (see @ionic/core
+     button.css) swaps the resting fill to the toolbar colors:
+       background: var(--ion-toolbar-color, var(--background));
+       color:      var(--ion-toolbar-background, var(--color));
+     Because the modal footer's IonToolbar carries the page's neutral
+     toolbar tokens (dark text on cream bg), that swap renders the CTA
+     as cream-on-dark instead of cream-on-terracotta. Null these two
+     toolbar vars on the button itself so the shadow rule falls through
+     to var(--background) / var(--color) and the brand palette wins. */
+  --ion-toolbar-color: initial;
+  --ion-toolbar-background: initial;
 }
 
 /* Default modal IonContent inset — applied via the .modal-content class
@@ -755,17 +837,17 @@ ion-modal ion-footer ion-toolbar {
   color: var(--color-text-tertiary);
 }
 
-/* Long-email variant on the Account section's row — clamps to a single
-   line and ellipses the tail so a 60-char mailbox doesn't push the
-   chevron off the row. The `max-width: 12em` keeps the visible portion
-   readable on phones; full email is still inside the user record. */
-.account-list ion-note.account-list__email-note {
-  max-width: 12em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
-  color: var(--color-text-secondary);
+/* Email value on the Account section's Change email row — stacks beneath
+   the label inside the IonLabel so long mailboxes wrap to a second line
+   instead of truncating with an ellipsis. Mono for readability of
+   address characters. */
+.account-list ion-label .account-list__email-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+  word-break: break-all;
+  white-space: normal;
 }
 
 /* Danger-zone list — color="danger" on the IonLabel handles the label

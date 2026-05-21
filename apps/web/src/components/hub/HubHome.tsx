@@ -13,7 +13,11 @@ import { useJoinBusinessModal } from '@/contexts/join-business-context'
 import { fetchDeduped } from '@/lib/fetch'
 import { createSessionCache, CACHE_KEYS } from '@/hooks'
 import { registerRefetch } from '@/lib/realtime/refetch-registry'
-import { FeatureCard, GroupLabel, PageSpinner } from '@/components/ui'
+import { FeatureCard, GroupLabel, ModalShell, PageSpinner } from '@/components/ui'
+
+// Threshold above which the search input appears. Below this the list is
+// short enough to scan visually without a filter.
+const SEARCH_MIN_BUSINESSES = 4
 import { BusinessRow } from '@/components/businesses/shared'
 import type { MessageId } from '@/i18n/messageIds'
 
@@ -73,6 +77,7 @@ function HubHomeBody() {
   const [businesses, setBusinesses] = useState<Business[]>(() => getCachedBusinessList())
   const [isLoading, setIsLoading] = useState(() => getCachedBusinessList().length === 0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false)
   const intl = useIntl()
 
   // Release the auth-gate's hold phase as soon as the hub has its data.
@@ -149,67 +154,91 @@ function HubHomeBody() {
     )
   }
 
-  return (
-    <div className={hasBusinesses ? 'hub-body' : 'hub-body hub-body--empty'}>
-      <HubGreeting userName={user?.name ?? null} locale={intl.locale} />
+  // Search input only earns its weight once the list outgrows a glance.
+  // Below the threshold the user can scan owned/joined sections directly.
+  const showSearch = businesses.length >= SEARCH_MIN_BUSINESSES
 
-      <GroupLabel>
-        {intl.formatMessage({ id: 'hub.get_started_label' })}
-      </GroupLabel>
+  const composeRow = (
+    <button
+      type="button"
+      className="hub-compose-row"
+      onClick={() => setIsActionSheetOpen(true)}
+      aria-label={intl.formatMessage({ id: 'hub.compose_aria' })}
+      data-haptic
+    >
+      <span className="hub-compose-row__new">
+        {intl.formatMessage({ id: 'hub.compose_new' })}
+      </span>
+      <span className="hub-compose-row__sep" aria-hidden="true">·</span>
+      <span className="hub-compose-row__join">
+        {intl.formatMessage({ id: 'hub.compose_join' })}
+      </span>
+    </button>
+  )
 
-      <div className="hub-actions">
+  const actionSheet = (
+    <ModalShell
+      isOpen={isActionSheetOpen}
+      onClose={() => setIsActionSheetOpen(false)}
+      title={intl.formatMessage({ id: 'hub.action_sheet_title' })}
+      variant="half"
+      flushContent
+    >
+      <div className="hub-actions hub-actions--sheet">
         <FeatureCard
           primary
           kicker={intl.formatMessage({ id: 'hub.action_create_kicker' })}
           title={intl.formatMessage({ id: 'hub.action_create_title' })}
           description={intl.formatMessage({ id: 'hub.action_create_desc_short' })}
-          onClick={openCreateModal}
+          onClick={() => {
+            setIsActionSheetOpen(false)
+            openCreateModal()
+          }}
         />
         <FeatureCard
           kicker={intl.formatMessage({ id: 'hub.action_join_kicker' })}
           title={intl.formatMessage({ id: 'hub.action_join_title' })}
           description={intl.formatMessage({ id: 'hub.action_join_desc_short' })}
-          onClick={openJoinModal}
+          onClick={() => {
+            setIsActionSheetOpen(false)
+            openJoinModal()
+          }}
         />
       </div>
+    </ModalShell>
+  )
 
-      {!hasBusinesses && (
-        <div className="hub-empty">
-          <Building2 className="hub-empty__icon" aria-hidden="true" />
-          <h2 className="hub-empty__title">
-            {intl.formatMessage({ id: 'hub.empty_state_title' })}
-          </h2>
-          <p className="hub-empty__desc">
-            {intl.formatMessage({ id: 'hub.empty_state_description' })}
-          </p>
-        </div>
-      )}
+  return (
+    <div className={hasBusinesses ? 'hub-body' : 'hub-body hub-body--empty'}>
+      <HubGreeting userName={user?.name ?? null} locale={intl.locale} />
 
-      {hasBusinesses && (
+      {hasBusinesses ? (
         <>
-          <label className="app-search">
-            <span className="app-search__icon">{SearchIcon}</span>
-            <input
-              type="search"
-              className="app-search__input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={intl.formatMessage({ id: 'hub.search_placeholder' })}
-              aria-label={intl.formatMessage({ id: 'hub.search_placeholder' })}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="app-search__clear"
-                onClick={() => setSearchQuery('')}
-                aria-label={intl.formatMessage({ id: 'hub.search_clear' })}
-              >
-                <X />
-              </button>
-            )}
-          </label>
+          {showSearch && (
+            <label className="app-search">
+              <span className="app-search__icon">{SearchIcon}</span>
+              <input
+                type="search"
+                className="app-search__input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={intl.formatMessage({ id: 'hub.search_placeholder' })}
+                aria-label={intl.formatMessage({ id: 'hub.search_placeholder' })}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="app-search__clear"
+                  onClick={() => setSearchQuery('')}
+                  aria-label={intl.formatMessage({ id: 'hub.search_clear' })}
+                >
+                  <X />
+                </button>
+              )}
+            </label>
+          )}
 
           {searchQuery && !hasFilteredResults ? (
             <div className="hub-empty-search">
@@ -256,8 +285,46 @@ function HubHomeBody() {
               </div>
             </>
           )}
+
+          {composeRow}
+        </>
+      ) : (
+        <>
+          {/* Zero-business onboarding keeps the prominent dual-card CTA —
+           * first-run users need the explicit affordance, not a slim row. */}
+          <GroupLabel>
+            {intl.formatMessage({ id: 'hub.get_started_label' })}
+          </GroupLabel>
+
+          <div className="hub-actions">
+            <FeatureCard
+              primary
+              kicker={intl.formatMessage({ id: 'hub.action_create_kicker' })}
+              title={intl.formatMessage({ id: 'hub.action_create_title' })}
+              description={intl.formatMessage({ id: 'hub.action_create_desc_short' })}
+              onClick={openCreateModal}
+            />
+            <FeatureCard
+              kicker={intl.formatMessage({ id: 'hub.action_join_kicker' })}
+              title={intl.formatMessage({ id: 'hub.action_join_title' })}
+              description={intl.formatMessage({ id: 'hub.action_join_desc_short' })}
+              onClick={openJoinModal}
+            />
+          </div>
+
+          <div className="hub-empty">
+            <Building2 className="hub-empty__icon" aria-hidden="true" />
+            <h2 className="hub-empty__title">
+              {intl.formatMessage({ id: 'hub.empty_state_title' })}
+            </h2>
+            <p className="hub-empty__desc">
+              {intl.formatMessage({ id: 'hub.empty_state_description' })}
+            </p>
+          </div>
         </>
       )}
+
+      {actionSheet}
     </div>
   )
 }

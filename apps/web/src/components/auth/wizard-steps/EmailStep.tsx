@@ -29,7 +29,6 @@ export function EmailStep() {
 
   const trimmed = email.trim()
   const valid = EMAIL_RE.test(trimmed)
-  const canSubmit = valid && !submitting
 
   // Clear inline error when the user edits the email.
   useEffect(() => {
@@ -40,7 +39,13 @@ export function EmailStep() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!canSubmit) return
+      if (submitting) return
+      if (!valid) {
+        // Continue is always active (style guide § 1) — surface invalid
+        // email as an inline error under the field instead of disabling.
+        setError(intl.formatMessage({ id: 'auth.email_invalid' }))
+        return
+      }
       setError(null)
       setSubmitting(true)
       const result = await sendOtp(trimmed)
@@ -54,7 +59,7 @@ export function EmailStep() {
       setSubmitting(false)
       goTo('verify')
     },
-    [canSubmit, goTo, intl, sendOtp, trimmed],
+    [goTo, intl, sendOtp, submitting, trimmed, valid],
   )
 
   // EntryPage at `/` owns the sign-in entry point; the back-link
@@ -108,7 +113,7 @@ export function EmailStep() {
           <IonButton
             expand="block"
             type="submit"
-            disabled={!canSubmit}
+            disabled={submitting}
             className="mt-3"
           >
             {submitting ? (

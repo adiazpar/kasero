@@ -12,7 +12,7 @@ import {
   IonIcon,
 } from '@ionic/react'
 import { close, chevronBack } from 'ionicons/icons'
-import { Check, Minus, Plus } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useProductForm } from '@/contexts/product-form-context'
 import { useContext } from 'react'
 import {
@@ -21,6 +21,8 @@ import {
   AddProductCallbacksContext,
   EditProductCallbacksContext,
 } from './ProductNavContext'
+import { WizardProgress } from './WizardProgress'
+import { StockStepper } from '@/components/ui/stock-stepper'
 
 interface CategoryStockStepProps {
   mode: 'forward' | 'edit'
@@ -91,10 +93,8 @@ export function CategoryStockStep({ mode }: CategoryStockStepProps) {
 
       <IonContent className="pm-content">
         <div className="pm-shell">
+          <WizardProgress current={3} total={4} />
           <header className="pm-hero">
-            <span className="pm-hero__eyebrow">
-              {t.formatMessage({ id: 'productAddEdit.step_category_eyebrow' })}
-            </span>
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_category_title' },
@@ -191,50 +191,17 @@ export function CategoryStockStep({ mode }: CategoryStockStepProps) {
 }
 
 /**
- * Tiny stock-stepper for the wizard's initial-stock row. Backs the
- * `newStockValue` field in the form context (already there for the
- * AdjustInventoryStep path; we reuse it here for new-product creation
- * so the on-submit handler picks up a single source of truth).
- *
- * The actual API insert sets stock: 0 today (handled in the products
- * route); this control is forward-looking — when the route accepts an
- * `initialStock` form field, this hook-up is already in place.
+ * Initial-stock control for the new-product wizard. Reuses the shared
+ * centered `<StockStepper>` so the visual language matches the
+ * AdjustInventoryStep (same `[ − {n} + ]` cluster with a "units"
+ * caption below). Single source of truth via `useProductForm`.
  */
 function InitialStockInput() {
-  const t = useIntl()
   const { newStockValue, setNewStockValue } = useProductForm()
-  const value = newStockValue || 0
-
   return (
-    <div className="pm-stock-stepper">
-      <button
-        type="button"
-        className="pm-stock-stepper__button"
-        onClick={() => setNewStockValue(Math.max(0, value - 1))}
-        aria-label={t.formatMessage({ id: 'productForm.price_decrease_aria' })}
-        disabled={value <= 0}
-      >
-        <Minus size={16} strokeWidth={2} />
-      </button>
-      <input
-        id="wizard-initial-stock"
-        type="number"
-        min={0}
-        value={value}
-        onChange={(e) => {
-          const n = parseInt(e.target.value, 10)
-          setNewStockValue(isNaN(n) ? 0 : Math.max(0, n))
-        }}
-        className="pm-stock-stepper__input"
-      />
-      <button
-        type="button"
-        className="pm-stock-stepper__button"
-        onClick={() => setNewStockValue(value + 1)}
-        aria-label={t.formatMessage({ id: 'productForm.price_increase_aria' })}
-      >
-        <Plus size={16} strokeWidth={2} />
-      </button>
-    </div>
+    <StockStepper
+      value={newStockValue || 0}
+      onChange={setNewStockValue}
+    />
   )
 }

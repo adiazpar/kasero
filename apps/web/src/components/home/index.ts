@@ -1,7 +1,4 @@
 export { HomeHero } from './HomeHero'
 export { RevenueCard } from './RevenueCard'
-export { SalesTile } from './SalesTile'
-export { ProductsTile } from './ProductsTile'
-export { ManageTile } from './ManageTile'
 export { AlertsSection } from './AlertsSection'
 export { WeekTrendCard } from './WeekTrendCard'

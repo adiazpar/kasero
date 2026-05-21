@@ -34,6 +34,13 @@ export interface PriceKeypadStepProps {
   helper?: ReactNode
   /** Aria label for the digit grid as a whole. */
   ariaLabel?: string
+  /**
+   * Maximum allowed value, in DISPLAY units (e.g. dollars, not cents).
+   * Keypresses that would exceed the cap are silently ignored. Defaults
+   * to 1_000_000_000 to mirror the API's `Schemas.amount()` Zod cap, so
+   * the user can never type a value the backend will reject.
+   */
+  maxValue?: number
 }
 
 /**
@@ -54,6 +61,7 @@ export interface PriceKeypadStepProps {
 export function PriceKeypadStep({
   value,
   onValueChange,
+  maxValue = 1_000_000_000,
   eyebrow,
   title,
   subtitle,
@@ -128,14 +136,19 @@ export function PriceKeypadStep({
     return (n / 10 ** decimals).toFixed(decimals)
   }
 
-  // Cap at 12 digits so a stuck keypress doesn't produce numbers that
-  // overflow IEEE 754 precision or render hilariously wide.
+  // Cap at the API's amount limit (default 1_000_000_000 in display
+  // units, mirrors `Schemas.amount().max(...)`) so the user can't type
+  // a value the backend will reject. Defense-in-depth: also cap raw
+  // buffer length at 12 digits in case the cap math ever yields a
+  // surprising buffer size for an exotic currency.
   const MAX_DIGITS = 12
+  const maxBuffer = Math.floor(maxValue * 10 ** decimals)
 
   const pressDigit = (digit: string) => {
     const current = valueToBuffer(value)
     if (current.toString().length >= MAX_DIGITS) return
     const next = current * 10 + parseInt(digit, 10)
+    if (next > maxBuffer) return
     onValueChange(bufferToValue(next))
   }
 

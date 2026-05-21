@@ -15,6 +15,7 @@ import { close, chevronBack } from 'ionicons/icons'
 import { PriceKeypadStep } from '@/components/ui'
 import { useProductForm } from '@/contexts/product-form-context'
 import { useProductNav, useProductOnClose } from './ProductNavContext'
+import { WizardProgress } from './WizardProgress'
 
 interface PriceStepProps {
   mode: 'forward' | 'edit'
@@ -77,10 +78,8 @@ export function PriceStep({ mode }: PriceStepProps) {
 
       <IonContent className="pm-content modal-content--no-scroll">
         <div className="keypad-shell">
+          <WizardProgress current={2} total={4} />
           <header className="pm-hero pm-hero--keypad">
-            <span className="pm-hero__eyebrow">
-              {t.formatMessage({ id: 'productAddEdit.step_price_eyebrow' })}
-            </span>
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_price_title' },

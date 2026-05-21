@@ -140,13 +140,13 @@
   .tools-button:hover {
     border-color: var(--color-brand);
     color: var(--color-brand);
-    background-color: var(--color-brand-subtle);
+    background-color: var(--color-paper-deep);
   }
 }
 
 .tools-button:active {
   transform: scale(0.95);
-  background-color: var(--color-brand-subtle);
+  background-color: var(--color-paper-deep);
   color: var(--color-brand);
   border-color: var(--color-brand);
 }
@@ -377,8 +377,8 @@
  * The inset hairline creates a "printed card" frame around either
  * content style. */
 .product-row__icon {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border-radius: var(--radius-lg);
   background: var(--color-bg-muted);
@@ -426,7 +426,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 /* Italic Fraunces name — generous size, dominant typographic anchor.
@@ -444,50 +444,47 @@
   line-height: 1.15;
   color: var(--color-text-primary);
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  /* Single-line, ellipsis on overflow. Long names truncate rather than
+   * pushing the row to a second line — keeps the catalog visually
+   * scannable. Full name is still available in the edit modal. */
+  white-space: nowrap;
   overflow: hidden;
-  word-break: break-word;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
-/* Mono uppercase category — printed label vibe, sits as the first
- * piece of metadata under the name. Generous letter-spacing to read
- * as a stamp, not a body line. */
-.product-row__category {
+/* Single metaline — mono uppercase, printed-label vibe. Combines the
+ * facets that are actually SET (category name, barcode) with a mono
+ * middot. Hides entirely when nothing is set, so the row collapses
+ * cleanly to {thumbnail + name + trail} instead of carrying a
+ * "Uncategorized" placeholder. One-line ellipsis protects against
+ * long barcodes pushing into the trail column. */
+.product-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
-  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* Barcode — only visible when a code is set. Smaller scan glyph +
- * monospaced value, slightly tighter row so it tucks under the
- * category cleanly. */
-.product-row__barcode {
+.product-row__meta-part {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-tertiary);
-  letter-spacing: 0.04em;
+  min-width: 0;
 }
 
-.product-row__barcode > svg {
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-.product-row__barcode-value {
-  word-break: break-all;
-  letter-spacing: 0.04em;
+.product-row__meta-sep {
+  opacity: 0.5;
 }
 
 /* Right-aligned trail anchor. Italic Fraunces price mirrors the
@@ -499,9 +496,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 10px;
   text-align: right;
-  margin-left: var(--space-2);
+  margin-left: var(--space-3);
 }
 
 .product-row__price {
@@ -517,28 +514,40 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mono uppercase stock chip on a cream backplate — reads as a
- * printed inventory tag pinned under the price. Error tone on low
- * stock keeps the warning legible without dominating the row. */
+/* Stock — dot + "Stock · n" text, no pill chrome. The colored dot is
+ * the state signal (moss = healthy, saffron = low/zero, tertiary =
+ * untracked). Label is the same across states ("Stock · n") so the
+ * user just reads the count without re-parsing a status word. */
 .product-row__stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
-  background: var(--color-bg-muted);
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
+  white-space: nowrap;
 }
 
-.product-row__stock--low {
-  color: var(--color-error);
-  background: var(--color-error-subtle);
-  border-color: color-mix(in srgb, var(--color-error) 28%, transparent);
+.product-row__stock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
+
+.product-row__stock[data-state="in-stock"] .product-row__stock-dot {
+  background: var(--color-success);
+}
+
+.product-row__stock[data-state="low"] .product-row__stock-dot {
+  background: var(--color-warning);
+}
+
+/* Untracked inherits the tertiary default dot. */
 
 /* ===== Order row =====================================================
  * Reads as a printed PO entry. Leading edge carries a 4px status-tinted

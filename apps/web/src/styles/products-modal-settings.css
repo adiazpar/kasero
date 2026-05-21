@@ -191,7 +191,7 @@
 @media (hover: hover) {
   .settings-add-cta:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -372,7 +372,7 @@
 @media (hover: hover) {
   .settings-category-row__grip:hover {
     color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 

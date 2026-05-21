@@ -34,6 +34,47 @@
   padding: var(--space-2) 0 var(--space-3);
 }
 
+/* Wizard progress bar — replaces the prominent "STEP X OF 4" eyebrow on
+   the 4 add/edit chain steps (Name / Price / CategoryStock / Barcode).
+   2px hair track with a brand-tinted inner fill; the fill width tweens
+   on step change so the bar feels like it's filling in. A small mono
+   "1 / 4" sits below for a11y; the bar itself carries the role.
+
+   Sits as the first child of .pm-shell so it spans the page horizontal
+   padding — full edge-to-edge bars feel more architectural than insets. */
+.pm-wizard-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--page-padding)) 0;
+  padding: 0 var(--page-padding);
+}
+
+.pm-wizard-progress__track {
+  position: relative;
+  height: 2px;
+  width: 100%;
+  background: var(--color-hair);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.pm-wizard-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: var(--color-brand);
+  border-radius: 1px;
+  transition: width var(--duration-normal) var(--ease-out-expo);
+}
+
+.pm-wizard-progress__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.08em;
+}
+
 .pm-hero {
   display: flex;
   flex-direction: column;
@@ -194,7 +235,7 @@
 @media (hover: hover) {
   .pm-choice:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -459,7 +500,7 @@ ion-segment.pm-form-segment ion-segment-button.segment-button-checked {
 
 @media (hover: hover) {
   .pm-icon-rail__button:hover {
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
     color: var(--color-brand);
   }
 }
@@ -847,7 +888,7 @@ ion-segment.pm-form-segment ion-segment-button.segment-button-checked {
 @media (hover: hover) {
   .pm-ai-dropzone:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -1166,7 +1207,7 @@ ion-segment.pm-form-segment ion-segment-button.segment-button-checked {
 @media (hover: hover) {
   .pm-suggested__pick-row:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -1202,7 +1243,7 @@ ion-segment.pm-form-segment ion-segment-button.segment-button-checked {
 
 @media (hover: hover) {
   .pm-suggested__back:hover {
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 
@@ -1900,7 +1941,7 @@ ion-footer.pm-footer ion-toolbar {
 
 @media (hover: hover) {
   .pm-stock-stepper__button:hover:not(:disabled) {
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
     color: var(--color-brand);
   }
 }
@@ -1958,7 +1999,7 @@ ion-footer.pm-footer ion-toolbar {
 @media (hover: hover) {
   .pm-review__hero-card:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 

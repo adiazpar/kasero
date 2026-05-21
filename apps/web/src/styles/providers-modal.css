@@ -209,7 +209,7 @@
 @media (hover: hover) {
   .pv-status:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }
 

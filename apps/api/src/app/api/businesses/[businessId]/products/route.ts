@@ -1,4 +1,4 @@
-import { db, products, businesses } from '@/db'
+import { db, products, businesses, saleItems } from '@/db'
 import { eq, and, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
@@ -59,11 +59,29 @@ export const GET = withBusinessAuth(async (request, access) => {
   // Defensive cap — a small business never legitimately exposes 500+
   // products on one list call; pathological inserts (malicious or bugged)
   // can't drag the bandwidth / parse cost past this ceiling.
-  const productsList = await db
-    .select()
+  //
+  // LEFT JOIN sale_items + COUNT lets us derive `hasSold` per row without
+  // adding a denormalized column to the products table (which would mean
+  // maintaining the flag on every sale confirm + every sale delete/refund —
+  // another invariant to drift). The (sale_items.product_id) index already
+  // exists, so the aggregate is cheap at the catalog ceiling. `hasSold`
+  // distinguishes "brand new, awaiting initial stock" (READY) from
+  // "depleted SKU that has sold before" (OUT OF STOCK) on the list row.
+  const rows = await db
+    .select({
+      product: products,
+      soldCount: sql<number>`COUNT(${saleItems.id})`.as('sold_count'),
+    })
     .from(products)
+    .leftJoin(saleItems, eq(saleItems.productId, products.id))
     .where(and(...conditions))
+    .groupBy(products.id)
     .limit(500)
+
+  const productsList = rows.map((r) => ({
+    ...r.product,
+    hasSold: Number(r.soldCount) > 0,
+  }))
 
   return successResponse({ products: productsList })
 })

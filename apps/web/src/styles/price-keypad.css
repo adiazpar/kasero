@@ -175,10 +175,14 @@
     transform var(--duration-instant) ease-out;
 }
 
+/* Tonal active state — a deeper paper shade rather than a terracotta
+   wash. Press feedback should read as "the same key, pushed in," not a
+   color swap. Border stays soft hair so the pressed key doesn't visually
+   pop forward; the scale + background shift carry the press cue. */
 .price-keypad__key:active {
   transform: scale(0.96);
-  background: var(--color-brand-subtle);
-  border-color: var(--color-brand);
+  background: var(--color-paper-deep);
+  border-color: var(--color-hair-soft);
 }
 
 .price-keypad__key:disabled {

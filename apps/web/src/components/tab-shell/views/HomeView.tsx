@@ -9,23 +9,19 @@ import { useSalesSessions } from '@/contexts/sales-sessions-context'
 import { useProducts } from '@/contexts/products-context'
 import { useOrders } from '@/contexts/orders-context'
 import { useProviders } from '@/contexts/providers-context'
-import { useProductSettings } from '@/contexts/product-settings-context'
 import { useSalesAggregate } from '@/hooks/useSalesAggregate'
-import { GroupLabel } from '@/components/ui'
+import { useBusinessFormat } from '@/hooks/useBusinessFormat'
 import { getOrderDisplayStatus } from '@/lib/products'
 import {
   HomeHero,
   RevenueCard,
-  SalesTile,
-  ProductsTile,
-  ManageTile,
   WeekTrendCard,
   AlertsSection,
 } from '@/components/home'
 
 export function HomeView() {
   const intl = useIntl()
-  const { businessId, canManage, isOwner } = useBusiness()
+  const { businessId } = useBusiness()
   const { sales, stats, isLoaded: salesLoaded, ensureLoaded: ensureSalesLoaded } = useSales()
   const {
     currentSession,
@@ -38,8 +34,8 @@ export function HomeView() {
     ensureCompletedLoaded,
   } = useOrders()
   const { providers, ensureLoaded: ensureProvidersLoaded } = useProviders()
-  const { categories } = useProductSettings()
   const aggregate = useSalesAggregate(businessId ?? '')
+  const { formatCurrency } = useBusinessFormat()
   // Ionic-aware router. Used for cross-tab navigation (Home -> Sales /
   // Products / Manage and the alert rows) with the ('none', 'replace')
   // signature so IonTabs recognizes the destination as a sibling tab
@@ -129,15 +125,6 @@ export function HomeView() {
     return aggregate.data.dailyRevenue.reduce((sum, e) => sum + e.total, 0)
   }, [aggregate.isLoaded, aggregate.data])
 
-  // Role label for the Manage tile. canManage covers owner + manager
-  // (partner) roles; isOwner narrows further. Everyone else falls
-  // through to "employee" — the read-only voice on the description.
-  const role: 'owner' | 'manager' | 'employee' = isOwner
-    ? 'owner'
-    : canManage
-    ? 'manager'
-    : 'employee'
-
   // Cross-tab navigation. push(href, 'none', 'replace') tells Ionic to
   // perform a tab swap instead of stacking a push on top of Home — so
   // the back button from the destination tab leaves the shell at Hub
@@ -154,8 +141,8 @@ export function HomeView() {
     if (businessId) pushTab(`/${businessId}/products`)
   }
 
-  const handleManageClick = () => {
-    if (businessId) pushTab(`/${businessId}/manage`)
+  const handleProvidersClick = () => {
+    if (businessId) pushTab(`/${businessId}/providers`)
   }
 
   const handleLowStockClick = () => {
@@ -178,30 +165,51 @@ export function HomeView() {
         amount={stats?.todayRevenue ?? null}
         vsYesterdayPct={stats?.vsYesterdayPct ?? null}
       />
-      <GroupLabel>{intl.formatMessage({ id: 'home.section_today' })}</GroupLabel>
-      <div className="home-tiles">
-        <SalesTile
-          isOpen={Boolean(currentSession)}
-          openedAt={currentSession?.openedAt ?? null}
-          runningTotal={sessionRunningTotal}
-          itemCount={stats?.todayCount ?? 0}
-          avgTicket={stats?.todayAvgTicket ?? null}
+      <div className="home-mini-row">
+        <button
+          type="button"
+          className={`home-mini home-mini--cta${
+            currentSession ? ' home-mini--cta-open' : ''
+          }`}
           onClick={handleSalesClick}
-        />
-        <ProductsTile
-          productCount={products.length}
-          categoryCount={categories.length}
-          onClick={handleProductsClick}
-        />
-        <ManageTile
-          providerCount={providers.length}
-          role={role}
-          onClick={handleManageClick}
-        />
+        >
+          <span className="home-mini__eyebrow">
+            {intl.formatMessage({ id: 'home.sales_tile_kicker' })}
+          </span>
+          <span className="home-mini__title">
+            {currentSession
+              ? intl.formatMessage({ id: 'home.session_open_title' })
+              : intl.formatMessage({ id: 'home.session_closed_title' })}
+          </span>
+          <span className="home-mini__sub">
+            {currentSession
+              ? formatCurrency(sessionRunningTotal)
+              : intl.formatMessage({ id: 'home.session_closed_description' })}
+          </span>
+        </button>
+        <div className="home-mini home-mini--stats">
+          <button
+            type="button"
+            className="home-mini__stat-row"
+            onClick={handleProductsClick}
+          >
+            <span className="home-mini__stat-value">{products.length}</span>
+            <span className="home-mini__stat-label">
+              {intl.formatMessage({ id: 'navigation.products' })}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-mini__stat-row"
+            onClick={handleProvidersClick}
+          >
+            <span className="home-mini__stat-value">{providers.length}</span>
+            <span className="home-mini__stat-label">
+              {intl.formatMessage({ id: 'navigation.providers' })}
+            </span>
+          </button>
+        </div>
       </div>
-      <GroupLabel>
-        {intl.formatMessage({ id: 'home.section_this_week' })}
-      </GroupLabel>
       <WeekTrendCard
         isLoading={!aggregate.isLoaded}
         dailyRevenue={aggregate.data?.dailyRevenue ?? null}

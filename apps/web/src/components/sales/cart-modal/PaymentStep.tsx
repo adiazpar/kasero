@@ -128,29 +128,46 @@ export function PaymentStepContent({
                 />
               </div>
 
-              {/* Quick-fill row: Exact + dynamically computed bills. */}
+              {/* Quick-fill row: Exact (reset to total) leads, then
+                 * denomination chips that ADD to the current tendered. The
+                 * chip whose value matches the current tendered gets a
+                 * terracotta selected ring. */}
               <div className="quick-bills">
                 <button
                   type="button"
-                  className="quick-bill quick-bill--exact"
+                  className={`quick-bill${
+                    Math.abs(tendered - total) < 1e-9 && tenderedStr !== ''
+                      ? ' quick-bill--selected'
+                      : ''
+                  }`}
                   onClick={() => {
                     setTenderedStr(total.toString())
                   }}
                 >
                   {t.formatMessage({ id: 'sales.cart.modal_tendered_exact' })}
                 </button>
-                {quickBills.map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    className="quick-bill"
-                    onClick={() => {
-                      setTenderedStr(amount.toString())
-                    }}
-                  >
-                    {formatCurrency(amount)}
-                  </button>
-                ))}
+                {quickBills.map((amount) => {
+                  const selected = Math.abs(tendered - amount) < 1e-9 && tenderedStr !== ''
+                  return (
+                    <button
+                      key={amount}
+                      type="button"
+                      className={`quick-bill${selected ? ' quick-bill--selected' : ''}`}
+                      onClick={() => {
+                        // Denomination chips ADD to the current tender so
+                        // a vendor can stack S/ 10 + S/ 20 quickly. If the
+                        // current tender is the auto-EXACT total, replace
+                        // it instead (otherwise the first chip tap would
+                        // overshoot).
+                        const isExactAuto = Math.abs(tendered - total) < 1e-9
+                        const next = isExactAuto ? amount : tendered + amount
+                        setTenderedStr(roundToCurrencyDecimals(next, currency).toString())
+                      }}
+                    >
+                      {formatCurrency(amount)}
+                    </button>
+                  )
+                })}
               </div>
 
               {showChangeRow && (

@@ -93,6 +93,14 @@ export interface Product {
   barcodeSource?: BarcodeSource | null
   stock?: number | null
   lowStockThreshold?: number | null
+  /** Derived at read time by the products list route (LEFT JOIN +
+   *  COUNT against sale_items). True when ≥1 sale_items row references
+   *  this product. Used by the Products list to distinguish a brand-new
+   *  product at zero stock (READY · SET STOCK, calm) from a depleted SKU
+   *  that has sold before (OUT OF STOCK, saffron). Optional because other
+   *  routes that return a Product (single GET, PATCH response, POST
+   *  response) don't compute it. */
+  hasSold?: boolean
   /** Audit timestamps. Set on insert; updatedAt bumped on every PATCH
    *  that mutates a product row (PATCH /products/:id, /stock). */
   createdAt?: Date | string | null

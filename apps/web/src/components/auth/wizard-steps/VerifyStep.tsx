@@ -9,6 +9,12 @@ import './VerifyStep.css'
 
 const RESEND_COOLDOWN_SECONDS = 30
 
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 /**
  * Middle step of the 3-step passwordless auth wizard. The user has
  * just received a 6-digit OTP (sent either by EntryPage or the
@@ -26,7 +32,9 @@ export function VerifyStep() {
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [cooldown, setCooldown] = useState(0)
+  // Start the cooldown on mount — the upstream EntryPage / EmailStep
+  // has just sent the OTP, so the resend window opens 30s later.
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS)
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -72,10 +80,11 @@ export function VerifyStep() {
     }
   }, [cooldown, email, intl, sendOtp])
 
-  // Manual submit handler for the explicit "verify-submit" button. Mirrors
-  // the auto-submit branch in handleComplete, but lets E2E tests drive the
-  // verify step with a deterministic click (the auto-submit-on-complete
-  // fires asynchronously, which makes the timing tricky for Playwright).
+  // Manual submit handler used by both the visible Continue button and
+  // the hidden E2E hook. Mirrors the auto-submit branch in handleComplete,
+  // but lets users (and Playwright) drive the verify step with a
+  // deterministic click — the auto-submit-on-complete fires asynchronously,
+  // which makes timing tricky for both A11Y assistive tech and tests.
   // Declared BEFORE the email-guard early-return so React's hook order is
   // stable across renders (rules-of-hooks).
   const handleManualSubmit = useCallback(() => {
@@ -88,6 +97,8 @@ export function VerifyStep() {
     // Defensive — shouldn't reach this step without a wizard email.
     return null
   }
+
+  const canSubmit = code.length === 6 && !submitting
 
   return (
     <div className="register-verify" data-testid="verify-step">
@@ -109,19 +120,19 @@ export function VerifyStep() {
           {errorMessage}
         </p>
       )}
-      {/* Explicit submit hook for E2E + accessibility (some assistive
-          tech can't trigger the auto-submit). Hidden visually because
-          the auto-submit covers the keyboard path; rendered as a real
-          button so getByTestId('verify-submit').click() works. */}
-      <button
-        type="button"
+      {/* Sticky Continue — terracotta from frame 1 so the user always
+          knows what's next, even though auto-submit covers the keyboard
+          path on the 6th digit. The same button doubles as the E2E +
+          assistive-tech submit hook (data-testid retained). */}
+      <IonButton
         data-testid="verify-submit"
-        className="register-verify__submit-hidden"
+        expand="block"
         onClick={handleManualSubmit}
-        disabled={code.length !== 6 || submitting}
-        aria-hidden="true"
-        tabIndex={-1}
-      />
+        disabled={!canSubmit}
+        className="register-verify__continue"
+      >
+        {intl.formatMessage({ id: 'common.continue' })}
+      </IonButton>
       <IonButton
         fill="clear"
         disabled={cooldown > 0 || submitting}
@@ -129,7 +140,10 @@ export function VerifyStep() {
         className="register-verify__resend"
       >
         {cooldown > 0
-          ? intl.formatMessage({ id: 'verify_email_resend_cooldown' }, { seconds: cooldown })
+          ? intl.formatMessage(
+              { id: 'verify_email_resend_cooldown' },
+              { time: formatCountdown(cooldown) },
+            )
           : intl.formatMessage({ id: 'verify_email_resend' })}
       </IonButton>
     </div>

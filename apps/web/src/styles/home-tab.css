@@ -106,16 +106,194 @@
   border-radius: var(--radius-md);
 }
 
-/* ===== Vertical tile stack =========================================== *
- * Three full-width FeatureCards (Sales, Products, Manage) stacked under
- * the "Today" group label. Vertical flex column — the same vocabulary
- * .manage-workspace uses in app.css for its full-width tile rhythm — so
- * each tile presents its own kicker, title, and description without
- * competing for horizontal space. */
-.home-tiles {
+/* ===== Mini-row (2-col) ============================================== *
+ * Replaces the previous vertical stack of three full-width tiles. Left
+ * cell is the only true action on Home — the session CTA (open / closed).
+ * Right cell is a stats stack (products + providers counts) — quieter
+ * vocabulary, mono micro-rows. Both cells navigate to sibling tabs, but
+ * the left is a single tap target (the only thing a user *needs* to do
+ * from Home) while the right reads as ambient context. */
+.home-mini-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.home-mini {
+  min-height: 124px;
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-md);
+  text-align: left;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-1);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+}
+
+/* Tonal press feedback — neutral surface darkens to paper-deep, brand
+ * CTA darkens to brand-hover. Never flash to a different color family.
+ * `:hover` is scoped to (hover: hover) so touch devices don't get the
+ * sticky hover after tap. */
+@media (hover: hover) {
+  .home-mini:hover {
+    background: var(--color-paper-deep);
+  }
+}
+
+.home-mini:active {
+  background: var(--color-paper-deep);
+  transform: scale(0.99);
+}
+
+/* Left cell — closed state: full brand fill so it reads as the page's
+ * only call-to-action. Open state: surface plate with brand text/sub so
+ * it still signals action without screaming at the user during a live
+ * session. */
+.home-mini--cta {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-text-inverse);
+}
+
+/* Brand-resting CTA: tonal darken to brand-hover. Override the generic
+ * .home-mini press handler above so we don't drop to paper-deep on a
+ * brand surface. */
+@media (hover: hover) {
+  .home-mini--cta:hover {
+    background: var(--color-brand-hover);
+  }
+}
+
+.home-mini--cta:active {
+  background: var(--color-brand-hover);
+}
+
+.home-mini--cta .home-mini__eyebrow {
+  color: color-mix(in srgb, var(--color-text-inverse) 80%, transparent);
+}
+
+.home-mini--cta.home-mini--cta-open {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+/* Open CTA falls back to neutral surface — restore the tonal paper-deep
+ * press feedback (the brand-hover override above would be wrong here). */
+@media (hover: hover) {
+  .home-mini--cta.home-mini--cta-open:hover {
+    background: var(--color-paper-deep);
+  }
+}
+
+.home-mini--cta.home-mini--cta-open:active {
+  background: var(--color-paper-deep);
+}
+
+.home-mini--cta.home-mini--cta-open .home-mini__eyebrow {
+  color: var(--color-text-tertiary);
+}
+
+.home-mini--cta.home-mini--cta-open .home-mini__sub {
+  color: var(--color-brand);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-mini__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.home-mini__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: var(--text-xl, 20px);
+  line-height: 1.1;
+  margin-top: auto;
+}
+
+.home-mini__sub {
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+
+/* Right cell — stats stack. Each row is itself a tap target (products /
+ * providers). The cell has its own padding zeroed because the rows
+ * carry their own padding to make the touch target generous. */
+.home-mini--stats {
+  padding: 0;
+  background: var(--color-paper-deep);
+  border-color: var(--color-hair);
+  cursor: default;
+}
+
+.home-mini__stat-row {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  text-align: left;
+  font: inherit;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) ease-out;
+}
+
+/* Stat rows sit on top of the .home-mini--stats paper-deep plate, so
+ * a tap darkens one shade further (paper-warm is between surface and
+ * paper-deep — using color-mix to land on a deeper cream than the
+ * plate so the press registers without leaving the cream family). */
+@media (hover: hover) {
+  .home-mini__stat-row:hover {
+    background: color-mix(in srgb, var(--color-paper-deep) 60%, var(--color-text-primary) 6%);
+  }
+}
+
+.home-mini__stat-row:active {
+  background: color-mix(in srgb, var(--color-paper-deep) 60%, var(--color-text-primary) 6%);
+}
+
+.home-mini__stat-row + .home-mini__stat-row {
+  border-top: 1px solid var(--color-hair);
+}
+
+.home-mini__stat-value {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: var(--text-2xl, 24px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.home-mini__stat-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
 }
 
 /* ===== Alerts list =================================================== *

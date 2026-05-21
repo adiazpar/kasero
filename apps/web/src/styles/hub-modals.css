@@ -297,7 +297,11 @@
   box-shadow: 0 4px 12px -6px rgba(27, 24, 21, 0.3);
   transition:
     color var(--duration-fast) ease-out,
+    background var(--duration-fast) ease-out,
     border-color var(--duration-fast) ease-out;
+  /* Suppress iOS default brand-tinted tap highlight; the explicit
+     :active rule below paints a tonal press feedback instead. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (hover: hover) {
@@ -305,6 +309,14 @@
     color: var(--color-error);
     border-color: var(--color-error);
   }
+}
+
+/* Tonal press — darker neutral on the cream surface. The :hover above
+   flips color/border to error for affordance; on touch we want the
+   press flash to read as a press (darker bg) without jumping to the
+   brand or error palette mid-tap. */
+.create-business__logo-remove:active {
+  background: var(--color-paper-deep);
 }
 
 .create-business__logo-remove svg {
@@ -331,14 +343,23 @@
     background var(--duration-fast) ease-out,
     box-shadow var(--duration-fast) ease-out;
   text-align: left;
+  /* Suppress iOS default brand-tinted tap highlight; tonal :active
+     below paints the press feedback in the cream/paper family. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (hover: hover) {
   .create-business__logo-upload:hover {
     border-color: var(--color-brand);
-    background: var(--color-bg-muted);
-    box-shadow: 0 0 0 4px var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
+}
+
+/* Tonal press — darker shade of the same cream surface. Hover may
+   accent the border to brand (above), but the press itself stays
+   tonal so the bg never flashes terracotta on touch. */
+.create-business__logo-upload:active {
+  background: var(--color-paper-deep);
 }
 
 .create-business__logo-upload-icon {
@@ -616,6 +637,16 @@
   color: var(--color-error);
   text-align: left;
   padding: 0;
+  /* No default brand tap-highlight — the :active rule below darkens
+     the error text instead of flashing a background fill. */
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--duration-fast) ease-out;
+}
+
+.join-business__code-error-action:active {
+  /* Tonal press inside the error palette — darken the existing error
+     text via opacity rather than introducing a new color family. */
+  opacity: 0.7;
 }
 
 .join-business__code-error-action::before {

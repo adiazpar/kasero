@@ -153,14 +153,14 @@ input[type="date"].input::-webkit-calendar-picker-indicator {
 
 @media (hover: hover) {
   .input-number-spinner:hover {
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
     color: var(--color-brand);
   }
 }
 
 .input-number-spinner:active {
-  background: var(--color-brand);
-  color: white;
+  background: var(--color-paper-deep);
+  color: var(--color-brand);
 }
 
 .input-number-spinner svg {
@@ -270,6 +270,6 @@ select.input option[value=""] {
 @media (hover: hover) {
   .image-upload-zone:hover {
     border-color: var(--color-brand);
-    background: var(--color-brand-subtle);
+    background: var(--color-paper-deep);
   }
 }

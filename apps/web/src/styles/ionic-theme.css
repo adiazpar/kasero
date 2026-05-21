@@ -359,3 +359,43 @@ ion-button:not([fill="clear"]) {
 ion-button.button-disabled {
   opacity: 0.5;
 }
+
+/* ===== IonButton fill="clear" — tonal press state =====
+ * fill="clear" is reserved for toolbar icon slots (modal close X,
+ * IonBackButton chevron) and is excluded from the pill rule above.
+ * Ionic's default activated bg for clear buttons resolves through
+ * --ion-color-base (the brand by default), so a press flashes the
+ * button in a translucent terracotta wash on a cream toolbar — a
+ * tonal-rule violation. Pin the activated / hover / focused bg to
+ * a neutral darker shade of the same paper family, and use a
+ * transparent ripple so the brand never enters the press state. */
+ion-button[fill="clear"] {
+  --background-hover: var(--color-bg-muted);
+  --background-hover-opacity: 1;
+  --background-activated: var(--color-bg-muted);
+  --background-activated-opacity: 1;
+  --background-focused: var(--color-bg-muted);
+  --background-focused-opacity: 1;
+  --ripple-color: transparent;
+}
+
+/* ===== IonActionSheet — tonal press states =====
+ * The Hub page's compose row opens an IonActionSheet (Create / Join /
+ * Cancel). Ionic ships defaults for activated/hover/focused button bg
+ * that derive from the brand palette on iOS mode, which would flash
+ * each row in terracotta on tap — wrong per the tonal rule. Resting
+ * sheet background is a near-white surface in light mode, so the
+ * press should darken to paper-deep (warm cream) and the cancel
+ * button (which sits on its own row) gets the same handling. */
+ion-action-sheet {
+  --button-background-activated: var(--color-paper-deep);
+  --button-background-activated-opacity: 1;
+  --button-background-hover: var(--color-paper-deep);
+  --button-background-hover-opacity: 1;
+  --button-background-focused: var(--color-paper-deep);
+  --button-background-focused-opacity: 1;
+  /* The destructive button uses --color-danger for its text; bg press
+     stays neutral so the text color does the work. Ripple disabled
+     to prevent any brand-tinted overlay on tap. */
+  --button-color-activated: var(--color-text-primary);
+}

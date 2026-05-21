@@ -112,3 +112,6 @@ apps/api/public/kasero-logo.png
 
 # Per-app env files are covered by the .env* glob above; left as a marker.
 .vercel
+
+# Playwright MCP server session artifacts
+.playwright-mcp/
