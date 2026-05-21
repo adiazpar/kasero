@@ -547,7 +547,7 @@ export function ProductsView() {
       }
     } catch {
       setError(t.formatMessage({
-        id: 'orders.error_unable_to_lookup_barcode'
+        id: 'products.scan_lookup_error'
       }))
     }
   }, [businessId, handleOpenEdit, setError, setSearchQuery, t])
