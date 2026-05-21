@@ -7,10 +7,6 @@ import {
   businessUsers,
   products,
   productCategories,
-  providers,
-  providerNotes,
-  orders,
-  orderItems,
   sales,
   saleItems,
   salesSessions,
@@ -227,20 +223,15 @@ export const PATCH = withBusinessAuth(async (request, access) => {
  * Delete a business and every child row that references it. Only the
  * owner can delete.
  *
- * IMPORTANT — child cleanup is explicit, not FK-cascade. The schema
- * declares onDelete:'cascade' on `business_users` and `provider_notes`
- * only. Every other child table (`products`, `product_categories`,
- * `providers`, `orders`, `order_items`, `sales`, `sale_items`,
- * `sales_sessions`, `invite_codes`, `ownership_transfers`) declares its
- * `business_id` FK without onDelete. libsql/Turso also runs with FK
- * enforcement OFF by default — `src/db/index.ts` never issues
- * `PRAGMA foreign_keys = ON`. Without explicit deletes, the prior
- * implementation silently left orphan rows for every business that was
- * ever deleted (GDPR-relevant data retention bug).
+ * IMPORTANT — child cleanup is explicit, not FK-cascade. Every child
+ * table declares its `business_id` FK without onDelete. libsql/Turso
+ * also runs with FK enforcement OFF by default — `src/db/index.ts`
+ * never issues `PRAGMA foreign_keys = ON`. Without explicit deletes,
+ * the prior implementation silently left orphan rows for every business
+ * that was ever deleted (GDPR-relevant data retention bug).
  *
  * Order matters because of FK dependencies:
  *   - sale_items must go before sales (FK saleId)
- *   - order_items must go before orders (FK orderId)
  *   - sales must go before sales_sessions (FK sessionId, restrict)
  *   - products must go before product_categories (FK categoryId, set null)
  *   - business_users last (cascades from users in some flows; the
@@ -298,59 +289,35 @@ export const DELETE = withBusinessAuth(async (request, access) => {
         .delete(salesSessions)
         .where(eq(salesSessions.businessId, access.businessId))
 
-      // 4. order_items — same pattern as sale_items.
-      const orderIds = await tx
-        .select({ id: orders.id })
-        .from(orders)
-        .where(eq(orders.businessId, access.businessId))
-      if (orderIds.length > 0) {
-        await tx
-          .delete(orderItems)
-          .where(inArray(orderItems.orderId, orderIds.map((o) => o.id)))
-      }
-
-      // 5. orders
-      await tx.delete(orders).where(eq(orders.businessId, access.businessId))
-
-      // 6. provider_notes (denormalized businessId; cleanest direct delete).
-      await tx
-        .delete(providerNotes)
-        .where(eq(providerNotes.businessId, access.businessId))
-
-      // 7. providers
-      await tx
-        .delete(providers)
-        .where(eq(providers.businessId, access.businessId))
-
-      // 8. products before product_categories (categoryId FK)
+      // 4. products before product_categories (categoryId FK)
       await tx
         .delete(products)
         .where(eq(products.businessId, access.businessId))
 
-      // 9. product_categories
+      // 5. product_categories
       await tx
         .delete(productCategories)
         .where(eq(productCategories.businessId, access.businessId))
 
-      // 10. invite_codes
+      // 6. invite_codes
       await tx
         .delete(inviteCodes)
         .where(eq(inviteCodes.businessId, access.businessId))
 
-      // 11. ownership_transfers (in-flight transfers for this business
+      // 7. ownership_transfers (in-flight transfers for this business
       //     are abandoned — they cannot be honored once the business
       //     is gone).
       await tx
         .delete(ownershipTransfers)
         .where(eq(ownershipTransfers.businessId, access.businessId))
 
-      // 12. business_users — would cascade via FK if enforcement were
+      // 8. business_users — would cascade via FK if enforcement were
       //     on, but we delete explicitly to be FK-off-safe.
       await tx
         .delete(businessUsers)
         .where(eq(businessUsers.businessId, access.businessId))
 
-      // 13. businesses (the row itself)
+      // 9. businesses (the row itself)
       await tx.delete(businesses).where(eq(businesses.id, access.businessId))
     })
 

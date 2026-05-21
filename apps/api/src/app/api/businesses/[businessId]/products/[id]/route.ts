@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db, products, orderItems, orders } from '@/db'
+import { db, products } from '@/db'
 import { eq, and, ne } from 'drizzle-orm'
 import { uploadProductIcon, deleteProductIcon, validateIconSize } from '@/lib/storage'
 import { sniffImageMimeType, type ImageMimeType } from '@/lib/file-sniff'
@@ -256,11 +256,7 @@ export const PATCH = withBusinessAuth(async (request, access, routeParams) => {
 /**
  * DELETE /api/businesses/[businessId]/products/[id]
  *
- * Hard-delete a product. Blocked if the product is referenced in any
- * pending order — the user must receive or cancel that order first.
- * Received orders don't block deletion: stock was already adjusted, and
- * order_items.productName snapshots preserve historical display after
- * the FK is set to NULL via cascade.
+ * Hard-delete a product. Managers and owners only.
  */
 export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
   // Only partners and owners can delete products
@@ -289,32 +285,6 @@ export const DELETE = withBusinessAuth(async (request, access, routeParams) => {
 
   if (!existingProduct) {
     return errorResponse(ApiMessageCode.PRODUCT_NOT_FOUND, 404)
-  }
-
-  // Block delete if the product is referenced in any pending order
-  const [blockingOrder] = await db
-    .select({ id: orders.id })
-    .from(orderItems)
-    .innerJoin(orders, eq(orderItems.orderId, orders.id))
-    .where(
-      and(
-        eq(orderItems.productId, id),
-        eq(orders.status, 'pending'),
-        eq(orders.businessId, access.businessId)
-      )
-    )
-    .limit(1)
-
-  if (blockingOrder) {
-    // 409 with the envelope plus the blocking order id so the client can
-    // navigate to it.
-    return NextResponse.json(
-      {
-        messageCode: ApiMessageCode.PRODUCT_PENDING_ORDER_BLOCK,
-        blockingOrderId: blockingOrder.id,
-      },
-      { status: 409 }
-    )
   }
 
   // Delete the icon file (if any) before removing the row

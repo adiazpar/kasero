@@ -1,6 +1,6 @@
 import 'server-only'
 import { headers } from 'next/headers'
-import { db, businessUsers, businesses, products, providers, productCategories, expenseCategories, expenses } from '@/db'
+import { db, businessUsers, businesses, products, productCategories, expenseCategories, expenses } from '@/db'
 import { eq, and, inArray } from 'drizzle-orm'
 import { auth } from './auth'
 
@@ -216,22 +216,6 @@ export async function assertProductsInBusiness(
   if (rows.length !== uniqueIds.length) return false
   const found = new Set(rows.map((r) => r.id))
   return uniqueIds.every((id) => found.has(id))
-}
-
-/**
- * Confirm a provider ID belongs to the given business. Empty/null IDs
- * are caller's responsibility to filter out before invoking.
- */
-export async function assertProviderInBusiness(
-  providerId: string,
-  businessId: string,
-): Promise<boolean> {
-  const row = await db
-    .select({ id: providers.id })
-    .from(providers)
-    .where(and(eq(providers.id, providerId), eq(providers.businessId, businessId)))
-    .get()
-  return row != null
 }
 
 /**
