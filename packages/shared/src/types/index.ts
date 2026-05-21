@@ -171,4 +171,6 @@ export interface OrderItem {
   receivedQuantity?: number | null
 }
 
+export * from './expense'
+
 
