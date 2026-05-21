@@ -434,6 +434,24 @@ export const expenses = sqliteTable('expenses', {
 ])
 
 // ===========================================
+// INVENTORY ADJUSTMENTS
+// ===========================================
+export const inventoryAdjustments = sqliteTable('inventory_adjustments', {
+  id: text('id').primaryKey(),
+  businessId: text('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
+  productId: text('product_id').references(() => products.id, { onDelete: 'cascade' }).notNull(),
+  createdByUserId: text('created_by_user_id').references(() => users.id).notNull(),
+  delta: integer('delta').notNull(),
+  reason: text('reason'),
+  relatedExpenseId: text('related_expense_id').references(() => expenses.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+}, (table) => [
+  index('idx_inventory_adjustments_business_id').on(table.businessId),
+  index('idx_inventory_adjustments_product_id').on(table.productId),
+  index('idx_inventory_adjustments_business_created').on(table.businessId, table.createdAt),
+])
+
+// ===========================================
 // INVITE CODES
 // ===========================================
 export const inviteCodes = sqliteTable('invite_codes', {
