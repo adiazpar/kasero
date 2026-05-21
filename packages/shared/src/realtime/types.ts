@@ -73,6 +73,13 @@ export type BusinessRealtimeEvent =
     } & WithOrigin)
   | ({ type: 'category.deleted'; categoryId: string } & WithOrigin)
   | ({ type: 'category.reordered' } & WithOrigin)
+  // Expense events.
+  | ({ type: 'expense.created'; expenseId: string } & WithOrigin)
+  | ({ type: 'expense.updated'; expenseId: string } & WithOrigin)
+  | ({ type: 'expense.deleted'; expenseId: string } & WithOrigin)
+  | ({ type: 'expense_category.created'; categoryId: string } & WithOrigin)
+  | ({ type: 'expense_category.updated'; categoryId: string } & WithOrigin)
+  | ({ type: 'expense_category.deleted'; categoryId: string } & WithOrigin)
   // Provider (supplier) events. The mutable columns on providers are `name`,
   // `phone`, `email`, and `active` (all touched by PATCH /providers/[id]).
   // Notes mutations (POST/PATCH/DELETE on provider_notes rows) are collapsed
