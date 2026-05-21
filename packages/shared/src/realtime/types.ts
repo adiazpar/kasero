@@ -114,6 +114,8 @@ export type BusinessRealtimeEvent =
     } & WithOrigin)
   | ({ type: 'order.received'; orderId: string } & WithOrigin)
   | ({ type: 'order.deleted'; orderId: string } & WithOrigin)
+  // Inventory adjustments (manual stock corrections tracked in inventory_adjustments).
+  | ({ type: 'inventory.adjusted'; adjustmentId: string; productId: string; relatedExpenseId: string | null } & WithOrigin)
   // Sales sessions (cash-drawer reconciliation framing a stretch of sales).
   // Only open and close are mutations; both transitions are fired here.
   | ({ type: 'sales_session.opened'; sessionId: string } & WithOrigin)
