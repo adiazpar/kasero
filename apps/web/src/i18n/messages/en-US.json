@@ -1434,7 +1434,7 @@
   "adjust_stock_modal.success_title": "Stock adjusted",
   "adjust_stock_modal.success_expense_logged": "Expense logged",
   "adjust_stock_modal.done": "Done",
-  "inventory.header_on_hand": "on hand",
+  "inventory.header_on_hand": "all",
   "inventory.header_low": "low",
   "inventory.header_out": "out",
   "inventory.stock_caption": "On hand · {count}",

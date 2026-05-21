@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "Scorte rettificate",
   "adjust_stock_modal.success_expense_logged": "Spesa registrata",
   "adjust_stock_modal.done": "Fatto",
-  "inventory.header_on_hand": "in magazzino",
+  "inventory.header_on_hand": "tutti",
   "inventory.header_low": "basso",
   "inventory.header_out": "esaurito",
   "inventory.stock_caption": "In magazzino · {count}",

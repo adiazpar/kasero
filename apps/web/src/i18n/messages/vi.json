@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "Đã điều chỉnh tồn kho",
   "adjust_stock_modal.success_expense_logged": "Đã ghi chi phí",
   "adjust_stock_modal.done": "Xong",
-  "inventory.header_on_hand": "tồn kho",
+  "inventory.header_on_hand": "tất cả",
   "inventory.header_low": "sắp hết",
   "inventory.header_out": "hết",
   "inventory.stock_caption": "Tồn kho · {count}",

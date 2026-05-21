@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "库存已调整",
   "adjust_stock_modal.success_expense_logged": "支出已记录",
   "adjust_stock_modal.done": "完成",
-  "inventory.header_on_hand": "在库",
+  "inventory.header_on_hand": "全部",
   "inventory.header_low": "低",
   "inventory.header_out": "缺货",
   "inventory.stock_caption": "在库 · {count}",

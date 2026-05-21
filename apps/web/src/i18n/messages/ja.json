@@ -1434,7 +1434,7 @@
   "adjust_stock_modal.success_title": "在庫を調整しました",
   "adjust_stock_modal.success_expense_logged": "支出を記録",
   "adjust_stock_modal.done": "完了",
-  "inventory.header_on_hand": "在庫あり",
+  "inventory.header_on_hand": "すべて",
   "inventory.header_low": "残少",
   "inventory.header_out": "在庫切れ",
   "inventory.stock_caption": "在庫 · {count}",

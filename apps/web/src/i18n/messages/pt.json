@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "Estoque ajustado",
   "adjust_stock_modal.success_expense_logged": "Despesa registrada",
   "adjust_stock_modal.done": "Concluído",
-  "inventory.header_on_hand": "em estoque",
+  "inventory.header_on_hand": "todos",
   "inventory.header_low": "baixo",
   "inventory.header_out": "esgotado",
   "inventory.stock_caption": "Em estoque · {count}",

@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "재고 조정 완료",
   "adjust_stock_modal.success_expense_logged": "지출 기록됨",
   "adjust_stock_modal.done": "완료",
-  "inventory.header_on_hand": "보유",
+  "inventory.header_on_hand": "전체",
   "inventory.header_low": "부족",
   "inventory.header_out": "품절",
   "inventory.stock_caption": "보유 · {count}",

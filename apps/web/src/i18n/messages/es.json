@@ -1434,7 +1434,7 @@
   "adjust_stock_modal.success_title": "Stock ajustado",
   "adjust_stock_modal.success_expense_logged": "Gasto registrado",
   "adjust_stock_modal.done": "Listo",
-  "inventory.header_on_hand": "en stock",
+  "inventory.header_on_hand": "todos",
   "inventory.header_low": "bajo",
   "inventory.header_out": "agotado",
   "inventory.stock_caption": "En stock · {count}",

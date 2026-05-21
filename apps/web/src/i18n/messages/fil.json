@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "Naayos na ang stock",
   "adjust_stock_modal.success_expense_logged": "Nai-log na gastos",
   "adjust_stock_modal.done": "Tapos",
-  "inventory.header_on_hand": "sa stock",
+  "inventory.header_on_hand": "lahat",
   "inventory.header_low": "mababa",
   "inventory.header_out": "naubos",
   "inventory.stock_caption": "Sa stock · {count}",

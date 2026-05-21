@@ -1773,7 +1773,7 @@
   "adjust_stock_modal.success_title": "Bestand angepasst",
   "adjust_stock_modal.success_expense_logged": "Ausgabe erfasst",
   "adjust_stock_modal.done": "Fertig",
-  "inventory.header_on_hand": "auf Lager",
+  "inventory.header_on_hand": "alle",
   "inventory.header_low": "knapp",
   "inventory.header_out": "leer",
   "inventory.stock_caption": "Auf Lager · {count}",
