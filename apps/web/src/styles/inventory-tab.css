@@ -69,18 +69,24 @@
  * pressed treatment from `.tools-button[aria-pressed=true]` — a soft
  * brand-tinted backplate — applied to the segment's own background. */
 .inventory-tally-pill__segment {
+  /* Equal-width segments via flex:1 — they share the container width
+   * evenly regardless of the count label content (`3 on hand` vs
+   * `12 low`). Mirrors how `.products-segment` (1fr / 1fr grid) makes
+   * the top-level switcher's buttons equal. */
+  flex: 1 1 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
   background: transparent;
   /* Transparent border at rest so the active state can paint a visible
    * border without shifting layout — same chassis as
    * `.tools-button[aria-pressed]` and `.products-segment__button`. */
   border: 1px solid transparent;
-  /* 2:1 horizontal/vertical padding using design tokens. Mirrors the
-   * `.products-segment__button` rhythm (--space-2 vertical / --space-4
-   * horizontal). */
-  padding: var(--space-2) var(--space-4);
+  /* Vertical padding from tokens; horizontal padding is absorbed by the
+   * flex:1 stretch, so the visible 2:1 ratio comes from the segment's
+   * share of the container's inner width. */
+  padding: var(--space-2) var(--space-3);
   margin: 0;
   border-radius: var(--radius-full);
   cursor: pointer;
@@ -109,14 +115,6 @@
   letter-spacing: 0;
   color: var(--color-text-secondary);
   white-space: nowrap;
-}
-
-.inventory-tally-pill__sep {
-  font-family: var(--font-body);
-  color: var(--color-ink-4);
-  font-size: 14px;
-  flex-shrink: 0;
-  user-select: none;
 }
 
 /* Low / Out segments — tint the count + label by stock state so the

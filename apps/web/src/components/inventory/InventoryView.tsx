@@ -153,8 +153,7 @@ export function InventoryView({ onAdjustStock }: InventoryViewProps) {
           </button>
           {(lowCount > 0 || filter === 'low') && (
             <>
-              <span className="inventory-tally-pill__sep" aria-hidden="true">·</span>
-              <button
+<button
                 type="button"
                 role="tab"
                 aria-selected={filter === 'low'}
@@ -170,8 +169,7 @@ export function InventoryView({ onAdjustStock }: InventoryViewProps) {
           )}
           {(outCount > 0 || filter === 'out') && (
             <>
-              <span className="inventory-tally-pill__sep" aria-hidden="true">·</span>
-              <button
+<button
                 type="button"
                 role="tab"
                 aria-selected={filter === 'out'}
