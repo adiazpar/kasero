@@ -82,8 +82,8 @@ vi.mock('@/lib/business-auth', async () => {
 
 vi.mock('@/db', () => ({
   db: {
-    select: (...args: unknown[]) => selectImpl(...args),
-    insert: (...args: unknown[]) => insertImpl(...args),
+    select: () => selectImpl(),
+    insert: () => insertImpl(),
   },
   // The route imports `users` and `ownershipTransfers` as drizzle tables;
   // the mock builders ignore the table reference so any truthy value works.

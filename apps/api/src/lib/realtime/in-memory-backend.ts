@@ -73,6 +73,7 @@ export class InMemoryBackend {
   }
 
   createSubscriber(): InMemorySubscriber {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- the returned object literal has its own `this`; capturing the outer class instance is intentional.
     const self = this
     const local = new EventEmitter()
     const handler = (channel: string, message: string) => {
@@ -121,6 +122,7 @@ export class InMemoryBackend {
   }
 
   createPublisher(): InMemoryPublisher {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- the returned object literal has its own `this`; capturing the outer class instance is intentional.
     const self = this
     return {
       async publish(channel, message) {
