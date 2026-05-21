@@ -14,7 +14,7 @@ import { ManageTab } from '@/routes/tabs/ManageTab'
 import { ProductsTab } from '@/routes/tabs/ProductsTab'
 import { ProviderDetailPage } from '@/routes/tabs/ProviderDetailPage'
 import { ProvidersTab } from '@/routes/tabs/ProvidersTab'
-import { SalesTab } from '@/routes/tabs/SalesTab'
+import { LedgerTab } from '@/routes/tabs/LedgerTab'
 import { TeamTab } from '@/routes/tabs/TeamTab'
 import { shellBackTransition } from '@/lib/shell-back-transition'
 
@@ -42,7 +42,7 @@ export function BusinessTabsLayout() {
     <IonTabs>
       <IonRouterOutlet animation={shellBackTransition}>
         <Route exact path={`${BUSINESS_PATH}/home`} component={HomeTab} />
-        <Route exact path={`${BUSINESS_PATH}/sales`} component={SalesTab} />
+        <Route exact path={`${BUSINESS_PATH}/sales`} component={LedgerTab} />
         <Route exact path={`${BUSINESS_PATH}/products`} component={ProductsTab} />
         <Route exact path={`${BUSINESS_PATH}/manage`} component={ManageTab} />
         <Route exact path={`${BUSINESS_PATH}/providers/:id`} component={ProviderDetailPage} />
@@ -61,7 +61,7 @@ export function BusinessTabsLayout() {
         </IonTabButton>
         <IonTabButton tab="sales" href={`/${businessId}/sales`}>
           <ShoppingCart {...TAB_ICON_PROPS} />
-          <IonLabel>{intl.formatMessage({ id: 'navigation.sales' })}</IonLabel>
+          <IonLabel>{intl.formatMessage({ id: 'ledger.tab_label' })}</IonLabel>
         </IonTabButton>
         <IonTabButton tab="products" href={`/${businessId}/products`}>
           <Package {...TAB_ICON_PROPS} />
