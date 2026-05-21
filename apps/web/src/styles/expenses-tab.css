@@ -4,6 +4,16 @@
  * for category chips and dates, hairline-bordered card wrappers.
  */
 
+/* ===== Ledger segment wrapper ========================================== */
+
+/* The Sales | Expenses pill segment lives at the top of the Ledger tab
+ * above both sub-views. Each sub-view has its own internal padding, so
+ * the segment needs its own horizontal+top padding to keep it from going
+ * flush against the screen edge. Mirrors `.products-page`'s top spacing. */
+.ledger-segment-wrap {
+  padding: var(--space-5) var(--space-4) 0;
+}
+
 /* ===== View shell ===================================================== */
 
 .expenses-view {

@@ -33,6 +33,7 @@ export function LedgerView() {
 
   return (
     <>
+      <div className="ledger-segment-wrap">
       <div
         role="tablist"
         aria-label={t.formatMessage({ id: 'ledger.tab_switcher_aria' })}
@@ -56,6 +57,7 @@ export function LedgerView() {
         >
           {t.formatMessage({ id: 'ledger.sub_expenses' })}
         </button>
+      </div>
       </div>
       <TabContainer
         activeTab={activeTab}
