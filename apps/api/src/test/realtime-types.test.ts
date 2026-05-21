@@ -60,6 +60,12 @@ describe('realtime types', () => {
         case 'order.deleted':
         case 'sales_session.opened':
         case 'sales_session.closed':
+        case 'expense.created':
+        case 'expense.updated':
+        case 'expense.deleted':
+        case 'expense_category.created':
+        case 'expense_category.updated':
+        case 'expense_category.deleted':
           return 'biz'
         case 'profile.updated':
         case 'business.list.changed':
