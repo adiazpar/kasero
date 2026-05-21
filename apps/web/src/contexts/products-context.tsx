@@ -46,12 +46,10 @@ interface ProductsProviderProps {
   children: ReactNode
 }
 
-// Business-scoped products store. Multiple pages (products list, orders
-// flows that need the product picker, provider detail + providers list for
-// the new-order swipe action) share this single source of truth so
-// navigation between them doesn't trigger duplicate fetches. Lazy-loads on
-// first ensureLoaded() call and persists to sessionStorage so return
-// visits paint instantly.
+// Business-scoped products store. Shared across the app so navigation
+// between pages doesn't trigger duplicate fetches. Lazy-loads on first
+// ensureLoaded() call and persists to sessionStorage so return visits
+// paint instantly.
 //
 // Mount this with key={businessId} so state is re-initialized when the
 // user switches businesses.
@@ -66,7 +64,7 @@ export function ProductsProvider({ businessId, children }: ProductsProviderProps
   const [isLoaded, setIsLoaded] = useState(() => !!cache.current.get())
   const [error, setError] = useState('')
   const inFlight = useRef<Promise<void> | null>(null)
-  // Timestamp of the most recent successful fetch for this provider mount.
+  // Timestamp of the most recent successful fetch for this context mount.
   // Used by isFresh() to gate ensureLoaded(): within the freshness window,
   // calls no-op; outside, they fire a background revalidate. A failed
   // fetch leaves the previous timestamp in place — a transient error
@@ -128,7 +126,7 @@ export function ProductsProvider({ businessId, children }: ProductsProviderProps
   // freshness window still applies — quick alt-tabs won't refetch.
   useRevalidateOnFocus(ensureLoaded)
 
-  // Register this provider's refetch with the realtime layer so
+  // Register this context's refetch with the realtime layer so
   // product.* events published by other devices (or this one's own
   // publishing tab) trigger a refetch here. Mirrors the
   // `registerRefetch('business', ...)` wiring in business-context.tsx.
@@ -137,8 +135,7 @@ export function ProductsProvider({ businessId, children }: ProductsProviderProps
   }, [refetch])
 
   // Memoize so consumers don't re-render on every parent tick. Multiple
-  // pages (products list, new-order picker, provider detail, providers
-  // list) all subscribe; the blast radius of an unmemoized value is the
+  // pages subscribe; the blast radius of an unmemoized value is the
   // entire business-scoped page tree.
   const value = useMemo<ProductsContextValue>(
     () => ({ products, setProducts, isLoading, isLoaded, error, ensureLoaded, refetch }),
