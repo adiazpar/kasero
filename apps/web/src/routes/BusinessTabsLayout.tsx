@@ -12,8 +12,6 @@ import { useIntl } from 'react-intl'
 import { HomeTab } from '@/routes/tabs/HomeTab'
 import { ManageTab } from '@/routes/tabs/ManageTab'
 import { ProductsTab } from '@/routes/tabs/ProductsTab'
-import { ProviderDetailPage } from '@/routes/tabs/ProviderDetailPage'
-import { ProvidersTab } from '@/routes/tabs/ProvidersTab'
 import { LedgerTab } from '@/routes/tabs/LedgerTab'
 import { TeamTab } from '@/routes/tabs/TeamTab'
 import { shellBackTransition } from '@/lib/shell-back-transition'
@@ -45,8 +43,6 @@ export function BusinessTabsLayout() {
         <Route exact path={`${BUSINESS_PATH}/sales`} component={LedgerTab} />
         <Route exact path={`${BUSINESS_PATH}/products`} component={ProductsTab} />
         <Route exact path={`${BUSINESS_PATH}/manage`} component={ManageTab} />
-        <Route exact path={`${BUSINESS_PATH}/providers/:id`} component={ProviderDetailPage} />
-        <Route exact path={`${BUSINESS_PATH}/providers`} component={ProvidersTab} />
         <Route exact path={`${BUSINESS_PATH}/team`} component={TeamTab} />
         <Route
           exact

@@ -11,8 +11,6 @@ export { useProductSettings } from '@/contexts/product-settings-context'
 
 export { useTeamManagement } from './useTeamManagement'
 
-export { useProviderManagement } from './useProviderManagement'
-
 export { useApiMessage } from './useApiMessage'
 
 export { useTheme } from './useTheme'
