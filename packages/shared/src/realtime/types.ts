@@ -80,18 +80,6 @@ export type BusinessRealtimeEvent =
   | ({ type: 'expense_category.created'; categoryId: string } & WithOrigin)
   | ({ type: 'expense_category.updated'; categoryId: string } & WithOrigin)
   | ({ type: 'expense_category.deleted'; categoryId: string } & WithOrigin)
-  // Provider (supplier) events. The mutable columns on providers are `name`,
-  // `phone`, `email`, and `active` (all touched by PATCH /providers/[id]).
-  // Notes mutations (POST/PATCH/DELETE on provider_notes rows) are collapsed
-  // under provider.updated with fields: ['notes'] — same pattern as how
-  // order_items rewrites are published as order.updated fields: ['items'].
-  | ({ type: 'provider.created'; providerId: string } & WithOrigin)
-  | ({
-      type: 'provider.updated'
-      providerId: string
-      fields: Array<'name' | 'phone' | 'email' | 'active' | 'notes'>
-    } & WithOrigin)
-  | ({ type: 'provider.deleted'; providerId: string } & WithOrigin)
   // Sales (customer-facing transactions). POST /sales is the only mutation
   // — there is no PATCH or DELETE route, so no `sale.updated` /
   // `sale.deleted` variants are declared. The handler for `sale.created`
@@ -99,21 +87,6 @@ export type BusinessRealtimeEvent =
   // for every line item; that cascade is intentionally handled by the
   // client refetch instead of an extra `product.updated` publish.
   | ({ type: 'sale.created'; saleId: string } & WithOrigin)
-  // Orders (purchase orders / receiving from suppliers). `order.received`
-  // is a separate event from `order.updated` because the receive route
-  // also bumps `products.stock`, so the client handler refetches both
-  // `orders` and `products`; PATCH only touches order columns, so
-  // `order.updated` refetches `orders` only. The `fields` literal mirrors
-  // every column the PATCH route can mutate — `items` covers the
-  // line-items rewrite (deletes + re-inserts under order_items).
-  | ({ type: 'order.created'; orderId: string } & WithOrigin)
-  | ({
-      type: 'order.updated'
-      orderId: string
-      fields: Array<'total' | 'estimatedArrival' | 'providerId' | 'items'>
-    } & WithOrigin)
-  | ({ type: 'order.received'; orderId: string } & WithOrigin)
-  | ({ type: 'order.deleted'; orderId: string } & WithOrigin)
   // Inventory adjustments (manual stock corrections tracked in inventory_adjustments).
   | ({ type: 'inventory.adjusted'; adjustmentId: string; productId: string; relatedExpenseId: string | null } & WithOrigin)
   // Sales sessions (cash-drawer reconciliation framing a stretch of sales).
