@@ -105,4 +105,29 @@ describe('ModalShell', () => {
     const ionModal = container.querySelector('ion-modal')
     expect(ionModal?.getAttribute('initial-breakpoint')).toBe('0.5')
   })
+
+  it('renders no header when chromeless, even if a title is provided', () => {
+    const { container } = render(
+      <ModalShell isOpen={true} onClose={() => {}} title="Saved" chromeless>
+        <div>body content</div>
+      </ModalShell>,
+      { wrapper },
+    )
+    expect(container.querySelector('ion-header')).toBeNull()
+    expect(screen.queryByText('Saved')).toBeNull()
+    expect(screen.queryByRole('button', { name: /close/i })).toBeNull()
+    expect(screen.getByText('body content')).toBeDefined()
+  })
+
+  it('still renders the header + close when a title is provided and not chromeless', () => {
+    const { container } = render(
+      <ModalShell isOpen={true} onClose={() => {}} title="Edit name">
+        <div>body</div>
+      </ModalShell>,
+      { wrapper },
+    )
+    expect(container.querySelector('ion-header')).not.toBeNull()
+    expect(screen.getByText('Edit name')).toBeDefined()
+    expect(screen.getByRole('button', { name: /close/i })).toBeDefined()
+  })
 })

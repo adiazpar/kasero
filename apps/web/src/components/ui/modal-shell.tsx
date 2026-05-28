@@ -66,6 +66,15 @@ interface ModalShellProps {
    */
   noScroll?: boolean
   /**
+   * Suppress the auto-rendered header bar (title + X) entirely. Use for
+   * terminal success/celebration steps whose primary "Done" button is the
+   * only dismissal affordance. This is the explicit, self-documenting form
+   * of "no header" — preferred over omitting `title`, which produces the
+   * same result implicitly and has silently created close-traps. Has no
+   * effect when `rawContent` is set (those modals render their own header).
+   */
+  chromeless?: boolean
+  /**
    * Keep modal contents mounted across open/close cycles. By default
    * Ionic unmounts modal children when the modal is dismissed (frees
    * memory), and remounts them on the next present. Set this to true to
@@ -112,6 +121,7 @@ export function ModalShell({
   flushContent = false,
   noScroll = false,
   keepContentsMounted = false,
+  chromeless = false,
 }: ModalShellProps) {
   // Sheet-mode is a property of `breakpoints` AND `initialBreakpoint` BOTH being
   // defined — see @ionic/core modal.js: `isSheetModal = breakpoints !== undefined
@@ -147,6 +157,18 @@ export function ModalShell({
   // implies draggability and is misleading if the user can't drag away.
   const showHandle = !rawContent && !noSwipeDismiss
 
+  const showHeader = !chromeless && title !== undefined
+
+  // Dev guard: a non-rawContent modal with neither a title nor an explicit
+  // `chromeless` renders no header and no X close button — almost always an
+  // unintended close-trap. Surface it loudly in development.
+  if (import.meta.env.DEV && !rawContent && !chromeless && title === undefined) {
+    console.warn(
+      '[ModalShell] No header will render (no `title` and not `chromeless`). ' +
+        'Pass a `title` for a content step, or set `chromeless` for a terminal/success step.',
+    )
+  }
+
   return (
     <IonModal
       isOpen={isOpen}
@@ -156,7 +178,7 @@ export function ModalShell({
       handle={showHandle}
       keepContentsMounted={keepContentsMounted}
     >
-      {title !== undefined && (
+      {showHeader && (
         <IonHeader>
           <IonToolbar>
             {/* Toolbar icon buttons use fill="clear" so they inherit

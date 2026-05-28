@@ -113,6 +113,16 @@ export default defineConfig(({ mode }) => {
         'lottie-web': 'lottie-web/build/player/lottie_light',
       },
     },
+    optimizeDeps: {
+      // libphonenumber-js is only reachable through PhoneInput, which lives
+      // behind the lazy-loaded EditProfileModal (and the register wizard).
+      // Vite's startup scan doesn't crawl into those dynamic imports, so the
+      // dep isn't pre-bundled until the modal first opens — at which point
+      // Vite triggers an on-demand re-optimization and the in-flight request
+      // for the not-yet-bundled module fails with a 504. Force-including it
+      // here makes Vite pre-bundle it at startup so the modal loads cleanly.
+      include: ['libphonenumber-js'],
+    },
     build: {
       // Default minifier (lightningcss) doesn't recognize Ionic's shadow-DOM
       // `:host-context()` pseudo-class and emits 10+ noisy "is not recognized"
