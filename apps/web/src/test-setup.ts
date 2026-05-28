@@ -62,24 +62,43 @@ vi.mock('@ionic/react', async (importOriginal) => {
     'aria-label': ariaLabel,
     disabled,
     type,
+    'data-testid': dataTestid,
   }: {
     children?: React.ReactNode
     onClick?: () => void
     'aria-label'?: string
     disabled?: boolean
     type?: 'button' | 'submit' | 'reset'
+    'data-testid'?: string
     [key: string]: unknown
   }) {
     return React.createElement(
       'button',
-      { type: type ?? 'button', onClick, 'aria-label': ariaLabel, disabled },
+      { type: type ?? 'button', onClick, 'aria-label': ariaLabel, disabled, 'data-testid': dataTestid },
       children,
     )
+  }
+
+  // IonFooter uses Shadow DOM in jsdom, which causes it to swallow its
+  // light-DOM children — they never appear in the accessibility tree or the
+  // Testing Library query results. Replace it with a plain <div> that passes
+  // children through so footer buttons are reachable in tests.
+  function IonFooterMock({ children }: { children?: React.ReactNode; [key: string]: unknown }) {
+    return React.createElement('ion-footer', {}, children)
+  }
+
+  // IonToolbar similarly renders as an opaque custom element in jsdom.
+  // Replace with a pass-through so its contents (footer buttons, toolbar
+  // icons) remain in the DOM and are reachable by queries.
+  function IonToolbarMock({ children }: { children?: React.ReactNode; [key: string]: unknown }) {
+    return React.createElement('ion-toolbar', {}, children)
   }
 
   return {
     ...actual,
     IonModal: IonModalMock,
     IonButton: IonButtonMock,
+    IonFooter: IonFooterMock,
+    IonToolbar: IonToolbarMock,
   }
 })
