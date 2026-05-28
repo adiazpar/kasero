@@ -6,25 +6,4 @@
   margin-bottom: 0;
 }
 
-.oauth-button {
-  /* Outline variant with a paper-warm fill so the brand button retains
-     enough contrast against the page background. */
-  --border-color: var(--color-border);
-  --border-width: 1px;
-  --background: var(--color-surface);
-  --background-hover: var(--color-bg-muted);
-  --color: var(--color-text-primary);
-  --border-radius: var(--radius-md);
-  --padding-top: var(--space-3);
-  --padding-bottom: var(--space-3);
-  font-family: var(--font-body);
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.oauth-button ion-icon {
-  font-size: 20px;
-  margin-right: var(--space-2);
-}
 

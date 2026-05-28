@@ -35,6 +35,53 @@
   justify-content: center;
 }
 
+/* ===== Entry screen (/) — centered header above a bottom-pinned actions
+   stack. The hero grows to fill the region above the buttons and centers
+   its title/subtitle on both axes; the actions stack sits at the bottom of
+   .auth-main, directly above the version footer. ===== */
+.auth-hero--entry {
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+/* The subtitle has a max-width; center its block within the centered hero. */
+.auth-hero--entry .auth-hero__subtitle {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.entry-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.oauth-button {
+  /* Outline variant with a paper-warm fill so the brand button retains
+     enough contrast against the page background. */
+  --border-color: var(--color-border);
+  --border-width: 1px;
+  --background: var(--color-surface);
+  --background-hover: var(--color-bg-muted);
+  --color: var(--color-text-primary);
+  --border-radius: var(--radius-md);
+  --padding-top: var(--space-3);
+  --padding-bottom: var(--space-3);
+  font-family: var(--font-body);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.oauth-button ion-icon {
+  font-size: 20px;
+  margin-right: var(--space-2);
+}
+
 /* ===== Wordmark — inside IonToolbar's IonTitle ===== */
 /* ion-title centers its content; .auth-wordmark sits inline inside it.
    Sizing is tuned to the toolbar's ~44px height (Ionic default). */
