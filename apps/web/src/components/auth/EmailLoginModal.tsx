@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useIntl } from 'react-intl'
 import { IonButton, IonSpinner } from '@ionic/react'
 import { ModalShell } from '@/components/ui/modal-shell'
@@ -55,6 +55,20 @@ export function EmailLoginModal({ isOpen, onClose }: Props) {
     [error],
   )
 
+  const titleNode = useMemo(() => {
+    const full = intl.formatMessage({ id: 'auth.email_modal_heading' })
+    const emphasis = intl.formatMessage({ id: 'auth.email_modal_heading_emphasis' })
+    const idx = full.indexOf(emphasis)
+    if (!emphasis || idx === -1) return full
+    return (
+      <>
+        {full.slice(0, idx)}
+        <em>{emphasis}</em>
+        {full.slice(idx + emphasis.length)}
+      </>
+    )
+  }, [intl])
+
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return
     setError(null)
@@ -96,6 +110,10 @@ export function EmailLoginModal({ isOpen, onClose }: Props) {
       footer={footer}
     >
       <header className="modal-hero">
+        <div className="modal-hero__eyebrow">
+          {intl.formatMessage({ id: 'auth.email_modal_eyebrow' })}
+        </div>
+        <h1 className="modal-hero__title">{titleNode}</h1>
         <p className="modal-hero__subtitle">
           {intl.formatMessage({ id: 'auth.email_modal_subtitle' })}
         </p>
