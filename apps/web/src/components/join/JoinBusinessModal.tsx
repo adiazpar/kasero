@@ -67,10 +67,7 @@ export function JoinBusinessModal({ joinBusiness }: JoinBusinessModalProps) {
 
   const onBack = step === 'preview' ? () => setStep('code') : undefined
 
-  // Header carries no title text — the editorial hero inside each step
-  // IS the title. We pass an empty string so ModalShell still renders
-  // its toolbar (X + optional back), just without competing chrome.
-  const title = ''
+  const title = t.formatMessage({ id: 'joinBusiness.modal_toolbar_title' })
 
   // Modal dismissal is the toolbar X across the app, so footer carries
   // only real actions. Transfers keep Decline (an actual API action,

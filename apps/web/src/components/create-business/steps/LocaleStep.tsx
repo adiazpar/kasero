@@ -3,6 +3,7 @@ import { useIntl } from 'react-intl'
 import {
   IonHeader,
   IonToolbar,
+  IonTitle,
   IonContent,
   IonFooter,
   IonButtons,
@@ -54,6 +55,7 @@ export function LocaleStep() {
               <IonIcon icon={chevronBack} />
             </IonButton>
           </IonButtons>
+          <IonTitle>{t.formatMessage({ id: 'createBusiness.toolbar_title' })}</IonTitle>
           <IonButtons slot="end">
             <IonButton fill="clear" onClick={handleCancel} aria-label={t.formatMessage({ id: 'common.close' })}>
               <IonIcon icon={close} />

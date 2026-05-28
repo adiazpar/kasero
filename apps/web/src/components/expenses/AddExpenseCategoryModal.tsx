@@ -5,6 +5,7 @@ import { useIntl } from 'react-intl'
 import {
   IonHeader,
   IonToolbar,
+  IonTitle,
   IonContent,
   IonFooter,
   IonButtons,
@@ -71,6 +72,7 @@ export function AddExpenseCategoryModal({
     <ModalShell rawContent isOpen={isOpen} onClose={onClose} noSwipeDismiss>
       <IonHeader className="pm-header">
         <IonToolbar>
+          <IonTitle>{t.formatMessage({ id: 'expenses.add_category_modal_title' })}</IonTitle>
           <IonButtons slot="end">
             <IonButton
               fill="clear"
