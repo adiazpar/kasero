@@ -291,6 +291,53 @@ Steps are numbered by their order as direct children of `<Modal>`. If you condit
 
 ---
 
+### 7. Header normalization: content steps are titled, terminal steps are chromeless
+
+Every modal step is exactly one of two shapes — there is no in-between:
+
+1. **Headered content step** — has a short, human title in the header bar, plus the X
+   close (and a back chevron when there's a prior step). For standard `ModalShell`
+   modals, pass `title`. For `rawContent` multi-step modals, the step's own
+   `IonHeader` must contain an `IonTitle`.
+2. **Chromeless terminal step** — success / celebration. **No header** (no title, no X).
+   The big animation + a single "Done"/primary button is the whole screen, and that
+   button (or a timer auto-close) is the only dismissal affordance. Set `chromeless`
+   on `ModalShell` (standard modals) or render no `IonHeader` for the step (`rawContent`).
+
+**The X close button is tied to the header.** `ModalShell` renders its header — including
+the X — only when `showHeader` is true (`!chromeless && title !== undefined`). So:
+
+- A content step **must** have a `title`. Omitting it removes the X and, with
+  `noSwipeDismiss`, creates a close-trap.
+- A terminal step **must** use `chromeless` (not just an omitted/empty `title`) so the
+  intent is explicit, and it **must** carry its own button or timer to close.
+
+```tsx
+// Multi-step modal: form step is headered, success step is chromeless.
+<ModalShell
+  isOpen={isOpen}
+  onClose={onClose}
+  title={intl.formatMessage({ id: 'thing.edit_title' })}  // only the content step's title
+  chromeless={step === 'save-success'}                     // success step → no header
+  footer={footer}
+  noSwipeDismiss
+>
+```
+
+Prefer `chromeless` over the legacy implicit `title={undefined}` / `title=""`. A DEV-only
+guard in `ModalShell` warns when a non-`rawContent` modal would render no header with
+neither a `title` nor `chromeless` — fix those by adding the right one.
+
+**Title vs in-body hero.** The header title is a short label. A modal may *also* render a
+large editorial headline in the body (`.modal-hero__title`); the two coexisting is the
+house style (e.g. `EditNameModal`, `ChangeEmailModal`). The in-body celebratory heading on
+a chromeless success step (under the Lottie) stays — only the header title goes away.
+
+**Documented exceptions** (keep their bespoke chrome; not governed by this rule): the
+live-camera `LiveBarcodeScanner` overlay, and pure list / action sheets such as `UserMenu`.
+
+---
+
 ## TabContainer
 
 For modals that need tabs within a single step (e.g., Details / Barcode tabs), use `TabContainer` from `@/components/ui`. **Read `.claude/docs/tab-system.md` for the full API, behavior guarantees, and architectural rules.** This section covers only what's modal-specific.
