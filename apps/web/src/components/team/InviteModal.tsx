@@ -235,8 +235,13 @@ export function InviteModal({
     )
   }
 
+  // Terminal deleted-success step is chromeless — no header bar at all. The
+  // user closes via the footer pill.
+  const isSuccessStep = step === 'deleted-success'
+
   return (
     <ModalShell rawContent isOpen={isOpen} onClose={onClose}>
+      {!isSuccessStep && (
       <IonHeader className="pm-header">
         <IonToolbar>
           {onBack && (
@@ -250,19 +255,18 @@ export function InviteModal({
               </IonButton>
             </IonButtons>
           )}
-          {step !== 'deleted-success' && (
-            <IonButtons slot="end">
-              <IonButton
-                fill="clear"
-                onClick={onClose}
-                aria-label={t.formatMessage({ id: 'common.close' })}
-              >
-                <IonIcon icon={close} />
-              </IonButton>
-            </IonButtons>
-          )}
+          <IonButtons slot="end">
+            <IonButton
+              fill="clear"
+              onClick={onClose}
+              aria-label={t.formatMessage({ id: 'common.close' })}
+            >
+              <IonIcon icon={close} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
+      )}
 
       <IonContent className="pm-content">
         {step === 'role' && (

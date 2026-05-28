@@ -468,22 +468,10 @@ export function AdjustStockModal({ product, onClose }: AdjustStockModalProps) {
     </>
   )
 
+  // Terminal success step is chromeless — no header bar at all. The user
+  // closes via the Done footer pill.
   const renderSuccessStep = () => (
     <>
-      <IonHeader className="pm-header">
-        <IonToolbar>
-          <IonButtons slot="end">
-            <IonButton
-              fill="clear"
-              onClick={onClose}
-              aria-label={t.formatMessage({ id: 'common.close' })}
-            >
-              <IonIcon icon={close} />
-            </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
-
       <IonContent className="pm-content">
         <div className="adjust-modal adjust-modal--success">
           <ConfirmationAnimation

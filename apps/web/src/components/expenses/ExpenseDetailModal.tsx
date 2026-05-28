@@ -161,6 +161,7 @@ export function ExpenseDetailModal({
   return (
     <>
       <ModalShell rawContent isOpen={isOpen} onClose={onClose}>
+        {step !== 'delete-success' && (
         <IonHeader className="pm-header">
           <IonToolbar>
             {step === 'delete-confirm' && (
@@ -185,6 +186,7 @@ export function ExpenseDetailModal({
             </IonButtons>
           </IonToolbar>
         </IonHeader>
+        )}
 
         <IonContent className="pm-content">
           {step === 'detail' && (

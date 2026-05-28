@@ -121,9 +121,12 @@ export function IncomingTransferModal({ isOpen, onClose }: Props) {
         })
     : ''
 
-  const title = step === 'review'
-    ? intl.formatMessage({ id: 'account.incoming_transfer_heading' })
-    : intl.formatMessage({ id: 'account.incoming_transfer_success_title' })
+  // Review step keeps its headered title. The terminal accept-success step
+  // is chromeless — no header bar, closed via the footer CTA.
+  const isSuccessStep = step === 'accept-success'
+  const title = isSuccessStep
+    ? undefined
+    : intl.formatMessage({ id: 'account.incoming_transfer_heading' })
 
   const footer = step === 'review' ? (
     <>
@@ -165,8 +168,9 @@ export function IncomingTransferModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={step === 'accept-success' ? finishAndReload : onClose}
       title={title}
+      chromeless={isSuccessStep}
       footer={footer}
-      noSwipeDismiss={step === 'accept-success'}
+      noSwipeDismiss={isSuccessStep}
     >
       {step === 'review' && (
         <>

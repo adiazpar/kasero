@@ -244,8 +244,13 @@ export function MemberModal({
     ? '/animations/trash.json'
     : '/animations/success.json'
 
+  // Terminal success steps are chromeless — no header bar at all. The user
+  // closes via the Done footer pill.
+  const isSuccessStep = step === 'role-success' || step === 'remove-success'
+
   return (
     <ModalShell rawContent isOpen={isOpen} onClose={onClose}>
+      {!isSuccessStep && (
       <IonHeader className="pm-header">
         <IonToolbar>
           {onBack && (
@@ -273,6 +278,7 @@ export function MemberModal({
           </IonButtons>
         </IonToolbar>
       </IonHeader>
+      )}
 
       <IonContent className="pm-content">
         {step === 'details' && (
