@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--space-2);
   width: 100%;
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
 }
 
 .oauth-button {
@@ -28,34 +28,3 @@
   margin-right: var(--space-2);
 }
 
-/* Apple HIG: SIWA buttons must be solid black-on-white or white-on-black
-   with the Apple logo. Hardcoded #000/#fff is intentional here — these
-   are Apple's brand requirements, not theme colors. Reviewed against
-   developer.apple.com/design/human-interface-guidelines/sign-in-with-apple. */
-.oauth-button--apple {
-  --background: #000;
-  --background-hover: #1a1a1a;
-  --background-activated: #1a1a1a;
-  --color: #fff;
-  --border-color: #000;
-}
-
-/* Divider used between OAuth buttons and the email-OTP form. */
-.oauth-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: var(--space-3) 0;
-  color: var(--color-text-tertiary);
-  font-size: var(--text-sm);
-  text-transform: lowercase;
-  letter-spacing: 0.02em;
-}
-
-.oauth-divider::before,
-.oauth-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-border);
-}

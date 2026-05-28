@@ -75,10 +75,10 @@ export function OAuthButtons({ callbackURL = '/', onInitiate, disabled }: OAuthB
 
       <IonButton
         expand="block"
-        fill="solid"
+        fill="outline"
         onClick={() => startSocial('apple')}
         disabled={disabled || pending !== null}
-        className="oauth-button oauth-button--apple"
+        className="oauth-button"
       >
         {pending === 'apple' ? (
           <IonSpinner name="crescent" />

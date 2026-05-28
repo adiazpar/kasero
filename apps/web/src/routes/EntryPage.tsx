@@ -153,10 +153,6 @@ export function EntryPage() {
                 )}
               </IonButton>
 
-              <div className="oauth-divider">
-                {intl.formatMessage({ id: 'oauth_or_divider' })}
-              </div>
-
               <OAuthButtons callbackURL="/" disabled={isLoading} />
             </div>
           </form>
