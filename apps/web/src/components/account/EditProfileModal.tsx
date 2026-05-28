@@ -195,7 +195,8 @@ export function EditProfileModal({ isOpen, onClose, onExitComplete }: EditProfil
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'form' ? intl.formatMessage({ id: 'account.profile_modal_title' }) : ''}
+      title={step === 'form' ? intl.formatMessage({ id: 'account.profile_modal_title' }) : undefined}
+      chromeless={step === 'success'}
       footer={step === 'form' ? saveButton : doneButton}
       noSwipeDismiss
     >

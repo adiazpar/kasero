@@ -307,9 +307,10 @@ export function ChangeEmailModal({
       onClose={onClose}
       title={
         stage === 'success'
-          ? ''
+          ? undefined
           : intl.formatMessage({ id: 'account.email_change_modal_title' })
       }
+      chromeless={stage === 'success'}
       footer={footer}
       noSwipeDismiss
     >

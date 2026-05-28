@@ -87,7 +87,10 @@ export function OpenSessionModal({
     }
   }
 
-  const title = intl.formatMessage({ id: 'sales.session.open_modal.title' })
+  const isSuccess = step === 1 && opened
+  const title = isSuccess
+    ? undefined
+    : intl.formatMessage({ id: 'sales.session.open_modal.title' })
 
   // Step 0 footer — primary action
   const step0Footer = (
@@ -122,6 +125,7 @@ export function OpenSessionModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={isSuccess}
       onBack={step === 1 && error ? () => setStep(0) : undefined}
       footer={footer}
       noSwipeDismiss

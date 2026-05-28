@@ -101,7 +101,10 @@ export function CloseSessionConfirmModal({
     }
   }
 
-  const title = intl.formatMessage({ id: 'sales.session.close_modal.title' })
+  const isSuccess = step === 2 && closed
+  const title = isSuccess
+    ? undefined
+    : intl.formatMessage({ id: 'sales.session.close_modal.title' })
 
   // ----- Footers (kept identical to behavior contract) -----
   const step0Footer = (
@@ -165,6 +168,7 @@ export function CloseSessionConfirmModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={isSuccess}
       onBack={step === 1 ? () => setStep(0) : undefined}
       footer={footer}
       noSwipeDismiss

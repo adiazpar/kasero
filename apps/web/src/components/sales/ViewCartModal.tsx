@@ -93,10 +93,10 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
   const cartTitle = t.formatMessage({ id: 'sales.cart.modal_title' })
   // Step 1 title
   const paymentTitle = t.formatMessage({ id: 'sales.cart.modal_payment_step_title' })
-  // Step 2 title
-  const successTitle = t.formatMessage({ id: 'sales.cart.modal_success_title' })
+  // Step 2 is chromeless — no toolbar title
+  const isSuccess = step === 2
 
-  const title = step === 0 ? cartTitle : step === 1 ? paymentTitle : successTitle
+  const title = step === 0 ? cartTitle : step === 1 ? paymentTitle : undefined
 
   // Step 0 footer: secondary IonButton — the visual mood is reserved for
   // step 1's terracotta Charge pill. Default chrome on the confirm button
@@ -175,6 +175,7 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
       isOpen={isOpen}
       onClose={handleClose}
       title={title}
+      chromeless={isSuccess}
       onBack={step === 1 ? handleBack : undefined}
       footer={footer}
       noSwipeDismiss

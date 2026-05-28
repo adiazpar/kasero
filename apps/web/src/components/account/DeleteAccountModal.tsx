@@ -341,9 +341,10 @@ export function DeleteAccountModal({
       onClose={onClose}
       title={
         stage === 'success'
-          ? ''
+          ? undefined
           : intl.formatMessage({ id: 'account.delete_modal_title' })
       }
+      chromeless={stage === 'success'}
       footer={footer}
       noSwipeDismiss
     >
