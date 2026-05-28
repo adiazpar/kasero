@@ -112,9 +112,7 @@ export function CancelTransferModal({ isOpen, onClose }: Props) {
     )
   }, [intl])
 
-  const title = step === 'form'
-    ? intl.formatMessage({ id: 'manage.transfer_pending_heading' })
-    : intl.formatMessage({ id: 'manage.cancel_transfer_title_success' })
+  const title = intl.formatMessage({ id: 'manage.transfer_pending_heading' })
 
   const footer = step === 'form' ? (
     <IonButton
@@ -138,6 +136,7 @@ export function CancelTransferModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={step === 'withdraw-success'}
       footer={footer}
       noSwipeDismiss
     >

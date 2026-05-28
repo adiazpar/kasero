@@ -113,7 +113,7 @@ export function TransferOwnershipModal({ isOpen, onClose }: Props) {
   const titlesByStep: Record<Step, string> = {
     form: intl.formatMessage({ id: 'manage.transfer_ownership' }),
     confirm: intl.formatMessage({ id: 'manage.transfer_ownership' }),
-    success: intl.formatMessage({ id: 'manage.transfer_sent_title' }),
+    success: '',
   }
 
   const onBack = step === 'confirm' ? () => setStep('form') : undefined
@@ -138,6 +138,7 @@ export function TransferOwnershipModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       title={titlesByStep[step]}
+      chromeless={step === 'success'}
       onBack={onBack}
       footer={footer}
       noSwipeDismiss

@@ -142,9 +142,7 @@ export function EditLogoModal({ isOpen, onClose }: Props) {
     }
   }
 
-  const title = step === 'form'
-    ? intl.formatMessage({ id: 'manage.edit_logo_title' })
-    : intl.formatMessage({ id: 'manage.edit_logo_title_success' })
+  const title = intl.formatMessage({ id: 'manage.edit_logo_title' })
 
   const footer = step === 'form' ? (
     <IonButton
@@ -174,6 +172,7 @@ export function EditLogoModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={step === 'save-success'}
       footer={footer}
       noSwipeDismiss
     >

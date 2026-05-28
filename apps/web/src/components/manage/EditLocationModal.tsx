@@ -74,9 +74,7 @@ export function EditLocationModal({ isOpen, onClose }: Props) {
   const nextLocale = getLocaleConfig(locale)
   const isChanged = locale !== (business?.locale ?? 'en-US')
 
-  const title = step === 'form'
-    ? intl.formatMessage({ id: 'manage.edit_location_title' })
-    : intl.formatMessage({ id: 'manage.edit_location_title_success' })
+  const title = intl.formatMessage({ id: 'manage.edit_location_title' })
 
   const footer = step === 'form' ? (
     <IonButton
@@ -102,6 +100,7 @@ export function EditLocationModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={step === 'save-success'}
       footer={footer}
       noSwipeDismiss
     >

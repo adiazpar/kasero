@@ -120,6 +120,7 @@ export function DeleteBusinessModal({ isOpen, onClose }: Props) {
         isOpen={isOpen}
         onClose={onClose}
         title=""
+        chromeless
         footer={footer}
         noSwipeDismiss
       >

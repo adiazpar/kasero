@@ -83,9 +83,7 @@ export function EditNameModal({ isOpen, onClose }: Props) {
     ? intl.formatMessage({ id: 'manage.edit_name_echo_tag' })
     : intl.formatMessage({ id: 'manage.edit_name_echo_tag_unchanged' })
 
-  const title = step === 'form'
-    ? intl.formatMessage({ id: 'manage.edit_name_title' })
-    : intl.formatMessage({ id: 'manage.edit_name_title_success' })
+  const title = intl.formatMessage({ id: 'manage.edit_name_title' })
 
   const footer = step === 'form' ? (
     <IonButton
@@ -111,6 +109,7 @@ export function EditNameModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      chromeless={step === 'save-success'}
       footer={footer}
       noSwipeDismiss
     >
