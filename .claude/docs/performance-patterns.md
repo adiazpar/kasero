@@ -300,6 +300,28 @@ export async function printBarcodeLabel(opts: PrintOpts): Promise<void> {
 
 Callers are already `onClick` handlers or fire-and-forget, so the async signature is a drop-in.
 
+### Dev-server gotcha: deps behind a lazy boundary need `optimizeDeps.include`
+
+The two patterns above have a Vite **dev-only** side effect. Vite pre-bundles dependencies by scanning the module graph at startup, but it does **not** crawl into `React.lazy()` / `import()` boundaries. So a third-party package that is *only* reachable through a lazy-loaded modal or a dynamic `import()` is never in the startup optimize set. The first time the user opens that modal, Vite discovers the dep on-demand, triggers a re-optimization, and the in-flight request for the not-yet-bundled module fails with a **504 Gateway Timeout** — which surfaces in React as `Failed to fetch dynamically imported module: .../SomeModal.tsx`.
+
+Fix: force-include any such package in `apps/web/vite.config.ts` so it is pre-bundled at boot:
+
+```typescript
+optimizeDeps: {
+  // libphonenumber-js is only reachable through PhoneInput, which lives
+  // behind the lazy-loaded EditProfileModal (and the register wizard).
+  include: ['libphonenumber-js'],
+},
+```
+
+Rule of thumb: **if you add a new npm dependency whose only importers sit behind a `lazy()` modal or a dynamic `import()`, add it to `optimizeDeps.include` in the same PR.**
+
+When you hit this on a machine where the dep already existed, the cause is usually a stale cache or a leftover dev server, not the config. Recovery:
+
+1. Kill any zombie dev servers — `ps aux | grep vite` often shows old `npm run dev` trees from prior sessions still holding a stale optimize-deps registry. Kill all of them.
+2. Delete the optimize-deps cache: `rm -rf apps/web/node_modules/.vite/deps` (the active cache lives under the Vite project root, `apps/web/`, not the repo-root `node_modules/.vite`).
+3. Restart `npm run dev`. Verify the dep is pre-bundled: it should appear in `apps/web/node_modules/.vite/deps/_metadata.json` and a request to `/node_modules/.vite/deps/<dep>.js` should return 200, not 504.
+
 ### Per-route bundle minimization
 
 Each `IonPage` route (Hub, Account, Join, BusinessTabsLayout, Login, Register) can be code-split via React.lazy. Tab pages inside `BusinessTabsLayout` lazy-load on first navigation; once a tab is visited, IonRouterOutlet keeps it mounted (Section 9 below) so re-entry has no further cost.
