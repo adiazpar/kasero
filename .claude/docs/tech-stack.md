@@ -66,17 +66,17 @@ The frontend and API share an origin in production — but it's not Vercel rewri
 
 | Layer | Technology | Cost |
 |-------|------------|------|
-| **Frontend framework** | Vite 6, React 19, TypeScript | $0 |
+| **Frontend framework** | Vite 8, React 19, TypeScript | $0 |
 | **Routing + nav primitives** | `@ionic/react` 8, `@ionic/react-router` 8, `react-router` v5 | $0 |
 | **i18n** | `react-intl` (`@formatjs/intl-react`), ICU MessageFormat | $0 |
-| **State management** | React Context (13 providers) | $0 |
+| **State management** | React Context (17 providers) | $0 |
 | **Styling** | Tailwind CSS v4 + brand CSS variables + Ionic theme bridge | $0 |
 | **PWA / Service Worker** | `vite-plugin-pwa` (Workbox `injectManifest`) | $0 |
-| **Backend framework** | Next.js 15 (App Router, API-only) | $0 |
+| **Backend framework** | Next.js 16 (App Router, API-only) | $0 |
 | **Database (dev)** | Local SQLite (`apps/api/data/local.db`) | $0 |
 | **Database (prod)** | Turso (libSQL — edge SQLite) | $0 |
 | **ORM** | Drizzle ORM | $0 |
-| **Auth** | `better-auth` 1.6 (DB sessions, passwordless email-OTP sign-in, Google OAuth) | $0 |
+| **Auth** | `better-auth` 1.6 (DB sessions, passwordless email-OTP sign-in, Google OAuth, Apple Sign In) | $0 |
 | **Rate limiting** | Two paths share one Upstash database: (a) `@upstash/ratelimit` SDK for app-level limits in `rate-limit.ts`, (b) better-auth `secondaryStorage` (via `@upstash/redis`) for auth-surface limits in `auth.ts`. In-memory fallback in dev. | $0 (Upstash free tier) |
 | **Realtime** | SSE over Upstash Redis pub/sub + Streams via `ioredis`. In-memory EventEmitter backend in dev (no env var needed). See `.claude/docs/realtime-system.md`. | $0 (Upstash free tier) |
 | **Shared package** | `packages/shared/` — TypeScript-only, consumed via TS project references | $0 |
@@ -154,12 +154,10 @@ kasero/
 │           │   ├── BusinessTabsLayout.tsx   # IonTabs + IonRouterOutlet
 │           │   └── tabs/                    # all tab pages + drill-downs
 │           │       ├── HomeTab.tsx
-│           │       ├── SalesTab.tsx
+│           │       ├── LedgerTab.tsx
 │           │       ├── ProductsTab.tsx
 │           │       ├── ManageTab.tsx
-│           │       ├── ProvidersTab.tsx
-│           │       ├── TeamTab.tsx
-│           │       └── ProviderDetailPage.tsx
+│           │       └── TeamTab.tsx
 │           ├── components/         # Tailwind components
 │           │   ├── ui/             # Modal, Input, PriceInput, TabContainer, SwipeableRow
 │           │   ├── auth/           # ContentGuard
@@ -177,11 +175,13 @@ kasero/
 │           │   ├── transfer/
 │           │   ├── icons/
 │           │   └── animations/
-│           ├── contexts/           # auth, auth-gate, business, products, orders,
-│           │                       #   providers, product-settings, sales,
-│           │                       #   sales-sessions, page-transition,
-│           │                       #   pending-transfer, incoming-transfer,
-│           │                       #   product-form, join-business, create-business
+│           ├── contexts/           # auth, auth-gate, business, products,
+│           │                       #   product-settings, sales, sales-sessions,
+│           │                       #   page-transition, pending-transfer,
+│           │                       #   incoming-transfer, product-form,
+│           │                       #   join-business, create-business,
+│           │                       #   expense-categories, expenses,
+│           │                       #   inventory-adjustments, realtime
 │           ├── hooks/              # useBusinessFormat, useBarcodeScan,
 │           │                       #   useRevalidateOnFocus, useOnlineStatus,
 │           │                       #   useApiMessage, useSessionCache, ...
@@ -191,7 +191,7 @@ kasero/
 │           │                       #   locale-config now live in @kasero/shared)
 │           ├── i18n/
 │           │   ├── AppIntlProvider.tsx
-│           │   ├── messages/       # en-US.json, es.json, ja.json — flat dot-keys
+│           │   ├── messages/       # 11 locale files (de, en-US, es, fil, fr, it, ja, ko, pt, vi, zh) — flat dot-keys
 │           │   ├── loadMessages.ts
 │           │   └── messageIds.d.ts # generated type union of valid message ids
 │           ├── pwa/
@@ -207,14 +207,13 @@ kasero/
         └── src/
             ├── index.ts            # barrel (excludes db/schema to avoid pulling drizzle)
             ├── db/schema.ts        # Drizzle schema (the only definition)
-            ├── types/              # Business, Product, Order, Provider, User, Sale, Invite, ApiEnvelope
+            ├── types/              # Business, Product, User, Sale, Invite, Expense, InventoryAdjustment, ApiEnvelope
             ├── api-messages.ts     # ApiMessageCode union + envelope helpers
             ├── business-role.ts    # BusinessRole enum + canManageBusiness, canManageTeam, isOwner
             ├── locales.ts          # LOCALES registry (label, acceptPrefixes, translate metadata)
             ├── locale-config.ts    # currency-by-locale, region grouping for the picker
             ├── barcodes.ts         # detectBarcodeFormat, normalizeBarcodeValue, computeCanonicalGtin,
             │                       #   gtinCheckDigit, generateInternalProductBarcode (KSR-)
-            ├── provider-notes.ts   # MAX_PROVIDER_NOTES, etc.
             └── sales-helpers.ts    # session/sale aggregation utilities (used by web + api)
 ```
 
@@ -308,7 +307,7 @@ We use Ionic for **navigation only**. Buttons, inputs, modals, lists — those r
 
 **Why we kept it:**
 
-The 13 existing providers (Auth, Business, Products, Orders, Providers, ProductSettings, PageTransition, PendingTransfer, IncomingTransfer, ProductForm, JoinBusiness, CreateBusiness, AuthGate) work fine and the migration cost to Zustand or Jotai is independent of the Vite / Ionic move. Migrating state management is on the roadmap as a future, separate change.
+The 17 existing providers (Auth, AuthGate, Business, CreateBusiness, ExpenseCategories, Expenses, IncomingTransfer, InventoryAdjustments, JoinBusiness, PageTransition, PendingTransfer, ProductForm, ProductSettings, Products, Realtime, Sales, SalesSessions) work fine and the migration cost to Zustand or Jotai is independent of the Vite / Ionic move. Migrating state management is on the roadmap as a future, separate change.
 
 Provider re-render cost is controlled via `useMemo` on context values + `useCallback` on every callback (see `performance-patterns.md` Section 5).
 
@@ -351,7 +350,7 @@ Provider re-render cost is controlled via `useMemo` on context values + `useCall
 3. **Code-split message bundles.** Each locale's JSON is dynamically imported per locale, so users only download the language they need.
 4. **Type-safe message ids.** A build-time codegen produces a union type of all valid keys; `intl.formatMessage({ id: 'typo' })` is a compile error.
 
-**Translation files:** flat dot-keys at `apps/web/src/i18n/messages/{en-US,es,ja}.json`. The translate script lives at `apps/api/scripts/i18n-translate.ts` and reads tone guidance from `packages/shared/src/locales.ts`.
+**Translation files:** flat dot-keys at `apps/web/src/i18n/messages/` — 11 locales: `de`, `en-US`, `es`, `fil`, `fr`, `it`, `ja`, `ko`, `pt`, `vi`, `zh`. The translate script lives at `apps/api/scripts/i18n-translate.ts` and reads tone guidance from `packages/shared/src/locales.ts`.
 
 **Server-side i18n: gone.** API routes don't translate; they emit `ApiMessageCode` envelopes. The client's `useApiMessage()` hook maps codes → translated strings using the current locale's JSON.
 
@@ -394,13 +393,13 @@ To verify the SW locally: `npm run start:local` from `apps/api/`. This runs `nex
 
 ---
 
-### Backend: Next.js 15 (API-only)
+### Backend: Next.js 16 (API-only)
 
-**What it is:** Next.js still hosts the 55 API routes under `apps/api/src/app/api/`. `app/layout.tsx` is a minimal html/body shell (required by Next.js even for API-only projects). `app/page.tsx` was deleted — without a route at `/`, the `next.config.js` `rewrites().fallback` rule sends `/` to `/index.html` (the static SPA shell copied into `public/` by the prebuild step).
+**What it is:** Next.js still hosts the 54 API routes under `apps/api/src/app/api/`. `app/layout.tsx` is a minimal html/body shell (required by Next.js even for API-only projects). `app/page.tsx` was deleted — without a route at `/`, the `next.config.js` `rewrites().fallback` rule sends `/` to `/index.html` (the static SPA shell copied into `public/` by the prebuild step).
 
 **Why we kept it:**
 
-1. **Zero behavioral change to 55 routes.** Wholesale rewriting to Express, Hono, or another runtime would be high-risk for no functional gain. The routes already use a clean middleware/wrapper architecture (`withBusinessAuth`, `withAuth`).
+1. **Zero behavioral change to 54 routes.** Wholesale rewriting to Express, Hono, or another runtime would be high-risk for no functional gain. The routes already use a clean middleware/wrapper architecture (`withBusinessAuth`, `withAuth`).
 2. **Vercel deployment unchanged.** Vercel knows how to deploy Next.js API routes as Lambdas. We don't have to rebuild the deployment story.
 3. **Same-origin without external rewrites.** The Vite SPA is folded into `apps/api/public/` by `apps/api/scripts/prepare-spa.mjs` (the API's `prebuild` hook). One Next.js deployment serves `/api/*` and the SPA shell from one origin. Cookies, no CORS, no auth re-architecture.
 4. **Auth runs in Node.** `apps/api/src/lib/auth.ts` is the better-auth config (Node-only — libsql + Drizzle adapter both need Node APIs). `apps/api/src/middleware.ts` runs on Edge but does a cookie-PRESENCE-only check; full session verification happens server-side in route handlers via `auth.api.getSession({ headers })`.
@@ -457,18 +456,20 @@ Schema defined in `packages/shared/src/db/schema.ts`. Both apps import row types
 
 | Table | Description |
 |-------|-------------|
-| `businesses` | Business entities (includes product settings + `nextOrderNumber` counter inline) |
+| `businesses` | Business entities (includes product settings + `nextSaleNumber`, `nextProductNumber`, `nextExpenseNumber` monotonic counters inline) |
 | `users` | User accounts (id, email, name, avatar, language, `emailVerified`, `emailVerifiedAt`, `phoneNumber`, `phoneNumberVerified`, `createdAt`, `updatedAt`). Identity-only: no credential material on this row. |
 | `session` | better-auth session rows (id, token, userId, expiresAt, ipAddress, userAgent, createdAt, updatedAt). Cookie is an opaque token referencing this row. |
-| `account` | better-auth account rows — one row per linked sign-in method. For passwordless email sign-in the row pairs the user with `providerId='credential'` (no password column — auth is fully passwordless); for OAuth the row stores `providerId='google'` plus the access/refresh tokens. |
+| `account` | better-auth account rows — one row per linked sign-in method. For passwordless email sign-in the row pairs the user with `providerId='credential'` (no password column — auth is fully passwordless); for OAuth the row stores `providerId='google'` or `providerId='apple'` plus the access/refresh tokens. |
 | `verification` | better-auth one-time tokens (email OTPs for sign-in, step-up, and dual-OTP email change). Self-expiring; expired rows pruned daily by `/api/cron/cleanup-unverified`. |
 | `business_users` | Join table — users to businesses (role, status, `createdAt`) |
-| `products` | Product catalog with pricing, stock, and barcode fields (incl. canonical `barcodeGtin`) |
+| `products` | Product catalog with pricing, stock, and barcode fields (incl. canonical `barcodeGtin`, `productNumber` counter) |
 | `product_categories` | Custom categories per business (name, sortOrder) |
-| `providers` | Supplier information |
-| `provider_notes` | Up to 5 notes per provider (enforced at the POST route) |
-| `orders` | Purchase orders from suppliers |
-| `order_items` | Line items for orders |
+| `sales` | Customer transactions (saleNumber, date, total, paymentMethod, sessionId) |
+| `sale_items` | Line items per sale (productId nullable on delete, productName snapshot, quantity, unitPrice) |
+| `sales_sessions` | Cash-drawer sessions (openedAt/closedAt, startingCash, denormalized close-time stats) |
+| `expense_categories` | Custom expense categories per business (name, sortOrder) |
+| `expenses` | Business expenses (expenseNumber, date, amount, categoryId, note, photoUrl) |
+| `inventory_adjustments` | Stock delta records (delta, reason, relatedExpenseId) |
 | `invite_codes` | Team member invitations (6-char codes, `expiresAt`) |
 | `ownership_transfers` | Business ownership transfer records |
 
@@ -480,16 +481,23 @@ Schema defined in `packages/shared/src/db/schema.ts`. Both apps import row types
 | `users` | `createdAt`, `updatedAt` | Required by better-auth's drizzleAdapter (consumed by the daily cleanup cron) |
 | `users` | `emailVerifiedAt` (nullable) | Audit timestamp of email-OTP sign-in completion |
 | `session` | `expiresAt`, `createdAt`, `updatedAt` | better-auth session lifecycle |
-| `verification` | `expiresAt` | Functional — invalidates expired OTPs / reset tokens |
+| `verification` | `expiresAt`, `createdAt`, `updatedAt` | Functional — invalidates expired OTPs / reset tokens |
 | `invite_codes` | `expiresAt` | Functional — determines if code is valid |
 | `ownership_transfers` | `expiresAt` | Lifecycle cutoff |
-| `provider_notes` | `createdAt`, `updatedAt` | Displayed in the notes list |
-| `orders` | `date`, `receivedDate`, `estimatedArrival` | User-facing dates |
+| `products` | `createdAt`, `updatedAt` | Surfaced in ProductInfoDrawer "Last updated" line |
+| `sales` | `date` (user-supplied, backdatable), `createdAt` | Stats bucketing uses `date`; `createdAt` tracks actual insert time |
+| `sales_sessions` | `openedAt`, `closedAt` | Session lifecycle; drives history list query |
+| `expense_categories` | `createdAt` | Audit |
+| `expenses` | `date`, `createdAt`, `updatedAt` | User-facing date + audit |
+| `inventory_adjustments` | `createdAt` | Adjustment history |
 
 **Indexes of note:**
 
 - `business_users (userId, businessId)` composite — the hottest query in the app (every business-scoped request hits `requireBusinessAccess`)
-- `order_items (productId)` — powers the product-delete blocking-order check
+- `business_users` partial unique index on `(businessId)` where `role='owner' AND status='active'` — enforces the single-active-owner invariant
+- `sales_sessions` partial unique index on `(businessId)` where `closedAt IS NULL` — enforces at-most-one-open-session-per-business
+- `products (businessId, barcode)` partial unique index where `barcode IS NOT NULL` — prevents duplicate barcodes within a business
+- `sale_items (productId)` — required for efficient ON DELETE SET NULL FK enforcement when a product is deleted
 - `users.email` (case-insensitive expression index on `LOWER(email)`) — used by `invite/validate` and `transfer/initiate`
 
 **Schema changes.** Edit `packages/shared/src/db/schema.ts`, then from `apps/api/`:
@@ -537,7 +545,7 @@ Runner: `apps/api/scripts/run-auth-backfill.ts`, invoked via `npm run auth:migra
 
 ### Auth: better-auth (DB sessions, passwordless email-OTP, Google OAuth)
 
-> **Passwordless by design.** There is no credential password storage. Authentication is fully passwordless: email OTP via better-auth's `emailOTP` plugin in `sign-in` mode, plus Google OAuth. The legacy `account.password` column and `two_factor` table were dropped in migration `2026-05-14-01-passwordless-cleanup.sql`. Destructive actions (delete account, change email, transfer business ownership) are gated by a fresh email-OTP step-up at the route level.
+> **Passwordless by design.** There is no credential password storage. Authentication is fully passwordless: email OTP via better-auth's `emailOTP` plugin in `sign-in` mode, plus Google OAuth and Apple Sign In. The legacy `account.password` column and `two_factor` table were dropped in migration `2026-05-14-01-passwordless-cleanup.sql`. Destructive actions (delete account, change email, transfer business ownership) are gated by a fresh email-OTP step-up at the route level.
 
 
 
@@ -825,6 +833,7 @@ BETTER_AUTH_TRUSTED_ORIGINS=                  # optional — extra origins bette
                                               # when testing on a phone; unused in
                                               # prod (same-origin via Vercel).
 API_PORT=8000                                 # default; override if needed
+PORT=8000                                     # must match API_PORT; read by start:local
 
 # Required only for production
 TURSO_DATABASE_URL=libsql://your-db.turso.io
@@ -832,7 +841,7 @@ TURSO_AUTH_TOKEN=your-token
 
 # Required for email delivery (OTP send + dual-OTP email-change)
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=Kasero <noreply@your-domain>
+EMAIL_FROM=Kasero <noreply@your-domain>
 
 # Optional (Google OAuth — Google sign-in only registers when BOTH are set)
 GOOGLE_CLIENT_ID=...
@@ -861,6 +870,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 # apps/web/.env.local
 VITE_WEB_PORT=3000                              # optional; default 3000
 VITE_API_PROXY_TARGET=https://localhost:8000    # optional; matches API_PORT
+VITE_AUTH_BASE_URL=                             # optional; leave empty in dev (proxy
+                                                # forwards /api/*); empty in prod (same-origin)
 ```
 
 Local dev uses `apps/api/data/local.db` automatically — just run `npm run dev` after setting `AUTH_SECRET`.
@@ -892,8 +903,6 @@ Local dev uses `apps/api/data/local.db` automatically — just run `npm run dev`
 - No external storage service needed
 - Icons included in database row
 
-**Order Receipts:** Cloudflare R2 (S3-compatible) is on the roadmap for receipt images. 10 GB free tier; URLs would be stored in `orders.receipt`. Not yet implemented.
-
 The Turso free tier (500M row reads, 25M writes, 9GB storage) supports ~1,000-2,000 businesses in production.
 
 ### Offline write queue
@@ -912,7 +921,7 @@ Implemented: SSE over Upstash Redis pub/sub + Streams. See `.claude/docs/realtim
 Capacitor would let us wrap the SPA into a native shell using the same Ionic codebase. Not in scope for this migration, but the move to Ionic deliberately keeps that path open.
 
 ### State migration to Zustand/Jotai (deferred)
-The 13 Context providers work and the migration is independent of the Vite + Ionic move. Deferred.
+The 17 Context providers work and the migration is independent of the Vite + Ionic move. Deferred.
 
 ---
 

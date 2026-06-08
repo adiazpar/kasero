@@ -4,7 +4,7 @@ A multi-business management system for small businesses (food vendors, artisans,
 
 ## Architecture
 
-npm-workspaces monorepo. Frontend (`apps/web/`) is a Vite + React + Ionic SPA using `@ionic/react-router` (react-router v5) for stack-based mobile-feeling navigation. Backend (`apps/api/`) is Next.js running in API-only mode — 55 routes, Drizzle/Turso/JWT. Shared code (Drizzle schema, types, Zod schemas, `ApiMessageCode`, business-role helpers, locale registry) lives in `packages/shared/` and is consumed by both apps via TS project references. In production, `apps/api/scripts/prepare-spa.mjs` copies the built SPA into `apps/api/public/`, so a single Next.js deployment serves both `/api/*` and the SPA shell from one origin. In development, API runs on `8000` and Vite on `3000` with `/api/*` proxied. Same-origin in both environments — no CORS, cookies work natively.
+npm-workspaces monorepo. Frontend (`apps/web/`) is a Vite + React + Ionic SPA using `@ionic/react-router` (react-router v5) for stack-based mobile-feeling navigation. Backend (`apps/api/`) is Next.js running in API-only mode — 54 routes, Drizzle/Turso/better-auth (passwordless email-OTP + Google/Apple OAuth, DB sessions). Shared code (Drizzle schema, types, Zod schemas, `ApiMessageCode`, business-role helpers, locale registry) lives in `packages/shared/` and is consumed by both apps via TS project references. In production, `apps/api/scripts/prepare-spa.mjs` copies the built SPA into `apps/api/public/`, so a single Next.js deployment serves both `/api/*` and the SPA shell from one origin. In development, API runs on `8000` and Vite on `3000` with `/api/*` proxied. Same-origin in both environments — no CORS, cookies work natively.
 
 ## Documentation
 
@@ -46,7 +46,7 @@ All styling uses CSS variables. Brand tokens live in `apps/web/src/styles/base.c
 
 **MUST READ before wrapping strings, adding routes, or handling errors:** `.claude/docs/i18n-system.md`.
 
-Kasero is fully internationalized with `react-intl` (English, Spanish, Japanese — see `packages/shared/src/locales.ts`). Every user-visible string — in components and in API route responses — must be translatable. Language is a user preference (`users.language`); formatting is a business property (`businesses.locale` / `businesses.currency`). Never conflate the two.
+Kasero is fully internationalized with `react-intl` (11 locales: de, en-US, es, fil, fr, it, ja, ko, pt, vi, zh — see `packages/shared/src/locales.ts`). Every user-visible string — in components and in API route responses — must be translatable. Language is a user preference (`users.language`); formatting is a business property (`businesses.locale` / `businesses.currency`). Never conflate the two.
 
 1. **Every new UI string goes through `intl.formatMessage({ id })`.** No exceptions. JSX with hardcoded English is a bug.
 2. **Every new API route returns an `ApiMessageCode` envelope.** Use `errorResponse()` / `successResponse()` / `validationError()` from `@/lib/api-middleware`. Never write `NextResponse.json({ error: 'English' })`.
@@ -73,10 +73,10 @@ For price inputs, use `<PriceInput>` from `@/components/ui`. Full details in `ba
 
 See `.claude/docs/modal-system.md` before building any modal. Key rules:
 
-- `Modal.Step` and `Modal.Footer` must be **direct children** (no wrapper components).
+- Build modals on `ModalShell`; multi-step flows keep their step-stack state in the consumer (no `Modal.Step`/`Modal.Footer` compound, no `IonNav` inside the modal).
 - Separate add/edit into different modals (never combine with conditional rendering).
-- Clean up state in `onExitComplete`, never in `onClose`.
-- Use optimistic UI for success steps (navigate before API call).
+- Reset state when the modal finishes closing — `ModalShell`'s `onClose` fires via `onDidDismiss` (after the close animation), so cleanup there is safe.
+- Await the mutation in modal success steps, then advance to the success step only on success (so errors surface inline); use fire-and-forget only for non-blocking background refreshes (e.g. `void products.refetch()`).
 
 ### Navigation
 
@@ -144,3 +144,8 @@ Per-app scripts (`db:push`, `db:push:prod`, `db:studio`, `start:local`, `i18n:tr
 Whenever a value rotates (new Upstash creds, regenerated `AUTH_SECRET`, new Google OAuth client, etc.), update the corresponding Bitwarden note in the same PR-or-session that changes the value, so the canonical copy never drifts from the live config. The companion `.env.example` files document the *shape* (which keys are expected) — Bitwarden carries the *values*.
 
 **Realtime credentials are Vercel-only.** `UPSTASH_REDIS_URL` is configured in the Vercel project envs (Production + Preview), not in your local `apps/api/.env.local`. Local dev uses an in-memory realtime backend so a `npm run dev` publish never reaches production subscribers. The canonical value is recorded in the Bitwarden note `Kasero — Vercel project envs`.
+# graphify
+- **graphify** (`.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
+When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.
+
+A knowledge graph lives at `graphify-out/` (god nodes, community structure, cross-file relationships; gitignored). For codebase questions, prefer `graphify query "<question>"` / `graphify path "<A>" "<B>"` / `graphify explain "<concept>"` (scoped subgraph) over broad grep; read `graphify-out/GRAPH_REPORT.md` only for broad architecture review. After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

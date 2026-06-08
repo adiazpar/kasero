@@ -133,6 +133,24 @@ All types are defined in `packages/shared/src/realtime/types.ts`. The TypeScript
 | `team.invite.consumed` | `inviteId`, `consumedByName` | `POST /invite/join` | refetch `invites` |
 | `team.invite.deleted` | `inviteId` | `POST /invite/delete` | refetch `invites` |
 | `business.updated` | `fields: Array<'name'\|'locale'\|'currency'\|'iconUrl'>` | `PATCH /businesses/[id]` | refetch `business` |
+| `product.created` | `productId` | `POST /products` | refetch `products` |
+| `product.updated` | `productId`, `fields: Array<'name'\|'price'\|'categoryId'\|'icon'\|'barcode'\|'stock'\|'active'>` | `PATCH /products/[id]`, `PATCH /products/[id]/stock` | refetch `products`; if `!isSelfEcho`: emit entity-updated |
+| `product.deleted` | `productId` | `DELETE /products/[id]` | refetch `products`; if `!isSelfEcho`: emit entity-deleted |
+| `product.settings.updated` | `fields: Array<'defaultCategoryId'\|'sortPreference'>` | `PATCH /product-settings` | refetch `product-settings` |
+| `category.created` | `categoryId` | `POST /categories` | refetch `categories` |
+| `category.updated` | `categoryId`, `fields: Array<'name'\|'sortOrder'>` | `PATCH /categories/[id]` | refetch `categories`; if `!isSelfEcho`: emit entity-updated |
+| `category.deleted` | `categoryId` | `DELETE /categories/[id]` | refetch `categories`; if `!isSelfEcho`: emit entity-deleted |
+| `category.reordered` | — | `POST /categories/reorder` | refetch `categories` |
+| `expense.created` | `expenseId` | `POST /expenses` | refetch `expenses` |
+| `expense.updated` | `expenseId` | `PATCH /expenses/[id]` | refetch `expenses`; if `!isSelfEcho`: emit entity-updated |
+| `expense.deleted` | `expenseId` | `DELETE /expenses/[id]` | refetch `expenses`; if `!isSelfEcho`: emit entity-deleted |
+| `expense_category.created` | `categoryId` | `POST /expense-categories` | refetch `expenses` |
+| `expense_category.updated` | `categoryId` | `PATCH /expense-categories/[id]` | refetch `expenses` |
+| `expense_category.deleted` | `categoryId` | `DELETE /expense-categories/[id]` | refetch `expenses` |
+| `sale.created` | `saleId` | `POST /sales` | refetch `sales` + `products` (stock cascade) |
+| `inventory.adjusted` | `adjustmentId`, `productId`, `relatedExpenseId` | `PATCH /products/[id]/stock` | refetch `products` |
+| `sales_session.opened` | `sessionId` | `POST /sales-sessions/open` | refetch `sales-sessions` |
+| `sales_session.closed` | `sessionId` | `POST /sales-sessions/close` | refetch `sales-sessions` |
 
 Every payload also has an optional `originDeviceId?: string` that the handler layer uses for echo suppression.
 
@@ -161,7 +179,7 @@ Published via `publishCriticalToUser`. Writes to `stream:user:{id}` first (cappe
 |---|---|---|---|
 | `system.resync` | — | first connect (stream tip), reconnect with nothing to replay, broker Redis reconnect | `callAllRefetches()` |
 | `system.error` | `code: ApiMessageCode` | stream read failure | show error toast |
-| `system.auth_expired` | — | SSE route emits on 3 consecutive errors | `routeToLogin()` |
+| `system.auth_expired` | — | Declared in the shared union; handled by `routeToLogin()` in `dispatchRealtimeEvent`. The 3-consecutive-error circuit breaker in `RealtimeProvider` currently calls `routeToLogin()` directly rather than emitting this frame — so this event type is wired end-to-end but not actively published. | `routeToLogin()` |
 
 ---
 
@@ -367,7 +385,7 @@ export const POST = withBusinessAuth(async (request, access) => {
 
 **Close:** on `isAuthenticated` becoming false (logout, account delete) or component unmount. The watchdog timer is also cleared.
 
-**Focus refetch backstop:** `useRevalidateOnFocus` in each resource context (products, orders, providers, categories, etc.) debounces a re-`ensureLoaded()` on every tab/window focus event (5s debounce). This backs up pub/sub events that were dropped during a subscriber reconnect gap. The 30s context freshness window (`STALE_AFTER_MS`) still applies — quick alt-tabs within 30s of the last fetch are no-ops. Together, the `system.resync` path (fired on reconnect) and `useRevalidateOnFocus` ensure the UI converges even when SSE delivery fails.
+**Focus refetch backstop:** `useRevalidateOnFocus` in each resource context (products, sales, expenses, categories, etc.) debounces a re-`ensureLoaded()` on every tab/window focus event (5s debounce). This backs up pub/sub events that were dropped during a subscriber reconnect gap. The 30s context freshness window (`STALE_AFTER_MS`) still applies — quick alt-tabs within 30s of the last fetch are no-ops. Together, the `system.resync` path (fired on reconnect) and `useRevalidateOnFocus` ensure the UI converges even when SSE delivery fails.
 
 ---
 

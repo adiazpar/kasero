@@ -6,41 +6,55 @@ Patterns for keeping the app fast despite remote database latency (production us
 
 ## 1. Optimistic UI
 
-**Principle:** Show success immediately, let the API run in the background. Users should never wait for a network round-trip to see feedback.
+**Principle:** Avoid unnecessary waiting. Modal success steps await the mutation (so errors can be surfaced inline), then advance to a dedicated success step. Background data that is no longer blocking the user is refreshed fire-and-forget after the await.
 
-### When to Use
+### Modal success-step pattern (await-then-advance)
 
-Any modal flow that ends with a success/confirmation step (Lottie animation, "Done" button). The user's action is complete from their perspective — the API can finish asynchronously.
-
-### Pattern
+Modal flows that end with a success/confirmation step (Lottie animation, "Done" button) follow this pattern: the mutation is awaited so that an error can be shown inline on the same step, and the success step is only reached once the API call resolves successfully.
 
 ```typescript
-// WRONG - user waits for API
-const handleClick = async () => {
-  const success = await onSubmit(data)
-  if (success) {
-    setCompleted(true)
-    goToStep(successStep)
+// CORRECT - await the mutation, advance only on success, show error inline on failure
+const handleSave = async () => {
+  setIsSaving(true)
+  try {
+    const saved = await onSubmit(data)
+    if (!saved) { setError('Failed'); return }
+    goToStep(successStep)          // advance AFTER the API resolves
+  } catch (err) {
+    setError(err.message)          // stays on current step, error visible
+  } finally {
+    setIsSaving(false)
   }
 }
-
-// CORRECT - instant feedback
-const handleClick = () => {
-  setCompleted(true)
-  goToStep(successStep)
-  onSubmit(data) // fire and forget
-}
 ```
+
+Source: `ReviewStep.handleSave` (`apps/web/src/components/products/steps/ReviewStep.tsx`) and `AdjustStockModal` (`apps/web/src/components/inventory/AdjustStockModal.tsx`) both follow this pattern.
+
+### Optimistic background refresh (fire-and-forget)
+
+After the await resolves, data that is no longer blocking the user can be refreshed in the background without making the user wait. Use `void` to signal the intentional fire-and-forget:
+
+```typescript
+const saved = await sales.commitSale({ ... })
+// Server decremented stock atomically — refresh the products cache in the
+// background so the picker reflects the new stock numbers without waiting.
+void products.refetch()
+onGoToSuccess()   // navigate immediately; refetch resolves on its own
+```
+
+Source: `ChargeButton.tsx` (`apps/web/src/components/sales/cart-modal/ChargeButton.tsx`).
 
 ### Navigation feels optimistic too
 
 Ionic's router commits route changes synchronously and starts the slide-in animation immediately on tap. There's no "pending route" state to manage from app code — taps feel instant by default. The `pendingHref` plumbing that previously lived in `PageTransitionContext` for cross-context navigation feedback is no longer needed for tab/drill-down switches; it remains only for the navigation-error timeout (see Section 11).
 
-### When NOT to Use
+### When NOT to fire-and-forget the mutation itself
 
+Always await the mutation when:
+- The next UI state depends on the API response data (e.g., a saved product number shown on the success step)
+- An error must be surfaced inline before the user leaves the step
 - Login / registration (need to know if credentials are valid)
 - Joining a business (need to validate invite code)
-- Any flow where the next UI state depends on the API response data
 
 ---
 
@@ -199,7 +213,7 @@ Each provider:
 4. Writes back to sessionStorage on every state change so the next paint is instant
 5. Revalidates on tab-return (`visibilitychange` / window `focus`) via `useRevalidateOnFocus`
 
-> `useProductSettings` was previously a standalone hook called independently by the products page and by `useOrderFlows`. That split into two independent copies of state; the provider above is the single source of truth now. Never `useProductSettings()` outside `ProductSettingsProvider` — it throws.
+> `useProductSettings` was previously a standalone hook called independently by two separate consumers. That split into two independent copies of state; the provider above is the single source of truth now. Never `useProductSettings()` outside `ProductSettingsProvider` — it throws.
 
 ### Freshness Window (`apps/web/src/lib/freshness.ts`)
 

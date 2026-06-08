@@ -1,113 +1,79 @@
 # Modal System Guide
 
-The modal system uses a compound component pattern with built-in multi-step navigation, animated transitions, and footer management.
+The modal system is built on `ModalShell` — a single standardized wrapper around `IonModal` that manages chrome (header, toolbar, close button, breakpoints, drag handle) consistently across all ~30 modals in the app. Multi-step flows are implemented as step-stack state owned by the consumer, not by a compound component.
 
-**Source:** `apps/web/src/components/ui/modal/`
+**Source:** `apps/web/src/components/ui/modal-shell.tsx`
 
 ---
 
 ## Quick Reference
 
 ```tsx
-import { Modal, useModal } from '@/components/ui'
+import { ModalShell } from '@/components/ui'
 
-<Modal isOpen={isOpen} onClose={onClose} onExitComplete={onCleanup}>
-  <Modal.Step title="Step One">
-    <Modal.Item>
-      <p>Content here</p>
-    </Modal.Item>
-    <Modal.Footer>
-      <button className="btn btn-primary flex-1">Save</button>
-    </Modal.Footer>
-  </Modal.Step>
-</Modal>
+// Pattern 0 — single-body modal
+<ModalShell isOpen={isOpen} onClose={onClose} title="Edit Item" footer={<button onClick={onClose}>Save</button>}>
+  <p>Content here</p>
+</ModalShell>
+
+// Pattern 1 — multi-step modal (step-stack state in the consumer)
+<ModalShell isOpen={isOpen} onClose={onClose} rawContent noSwipeDismiss>
+  {step === 'form' && <FormStep onNext={() => setStep('success')} onClose={onClose} />}
+  {step === 'success' && <SuccessStep onClose={onClose} />}
+</ModalShell>
 ```
 
 ---
 
 ## Component API
 
-### `<Modal>`
+### `<ModalShell>`
 
 | Prop | Type | Description |
 |------|------|-------------|
 | `isOpen` | `boolean` | Controls visibility |
-| `onClose` | `() => void` | Called when X/backdrop/ESC triggers close |
-| `onExitComplete` | `() => void` | Called AFTER close animation finishes — use for state cleanup |
-| `title` | `string` | Fallback title (overridden by step titles) |
-| `size` | `'default' \| 'large'` | Modal width |
-| `initialStep` | `number` | Starting step index (default: 0) |
-
-### `<Modal.Step>`
-
-| Prop | Type | Description |
-|------|------|-------------|
-| `title` | `string` | Step title shown in header |
-| `hideBackButton` | `boolean` | Hide the back arrow |
-| `backStep` | `number` | Override back button to go to specific step |
-| `onBackStep` | `() => void` | Callback when back is pressed (e.g., abort processing) |
-
-### `<Modal.Item>`
-
-Wraps content sections with proper padding and staggered enter animation.
-
-### `<Modal.Footer>`
-
-Renders in a fixed footer area below the content. Animates height when present/absent.
-
-### Navigation Buttons
-
-| Component | Description |
-|-----------|-------------|
-| `<Modal.NextButton>` | Go to next step |
-| `<Modal.BackButton>` | Go to previous step |
-| `<Modal.CancelBackButton>` | Go back (or close if first step) |
-| `<Modal.GoToStepButton step={n}>` | Jump to specific step |
-
-### `useModal()` Hook
-
-Access modal state and navigation from any child component:
-
-```tsx
-const { currentStep, goToStep, goNext, goBack, lock, unlock } = useModal()
-```
+| `onClose` | `() => void` | Called on `onDidDismiss` (after the close animation) |
+| `title` | `string` | Header title text. Omit only when `chromeless` is also set. |
+| `variant` | `'full' \| 'half'` | Drawer height variant — `'full'` (default) or `'half'` |
+| `onBack` | `() => void` | When set, renders a back chevron in the toolbar's start slot |
+| `footer` | `ReactNode` | Rendered inside `IonFooter` at the bottom of the modal |
+| `rawContent` | `boolean` | When true, renders children directly in `IonModal` without an auto-wrapped `IonContent`. Required for multi-step modals whose steps render their own `IonHeader` / `IonContent` / `IonFooter`. |
+| `noSwipeDismiss` | `boolean` | Disables sheet swipe-to-dismiss. Required for any modal with an `IonInput` + a Lottie success step (iOS keyboard resize can trigger snap-to-0 dismiss). |
+| `chromeless` | `boolean` | Suppresses the auto-rendered header entirely. Use for terminal success/celebration steps. |
+| `flushContent` | `boolean` | Skips the `.modal-content` inset on the auto-rendered `IonContent`. Use for list-style sheets where rows paint edge-to-edge. |
+| `noScroll` | `boolean` | Disables `IonContent` inner scroll via `--overflow: hidden`. Use for fixed-layout steps (e.g., cash-keypad). |
+| `keepContentsMounted` | `boolean` | Forces the body to stay mounted across open/close cycles. |
 
 ---
 
 ## Critical Rules
 
-### 1. Direct Children Only
+### 1. Keep step chrome at the consumer level
 
-Modal uses `Children.toArray()` with `_isModalStep` / `_isModalFooter` markers to find steps and footers. **Wrapper components are invisible** to this scan.
+`ModalShell` renders a single `IonModal`. For multi-step flows, the consumer owns a step-stack (or step enum) state and conditionally renders the active step's body. Each step is a plain content subtree — `IonHeader` + `IonContent` + `IonFooter` rendered directly inside the `rawContent` modal, NOT wrapped in a `<IonPage>` or routed via `<IonNav>`.
 
 ```tsx
-// CORRECT
-<Modal>
-  <Modal.Step title="Confirm">
-    <Modal.Item><p>Are you sure?</p></Modal.Item>
-    <Modal.Footer><button>Yes</button></Modal.Footer>
-  </Modal.Step>
-</Modal>
+// CORRECT — step body is a plain subtree, chrome is local to the step
+<ModalShell isOpen={isOpen} onClose={onClose} rawContent noSwipeDismiss>
+  {step === 'form' && <FormStep />}
+  {step === 'success' && <SuccessStep />}
+</ModalShell>
 
-// BROKEN - Modal.Step inside wrapper is not detected
-<Modal>
-  <SomeWrapperComponent />  {/* Returns Modal.Step — invisible to Modal */}
-</Modal>
-
-// BROKEN - Modal.Footer inside wrapper is not detected
-<Modal.Step title="Edit">
-  <FormWithFooter />  {/* Returns Modal.Item + Modal.Footer — footer not extracted */}
-</Modal.Step>
+// CORRECT — Pattern 0: single body, chrome owned by ModalShell
+<ModalShell isOpen={isOpen} onClose={onClose} title="Confirm"
+  footer={<button onClick={onConfirm}>Yes</button>}>
+  <p>Are you sure?</p>
+</ModalShell>
 ```
 
 **If you need reusable step content:**
-1. Extract content-only components that return `<Modal.Item>` elements
-2. Extract button components that use `useModal()` for navigation
-3. Keep `<Modal.Step>` and `<Modal.Footer>` as direct children in the modal JSX
+1. Extract content-only step components that render their own `IonHeader` + `IonContent` + optional `IonFooter`.
+2. Pass shared navigation callbacks (push/pop/close) via a step-context (e.g. `useMyNav()`).
+3. Never wrap step components in `IonPage` — see Rule 5.
 
 ### 2. Separate Add and Edit Modals
 
-Do NOT combine add and edit flows into one modal with conditional rendering. The timing issues between `useEffect`-based state population and `initialStep` cause:
+Do NOT combine add and edit flows into one modal with conditional rendering. The timing issues between `useEffect`-based state population cause:
 - Wrong step on open (form vs mode selection)
 - Missing footer buttons (state not set on first render)
 - Stale content on reopen
@@ -118,74 +84,74 @@ Instead, create separate modals:
 <EditItemModal isOpen={isOpen && !!editingItem} ... />
 ```
 
-### 3. Clean Up in onExitComplete, Not onClose
+### 3. State Cleanup Belongs in onClose (which fires after animation)
 
-Never reset state in `onClose` — it fires when the close STARTS, causing content to flash empty during the fade-out animation.
+`ModalShell` passes `onClose` to Ionic's `onDidDismiss` — which fires AFTER the dismiss animation completes. This means resetting state in `onClose` is safe and does not cause mid-animation content flashes.
 
 ```tsx
-// WRONG — content blinks during close animation
-const handleClose = () => {
-  setEditingItem(null)  // Content changes mid-animation!
-  setIsOpen(false)
-}
-
-// CORRECT — state cleanup after animation finishes
-<Modal
+// CORRECT — ModalShell.onClose fires via onDidDismiss, after animation
+<ModalShell
   isOpen={isOpen}
-  onClose={() => setIsOpen(false)}
-  onExitComplete={() => {
-    setEditingItem(null)
+  onClose={() => {
+    setIsOpen(false)
+    setEditingItem(null)  // Safe — animation is already done
     resetForm()
   }}
+  title="Edit Item"
 >
+  {/* ... */}
+</ModalShell>
 ```
 
-### 4. Optimistic Success Steps
+Do not try to split the close signal from the cleanup signal — `ModalShell` has no separate `onExitComplete` prop. The single `onClose` callback covers both.
 
-For save/delete flows, navigate to the success step BEFORE the API call. Set the animation trigger state first, then fire the API in the background:
+### 4. Success Steps: Await, Then Advance
+
+For save/delete flows, **await** the mutation and advance to the success step only on success — so a failure surfaces inline on the form instead of after a celebratory animation (real examples: `ReviewStep.tsx` awaits `onSubmit(...)`; `AdjustStockModal.tsx` awaits `create(...)` then `setStep('success')`). The genuinely optimistic move is to fire-and-forget a *non-blocking* follow-up like `void products.refetch()` after the await — never to skip awaiting the mutation itself:
 
 ```tsx
-function SaveButton({ onSubmit }) {
-  const { goToStep } = useModal()
-
-  const handleClick = () => {
-    setSaved(true)     // Trigger Lottie animation
-    goToStep(3)        // Navigate to success step
-    onSubmit()         // API fires in background
+function FormStep({ onSuccess, onSubmit }: Props) {
+  const handleSave = async () => {
+    const saved = await onSubmit()   // await the mutation — errors are catchable here
+    if (!saved) return               // stay on the form and show the error
+    onSuccess()                      // advance consumer step state to 'success'
   }
 
-  return <button onClick={handleClick}>Save</button>
+  return (
+    <>
+      <IonHeader>
+        <IonToolbar><IonTitle>Edit</IonTitle></IonToolbar>
+      </IonHeader>
+      <IonContent>
+        {/* form fields */}
+        <button onClick={handleSave}>Save</button>
+      </IonContent>
+    </>
+  )
 }
 ```
 
-The success step gates the Lottie on the trigger state:
+The success step is a chromeless terminal step with a single Done/close button (or auto-close timer). Set `chromeless` on `ModalShell` when the success step is active:
+
 ```tsx
-<Modal.Step title="Saved" hideBackButton>
-  <Modal.Item>
-    <div className="flex flex-col items-center text-center py-4">
-      <div style={{ width: 160, height: 160 }}>
-        {saved && (
-          <LottiePlayer
-            src="/animations/success.json"
-            loop={false}
-            autoplay={true}
-            delay={300}
-            style={{ width: 160, height: 160 }}
-          />
-        )}
+<ModalShell
+  isOpen={isOpen}
+  onClose={onClose}
+  title={step !== 'success' ? intl.formatMessage({ id: 'thing.edit_title' }) : undefined}
+  chromeless={step === 'success'}
+  rawContent
+  noSwipeDismiss
+>
+  {step === 'form' && <FormStep onSuccess={() => setStep('success')} onSubmit={submit} />}
+  {step === 'success' && (
+    <IonContent>
+      <div className="flex flex-col items-center text-center py-4">
+        <LottiePlayer src="/animations/success.json" loop={false} autoplay style={{ width: 160, height: 160 }} />
+        <button onClick={onClose} className="btn btn-primary">Done</button>
       </div>
-      <p
-        className="text-lg font-semibold text-text-primary mt-4 transition-opacity duration-300"
-        style={{ opacity: saved ? 1 : 0 }}
-      >
-        Changes saved!
-      </p>
-    </div>
-  </Modal.Item>
-  <Modal.Footer>
-    <button onClick={onClose} className="btn btn-primary flex-1">Done</button>
-  </Modal.Footer>
-</Modal.Step>
+    </IonContent>
+  )}
+</ModalShell>
 ```
 
 **Available Lottie animations:**
@@ -271,22 +237,26 @@ function NameStep() {
 
 Pop at `depth === 1` is a no-op by design — the root step exits via the close X in its own toolbar, not via the back chevron.
 
-**Reference implementations:** the order modals (`NewOrderModal.tsx`, `OrderDetailModal.tsx` + `order-steps/`) and the product modals (`AddProductModal.tsx`, `EditProductModal.tsx` + `steps/`). Both intentionally moved away from `IonNav` for this reason — see the note at `order-steps/OrderNavContext.tsx:5-13` and `steps/ProductNavContext.tsx:5-15`.
+**Reference implementation:** the product modals (`AddProductModal.tsx`, `EditProductModal.tsx` + `steps/`), which intentionally moved away from `IonNav` for this reason — see the note at `steps/ProductNavContext.tsx:5-15`.
 
-### 6. Step Indices Are Positional
+### 6. Use Named Step States, Not Numeric Indices
 
-Steps are numbered by their order as direct children of `<Modal>`. If you conditionally render steps, the indices shift and `goToStep(n)` breaks.
+Multi-step modals use a string enum (or step-stack of string enums) for step identity. Avoid numeric indices — when a conditional step is present or absent, numeric references to later steps silently point to the wrong step.
 
 ```tsx
-// DANGEROUS — step indices change based on canDelete
-<Modal.Step title="Form">...</Modal.Step>
-{canDelete && <Modal.Step title="Confirm Delete">...</Modal.Step>}
-<Modal.Step title="Success">...</Modal.Step>  {/* Is this step 1 or 2? */}
+// DANGEROUS — numeric index changes based on canDelete
+type Step = 0 | 1 | 2
+// step 0 = form, step 1 = confirm-delete (maybe), step 2 = success?
+// Once canDelete is false, step 2 no longer exists
 
-// SAFE — always render all steps, gate content instead
-<Modal.Step title="Form">...</Modal.Step>
-<Modal.Step title="Confirm Delete">...</Modal.Step>  {/* Always present */}
-<Modal.Step title="Success">...</Modal.Step>          {/* Always step 2 */}
+// SAFE — named step states are stable regardless of which steps render
+type Step = 'form' | 'confirm-delete' | 'success'
+const [step, setStep] = useState<Step>('form')
+
+// Conditional rendering in the modal body
+{step === 'form' && <FormStep onDelete={() => setStep('confirm-delete')} onSave={() => setStep('success')} />}
+{step === 'confirm-delete' && <ConfirmDeleteStep onBack={() => setStep('form')} />}
+{step === 'success' && <SuccessStep onClose={onClose} />}
 ```
 
 ---
@@ -345,33 +315,45 @@ For modals that need tabs within a single step (e.g., Details / Barcode tabs), u
 ```tsx
 import { TabContainer } from '@/components/ui'
 
-<Modal.Step title="Edit product">
-  {/* Tab buttons - add modal-step-item class so they fade with content */}
-  <div className="section-tabs section-tabs--modal modal-step-item">
-    <button onClick={() => setActiveTab('details')} className={`section-tab ${activeTab === 'details' ? 'section-tab-active' : ''}`}>
-      Details
-    </button>
-    <button onClick={() => setActiveTab('barcode')} className={`section-tab ${activeTab === 'barcode' ? 'section-tab-active' : ''}`}>
-      Barcode
-    </button>
-  </div>
+// Inside a rawContent step component (renders its own IonHeader/IonContent/IonFooter):
+<>
+  <IonHeader>
+    <IonToolbar>
+      <IonTitle>Edit product</IonTitle>
+    </IonToolbar>
+    {/* Tab buttons - add modal-step-item class so they fade with content */}
+    <div className="section-tabs section-tabs--modal modal-step-item">
+      <button onClick={() => setActiveTab('details')} className={`section-tab ${activeTab === 'details' ? 'section-tab-active' : ''}`}>
+        Details
+      </button>
+      <button onClick={() => setActiveTab('barcode')} className={`section-tab ${activeTab === 'barcode' ? 'section-tab-active' : ''}`}>
+        Barcode
+      </button>
+    </div>
+  </IonHeader>
 
-  <TabContainer
-    activeTab={activeTab}
-    onTabChange={(id) => setActiveTab(id as 'details' | 'barcode')}
-    swipeable
-  >
-    <TabContainer.Tab id="details">
-      <Modal.Item>...</Modal.Item>
-      <Modal.Item>...</Modal.Item>
-    </TabContainer.Tab>
-    <TabContainer.Tab id="barcode">
-      <Modal.Item>...</Modal.Item>
-    </TabContainer.Tab>
-  </TabContainer>
+  <IonContent>
+    <TabContainer
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as 'details' | 'barcode')}
+      swipeable
+    >
+      <TabContainer.Tab id="details">
+        <div className="modal-step-item">...</div>
+        <div className="modal-step-item">...</div>
+      </TabContainer.Tab>
+      <TabContainer.Tab id="barcode">
+        <div className="modal-step-item">...</div>
+      </TabContainer.Tab>
+    </TabContainer>
+  </IonContent>
 
-  <Modal.Footer>...</Modal.Footer>
-</Modal.Step>
+  <IonFooter>
+    <IonToolbar>
+      <div className="modal-footer">...</div>
+    </IonToolbar>
+  </IonFooter>
+</>
 ```
 
 **Modal-specific rules:**
@@ -405,10 +387,10 @@ See `.claude/docs/realtime-system.md` for the full revoke flow.
 
 ## Examples
 
-**Simple edit modal:** `apps/web/src/components/providers/ProviderModal.tsx`
+**Simple single-body modal:** `apps/web/src/components/account/EditProfileModal.tsx`
+**Multi-step with OTP:** `apps/web/src/components/account/ChangeEmailModal.tsx`
 **Add + AI flow:** `apps/web/src/components/products/AddProductModal.tsx`
-**Edit with delete/inventory:** `apps/web/src/components/products/EditProductModal.tsx`
-**Multi-step with review:** `apps/web/src/components/products/NewOrderModal.tsx`
+**Edit with delete:** `apps/web/src/components/products/EditProductModal.tsx`
 **Team management (modals + flows in a tab page):** `apps/web/src/routes/tabs/TeamTab.tsx`
 
-> Modal hosts live inside whichever `IonPage` mounts them. Each tab page (`HomeTab`, `SalesTab`, `ProductsTab`, `ManageTab`) and each drill-down page (`ProvidersTab`, `TeamTab`, `ProviderDetailPage`) owns its own modals; modals render as portals at the document root and close cleanly when the host `IonPage` unmounts or the `isOpen` prop flips to false.
+> Modal hosts live inside whichever `IonPage` mounts them. Each tab page (`HomeTab`, `LedgerTab`, `ProductsTab`, `ManageTab`) and the `TeamTab` drill-down own their own modals; modals render as portals at the document root and close cleanly when the host `IonPage` unmounts or the `isOpen` prop flips to false.

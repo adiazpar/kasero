@@ -89,9 +89,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // The JWT already carries the user's email — trust it and skip the DB
-    // round trip. If the token is stale (user deleted mid-session) the
-    // transaction below would fail on the FK insert anyway.
+    // The better-auth DB session carries the user's email — trust it and
+    // skip the DB round trip. If the session is stale (user deleted
+    // mid-session) the transaction below would fail on the FK insert anyway.
     const isRecipient = session.user.email.toLowerCase() === transfer.toEmail.toLowerCase()
 
     if (!isRecipient) {

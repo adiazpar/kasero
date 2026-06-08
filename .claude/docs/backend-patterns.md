@@ -372,13 +372,13 @@ const { email, name, price } = validation.data
 
 ### Role Matrix
 
-| Role | Read | Create products / orders | Edit products / orders | Adjust stock | Manage team | Transfer business |
-|------|------|--------------------------|------------------------|--------------|-------------|-------------------|
+| Role | Read | Create products | Edit products | Adjust stock | Manage team | Transfer business |
+|------|------|-----------------|---------------|--------------|-------------|-------------------|
 | owner | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | partner | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | employee | ✓ | — | — | — | — | — |
 
-Employees are strictly read-only. `POST /products`, `POST /orders`, `POST /orders/[id]/receive`, and `PATCH /products/[id]/stock` all gate on `canManageBusiness`. `GET /team` is also restricted to managers so teammate emails aren't exposed to employees.
+Employees are strictly read-only. `POST /products` and `PATCH /products/[id]/stock` gate on `canManageBusiness`. `GET /team` is also restricted to managers so teammate emails aren't exposed to employees.
 
 ### Role Check Helpers
 
@@ -401,7 +401,7 @@ if (!isOwner(access.role)) {
 | Operation | Check |
 |-----------|-------|
 | List / view business-scoped data | `withBusinessAuth` (already handled) |
-| Create / update / delete products, orders, providers, categories | `canManageBusiness(access.role)` |
+| Create / update / delete products, categories, expenses, expense-categories, inventory adjustments | `canManageBusiness(access.role)` |
 | Read team members | `canManageBusiness(access.role)` |
 | Change role / toggle status / issue invite codes | `isOwner(access.role)` |
 | Initiate / cancel / confirm ownership transfer | `isOwner(access.role)` |
@@ -510,10 +510,9 @@ if (oversize) return oversize
 
 Per-route caps:
 - AI routes (JSON with base64 image): 2 MB
-- Profile avatar (JSON with base64 image): 5 MB
+- Business create (multipart with optional logo): 3 MB
 - Product icon (multipart): 5 MB
 - Business logo (multipart): 5 MB
-- Order receipt (multipart): 15 MB
 - HEIC conversion (multipart): 30 MB
 
 ### Magic-Byte Content Sniffing
@@ -732,28 +731,32 @@ All AI and HEIC routes require authentication (`withAuth` wrapper) and share a p
 | `/categories/[id]` | DELETE | Delete category |
 | `/categories/reorder` | POST | Reorder categories |
 
-### Providers
+### Expenses
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/providers` | GET | List providers |
-| `/providers` | POST | Create provider |
-| `/providers/[id]` | GET | Get provider detail + embedded stats + notes |
-| `/providers/[id]` | PATCH | Update provider |
-| `/providers/[id]` | DELETE | Delete provider (nulls dependent orders' providerId) |
-| `/providers/[id]/notes` | POST | Create a note (max 5 per provider) |
-| `/providers/[id]/notes/[noteId]` | PATCH | Update a note |
-| `/providers/[id]/notes/[noteId]` | DELETE | Delete a note |
+| `/expenses` | GET | List expenses (cursor-paginated; optional `?from=`, `?to=`, `?limit=`) |
+| `/expenses` | POST | Create expense (manager only) |
+| `/expenses/[id]` | GET | Get expense detail |
+| `/expenses/[id]` | PATCH | Update expense (manager only) |
+| `/expenses/[id]` | DELETE | Delete expense (manager only) |
+| `/expenses/summary` | GET | Current-month income / expense / net totals; optional `?month=YYYY-MM-DD` for historical lookback |
 
-### Orders (Purchase Orders)
+### Expense Categories
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/orders` | GET | List orders with items |
-| `/orders` | POST | Create order (FormData) |
-| `/orders/[id]` | PATCH | Update order (FormData) |
-| `/orders/[id]` | DELETE | Delete order |
-| `/orders/[id]/receive` | POST | Receive order, update stock |
+| `/expense-categories` | GET | List expense categories |
+| `/expense-categories` | POST | Create expense category (manager only) |
+| `/expense-categories/[id]` | PATCH | Update expense category (manager only) |
+| `/expense-categories/[id]` | DELETE | Delete expense category (manager only); 409 `EXPENSE_CATEGORY_IN_USE` if expenses reference it |
+
+### Inventory Adjustments
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/inventory-adjustments` | GET | List adjustments (cursor-paginated; optional `?productId=`) |
+| `/inventory-adjustments` | POST | Record a stock adjustment and atomically update `products.stock` (manager only); optionally creates a linked expense in the same transaction |
 
 ### Sales Sessions (cash drawer / shift)
 
@@ -774,6 +777,13 @@ All AI and HEIC routes require authentication (`withAuth` wrapper) and share a p
 | `/sales` | POST | Record a sale |
 | `/sales/[id]` | GET / PATCH / DELETE | Read / update / void a sale |
 | `/sales/aggregate` | GET | Daily / period aggregates |
+
+### Test Endpoints (E2E only)
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/test/last-otp` | GET | Returns the most recently issued email-OTP for a given `?email=` from the `verification` table. Guarded by `ALLOW_TEST_ENDPOINTS=true` AND `NODE_ENV !== 'production'`; returns 404 otherwise. Used exclusively by E2E tests. |
+| `/api/test/seed-user` | POST | Seeds a test user. Same `ALLOW_TEST_ENDPOINTS` + non-production guard. |
 
 ---
 

@@ -91,9 +91,8 @@ export const POST = withBusinessAuth(async (request, access) => {
       )
 
     if (status === 'disabled') {
-      // Resolve the email inside the transaction — JWT-style stale
-      // emails won't surface here because we read straight from the
-      // users row.
+      // Resolve the email inside the transaction — read straight from the
+      // users row so we always get the current address, not a cached value.
       const [target] = await tx
         .select({ email: users.email })
         .from(users)

@@ -17,8 +17,9 @@
 | Profile | account/change-email confirm, better-auth update-user (`after` hook) | `profile` | — |
 | Products + inventory | businesses/[id]/products (POST), products/[id] (PATCH/DELETE), products/[id]/stock (PATCH), product-settings (PATCH) | `products`, `product-settings` | `product` |
 | Categories | categories (POST), categories/[id] (PATCH/DELETE), categories/reorder | `categories` | `category` |
-| Orders / sales / sessions | sales (POST), orders (POST/PATCH/DELETE), orders/[id]/receive, sales-sessions/{open,close} | `sales`, `orders`, `sales-sessions` | `sale`, `order`, `sales-session` |
-| Providers (suppliers) | providers (POST), providers/[id] (PATCH/DELETE), providers/[id]/notes (POST/PATCH/DELETE on noteId) | `providers` | `provider` |
+| Sales / sessions | sales (POST), sales-sessions/{open,close} | `sales`, `sales-sessions` | `sale`, `sales-session` |
+| Inventory adjustments | products/[id]/stock (PATCH) | `inventory-adjustments` | — |
+| Expenses | expenses (POST/PATCH/DELETE), expense-categories (POST/PATCH/DELETE) | `expenses`, `expense-categories` | `expense`, `expense-category` |
 
 ### Detail modals wired with `useDismissOnDelete` / `useResyncOnUpdate`
 
@@ -26,8 +27,6 @@
 - `InviteModal` — `invite`, dismiss-on-delete (gains `inviteId` prop from `useTeamManagement().generatedCodeId`)
 - `EditProductModal` — `product`, dismiss-on-delete
 - `ProductInfoDrawer` — `product`, dismiss-on-delete + resync-on-update
-- `OrderDetailModal` — `order`, dismiss-on-delete + resync-on-update (wired inside `useOrderFlows` where `viewingOrder` state lives)
-- `ProviderDetailClient` — `provider`, dismiss-on-delete (closes all name/email/phone edit modals) + resync-on-update
 - `SessionSalesList` — registers its own `refetch` under `'sales'` (it's a list view, not a per-entity modal; included here because it's a sneaky case where the component fetches its own data outside any context)
 
 ### Domains deliberately NOT realtime
@@ -179,10 +178,10 @@ The limit MUST be far above the browser's worst-case auto-retry cadence (3s for 
 
 ### 2.9 Stock cascade pattern: single event, dual client refetch
 
-When a route mutates `products.stock` as a side effect (sales create, order receive, category delete), the server fires ONE domain-level event:
+When a route mutates `products.stock` as a side effect (sales create, inventory adjustment, category delete), the server fires ONE domain-level event:
 
 - `sale.created` → client: `callRefetch('sales')` + `callRefetch('products')`
-- `order.received` → client: `callRefetch('orders')` + `callRefetch('products')`
+- `inventory-adjustment.created` → client: `callRefetch('inventory-adjustments')` + `callRefetch('products')`
 - `category.deleted` → client: `callRefetch('categories')` + `callRefetch('products')`
 
 **Not** N `product.updated fields:['stock']` events per affected product. Two extra GETs on receivers is cheaper than N pub/sub fan-outs.
@@ -191,13 +190,13 @@ When a route mutates `products.stock` as a side effect (sales create, order rece
 
 ### 2.10 Notes (and similar sub-entities) collapse under the parent's update event
 
-The provider notes routes (`POST /providers/[id]/notes`, `PATCH /notes/[noteId]`, `DELETE /notes/[noteId]`) all publish:
+When a route mutates a sub-entity that the client always views as part of its parent (e.g. sale line items that are always rendered inside the parent sale), those routes publish the PARENT's update event with a `fields` hint rather than creating a dedicated sub-entity event type. For example, a hypothetical sale-items rewrite would publish:
 
 ```ts
-publishToBusiness(businessId, { type: 'provider.updated', providerId, fields: ['notes'] })
+publishToBusiness(businessId, { type: 'sale.updated', saleId, fields: ['items'] })
 ```
 
-NOT a dedicated `note.*` event. Same with `order.updated fields:['items']` covering the order_items rewrite.
+NOT a dedicated `sale-item.*` event.
 
 **Rule: sub-entities that the client always views as part of their parent share the parent's event. Don't multiply event types for internal data shape.**
 
@@ -350,8 +349,7 @@ The canonical Vercel value is mirrored in Bitwarden's `Kasero — Vercel project
 │     subscribes to update bus, calls onUpdate when id matches     │
 │                                                                  │
 │ Consumed by:                                                     │
-│   MemberModal, InviteModal, EditProductModal, ProductInfoDrawer, │
-│   OrderDetailModal (via useOrderFlows), ProviderDetailClient     │
+│   MemberModal, InviteModal, EditProductModal, ProductInfoDrawer  │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -394,7 +392,7 @@ Step-by-step recipe. Every existing domain followed this exactly.
    - PATCH routes should compute `fields: changedFields[]` from the actual payload (`'name' in updateData ? ...`).
    - If `changedFields.length === 0`, skip the publish — empty PATCH payloads shouldn't trigger refetches.
 
-3. **Sub-route gotcha.** If your domain has sub-routes (provider notes, order items, etc.), publish the PARENT's `domain.updated fields:['<sub-token>']` rather than creating sub-entity events. See §2.10.
+3. **Sub-route gotcha.** If your domain has sub-routes (e.g. line items, embedded sub-records), publish the PARENT's `domain.updated fields:['<sub-token>']` rather than creating sub-entity events. See §2.10.
 
 ### 4.2 Shared types
 
@@ -557,9 +555,7 @@ When you see a symptom like the ones below, the cause is likely the correspondin
 - `products-context.tsx` → `'products'`
 - `product-settings-context.tsx` → `'product-settings'` + `'categories'`
 - `sales-context.tsx` → `'sales'`
-- `orders-context.tsx` → `'orders'` (unified refetch of active + completed buckets)
 - `sales-sessions-context.tsx` → `'sales-sessions'`
-- `providers-context.tsx` → `'providers'`
 - `apps/web/src/components/sales/session-views/SessionSalesList.tsx` → `'sales'` (component-level, special case)
 
 ### Detail modals wired
@@ -567,8 +563,6 @@ When you see a symptom like the ones below, the cause is likely the correspondin
 - `apps/web/src/components/team/InviteModal.tsx`
 - `apps/web/src/components/products/EditProductModal.tsx`
 - `apps/web/src/components/products/ProductInfoDrawer.tsx`
-- `apps/web/src/hooks/useOrderFlows.ts` (OrderDetailModal lifecycle)
-- `apps/web/src/components/providers/ProviderDetailClient.tsx`
 
 ### Locale keys (in every file under `apps/web/src/i18n/messages/`)
 - `session_revoked_removed` + `_no_name` fallback

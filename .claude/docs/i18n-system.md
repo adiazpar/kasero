@@ -1,6 +1,6 @@
 # i18n System
 
-Kasero is fully internationalized with `react-intl` (`@formatjs/intl-react`). Every user-visible string in the app — whether rendered by a component or emitted from an API route — flows through a single translation layer. The set of supported languages is driven by a single registry at `packages/shared/src/locales.ts`. Currently registered: English (`en-US`, source of truth), Spanish (`es`), Japanese (`ja`). This doc is the reference for writing new code in a way that stays compatible with that layer, and for adding new languages without touching the rest of the app.
+Kasero is fully internationalized with `react-intl` (`@formatjs/intl-react`). Every user-visible string in the app — whether rendered by a component or emitted from an API route — flows through a single translation layer. The set of supported languages is driven by a single registry at `packages/shared/src/locales.ts`. Currently registered: English (`en-US`, source of truth), German (`de`), Spanish (`es`), Filipino (`fil`), French (`fr`), Italian (`it`), Japanese (`ja`), Korean (`ko`), Portuguese (`pt`), Vietnamese (`vi`), Chinese Simplified (`zh`) — 11 locales total. This doc is the reference for writing new code in a way that stays compatible with that layer, and for adding new languages without touching the rest of the app.
 
 **Read this before**: wrapping any new string, adding a new API route, adding a new Zod schema, catching `ApiError` in a hook, or touching anything under `apps/web/src/i18n/`, `packages/shared/src/api-messages.ts`, `apps/api/src/lib/api-middleware.ts`, or `apps/api/scripts/i18n-translate.ts`.
 
@@ -52,7 +52,7 @@ Kasero is fully internationalized with `react-intl` (`@formatjs/intl-react`). Ev
 |---|---|
 | `packages/shared/src/locales.ts` | **Locale registry — single source of truth for adding a new language.** Defines `LOCALES` (label, accept-prefixes, translate metadata), and exports `SUPPORTED_LOCALES`, `DEFAULT_LOCALE`, `SupportedLocale`, `getLocaleConfig()`, `resolveLocaleByPrefix()`. |
 | `apps/web/src/i18n/messages/en-US.json` | **Source of truth for strings.** Every new key lands here first. Flat dot-keys. |
-| `apps/web/src/i18n/messages/<locale>.json` | One file per registered locale (e.g. `es.json`, `ja.json`). Edit directly when adding new keys to an existing locale. The translate script is reserved for bootstrapping a brand-new locale. |
+| `apps/web/src/i18n/messages/<locale>.json` | One file per registered locale (e.g. `de.json`, `es.json`, `fil.json`, `fr.json`, `it.json`, `ja.json`, `ko.json`, `pt.json`, `vi.json`, `zh.json`). Edit directly when adding new keys to an existing locale. The translate script is reserved for bootstrapping a brand-new locale. |
 | `apps/web/src/i18n/AppIntlProvider.tsx` | `<AppIntlProvider>` — wraps the app, resolves locale from `user.language` → browser Accept-Language → `en-US`, dynamically imports the matching messages JSON. |
 | `apps/web/src/i18n/loadMessages.ts` | `loadMessages(locale)` — `import()`-based dynamic loader; one JSON per locale, code-split. |
 | `apps/web/src/i18n/messageIds.d.ts` | **Generated** type union of all valid message ids. Typos become compile errors. |
@@ -98,7 +98,7 @@ If you need declarative JSX rendering (rare), the `<FormattedMessage id=... />` 
 
 1. Decide the namespace prefix. Use an existing prefix if the string belongs to the same feature domain (e.g. `productForm.`, `hub.`, `common.`). Add a new top-level prefix only if it's a brand new feature area.
 2. Add the key to `apps/web/src/i18n/messages/en-US.json` as a flat dot-key (`"productForm.name_label": "Name"`). Write the English value directly — no placeholder.
-3. Add the key to **every other** `apps/web/src/i18n/messages/<locale>.json` (currently `es.json` and `ja.json`) with the **real translation** in that language. No English placeholders, no follow-up script run. Preserve ICU `{variable}` tokens and `<em>` / other HTML-like tags verbatim. The per-locale tone rules (Spanish: usted form, Latin American POS vocabulary; Japanese: desu/masu polite form, Japanese punctuation) are documented in the `translate.guidance` blocks in `packages/shared/src/locales.ts` — match that voice.
+3. Add the key to **every other** `apps/web/src/i18n/messages/<locale>.json` (currently `de.json`, `es.json`, `fil.json`, `fr.json`, `it.json`, `ja.json`, `ko.json`, `pt.json`, `vi.json`, `zh.json`) with the **real translation** in that language. No English placeholders, no follow-up script run. Preserve ICU `{variable}` tokens and `<em>` / other HTML-like tags verbatim. The per-locale tone rules are documented in the `translate.guidance` blocks in `packages/shared/src/locales.ts` — match that voice.
 4. Use the key in your component via `intl.formatMessage({ id: 'productForm.name_label' })`. TypeScript will fail the build if you typo it, because `apps/web/src/i18n/messageIds.d.ts` types the union of valid ids.
 5. Regenerate the types: `npm run i18n:types --workspace=apps/web`. The `predev`/`prebuild` hooks also do this, but run it explicitly after editing the JSON so the next typecheck sees the new ids.
 
@@ -215,7 +215,7 @@ The client's `ApiError` class extracts `messageCode` and `messageVars` automatic
 
 1. Add the code to the union in `packages/shared/src/api-messages.ts`. Use `UPPER_SNAKE`, group with related codes under the domain comment header (Auth, Products, Barcode, Categories, Orders, Providers, Team, Invite, Transfer, Business, AI, HEIC, etc.).
 2. Add a corresponding key to the `apiMessages.` namespace in `apps/web/src/i18n/messages/en-US.json` — the key is the lowercase version of the code (e.g. `PRODUCT_CREATED` → `apiMessages.product_created`).
-3. Add the key in **every** non-English locale file (`es.json`, `ja.json`, …) with the **real translation** — no English placeholders, no follow-up script run.
+3. Add the key in **every** non-English locale file (`de.json`, `es.json`, `fil.json`, `fr.json`, `it.json`, `ja.json`, `ko.json`, `pt.json`, `vi.json`, `zh.json`) with the **real translation** — no English placeholders, no follow-up script run.
 4. Use the code in your route via `ApiMessageCode.YOUR_CODE`.
 5. Regenerate `apps/web/src/i18n/messageIds.d.ts` via `npm run i18n:types --workspace=apps/web` so the new id flows into the type union.
 
@@ -238,7 +238,7 @@ The client's `ApiError` class extracts `messageCode` and `messageVars` automatic
 | `apiMessages.realtime_unavailable` | Toast shown on `system.error` with `REALTIME_UNAVAILABLE` code |
 | `apiMessages.realtime_publish_unavailable` | Toast shown on `system.error` with `REALTIME_PUBLISH_UNAVAILABLE` code |
 
-All of the above were added to `en-US.json` first, then translated into `es.json` and `ja.json` directly (no script run) per the "real translations for every registered locale" rule.
+All of the above were added to `en-US.json` first, then translated into every other locale file directly (no script run) per the "real translations for every registered locale" rule.
 
 ### Zod schemas
 
@@ -478,7 +478,7 @@ These are the rules that matter for writing new code. They are the contract betw
 
 1. **Every new UI string goes through `intl.formatMessage({ id })`.** No exceptions. If you're writing JSX and typing English text that isn't inside `{variable}`, you're wrong.
 2. **Every new API route returns an `ApiMessageCode` envelope.** Use `errorResponse()` / `successResponse()` / `validationError()`. Never write `NextResponse.json({ error: 'English' })`.
-3. **Every new key lands in `en-US.json` first**, then add the **real translation** for every other registered locale (`es.json`, `ja.json`, …) directly — no English placeholders, no follow-up script run. Match the per-locale voice documented in the `translate.guidance` blocks in `packages/shared/src/locales.ts`. Regenerate `messageIds.d.ts` via `npm run i18n:types --workspace=apps/web`. The translate script is reserved for bootstrapping a brand-new locale.
+3. **Every new key lands in `en-US.json` first**, then add the **real translation** for every other registered locale (`de.json`, `es.json`, `fil.json`, `fr.json`, `it.json`, `ja.json`, `ko.json`, `pt.json`, `vi.json`, `zh.json`) directly — no English placeholders, no follow-up script run. Match the per-locale voice documented in the `translate.guidance` blocks in `packages/shared/src/locales.ts`. Regenerate `messageIds.d.ts` via `npm run i18n:types --workspace=apps/web`. The translate script is reserved for bootstrapping a brand-new locale.
 4. **Every new Zod schema uses the generic issue mapper.** Don't add `.min(n, 'custom message')` — it becomes dead code. If a `.refine()` needs a specific error, use `{ params: { apiMessageCode: 'YOUR_CODE' } }`.
 5. **Every hook that catches `ApiError` translates via `useApiMessage`**, with a fallback to a local `intl.formatMessage({ id: 'myFeature.error_...' })` for non-envelope failures.
 6. **Never hardcode `'en-US'` or `'USD'` in component code.** Use `useBusinessFormat()` for formatting and `useIntl()` for strings.
@@ -511,7 +511,7 @@ return <span>{statusLabels[order.status]}</span>
 ```
 
 **"I added a new key and only wrote the English version."**
-The key renders as its English source in every other locale because each `<locale>.json` is missing it (or kept as a byte-identical copy of the English). For existing locales (`es.json`, `ja.json`, …) add the real translation by hand alongside the en-US entry — do not reach for the translate script. The script is reserved for bootstrapping a brand-new locale; backfilling new keys through it tends to drift the tone away from existing strings in the same domain.
+The key renders as its English source in every other locale because each `<locale>.json` is missing it (or kept as a byte-identical copy of the English). For existing locales (`de.json`, `es.json`, `fil.json`, `fr.json`, `it.json`, `ja.json`, `ko.json`, `pt.json`, `vi.json`, `zh.json`) add the real translation by hand alongside the en-US entry — do not reach for the translate script. The script is reserved for bootstrapping a brand-new locale; backfilling new keys through it tends to drift the tone away from existing strings in the same domain.
 
 **"I used `useTranslations('hub')` and got a TypeScript error."**
 That was the `next-intl` API, which is no longer in the codebase. Use `useIntl()` from `react-intl` and call `intl.formatMessage({ id: 'hub.<key>' })` with the full dot-key id.

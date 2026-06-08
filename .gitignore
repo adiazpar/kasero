@@ -115,3 +115,6 @@ apps/api/public/kasero-logo.png
 
 # Playwright MCP server session artifacts
 .playwright-mcp/
+
+# Graphify knowledge-graph artifacts (local)
+graphify-out/

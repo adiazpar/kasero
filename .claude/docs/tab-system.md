@@ -4,14 +4,14 @@ There are **two distinct tab abstractions** in the codebase. Don't confuse them:
 
 | Concept | Source | Use case |
 |---------|--------|----------|
-| **`TabContainer`** (custom) | `apps/web/src/components/ui/TabContainer.tsx` | In-page sub-tab UI inside a single page or modal (e.g. ProductsTab's Products↔Orders sub-tabs, AddProductModal's Details↔Barcode tabs, ProviderDetailPage's summary↔history↔notes). Handles swipe gestures, slide animations, and scroll reset. |
+| **`TabContainer`** (custom) | `apps/web/src/components/ui/TabContainer.tsx` | In-page sub-tab UI inside a single page or modal (e.g. the Products and Ledger views' sub-tabs, AddProductModal's Details↔Barcode tabs). Handles swipe gestures, slide animations, and scroll reset. |
 | **`IonTabs`** (Ionic) | `@ionic/react` | Top-level navigation across the 4 business-context bottom tabs (Home, Sales, Products, Manage). Persistence + scroll preservation are native to Ionic; we don't reimplement them. |
 
 This document is about **`TabContainer`** — the in-page sub-tab primitive. For the top-level bottom-nav shell, see the section [IonTabs (top-level shell)](#iontabs-top-level-shell) below — it's a short pointer; the full per-page wiring lives in `apps/web/src/routes/BusinessTabsLayout.tsx`.
 
 `TabContainer` is the canonical primitive for any in-page tab UI — both modals and full pages. It handles swipe-to-switch, slide animations, and scroll reset. Don't roll your own tab renderer.
 
-> When tabs live inside a modal, also read `.claude/docs/modal-system.md` — it covers the modal-specific rules (which props to enable, where form state must live, tab button styling with `section-tabs--modal` and `morph-item`).
+> When tabs live inside a modal, also read `.claude/docs/modal-system.md` — it covers the modal-specific rules (which props to enable, where form state must live, tab button styling with `section-tabs--modal` and `modal-step-item`).
 
 ## API
 
@@ -43,7 +43,7 @@ You still render your own tab buttons above the `TabContainer`. The component ha
 | Surface | `swipeable` | `fitActiveHeight` | Why |
 |---------|:-----------:|:-----------------:|-----|
 | Modals with similar-height tabs (`AddProductModal`, `EditProductModal`) | yes | **no** | Stable container height — no growing/shrinking on swipe. |
-| Full pages with very different tab heights (ProductsTab Products↔Orders) | yes | **yes** | Avoids large empty space below the shorter tab. Height swap is instant under the slide. |
+| Full pages with very different tab heights (the Products view's Products↔Inventory) | yes | **yes** | Avoids large empty space below the shorter tab. Height swap is instant under the slide. |
 | Anywhere swipe is undesirable (rare) | no | n/a | Falls back to a plain opacity cross-fade with all tabs mounted. |
 
 **Default to `fitActiveHeight={false}`.** Only enable it when the height delta between tabs is large enough that the empty space below the short tab is visible and annoying.
@@ -145,13 +145,11 @@ export function BusinessTabsLayout() {
     <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/:businessId/home" component={HomeTab} />
-        <Route exact path="/:businessId/sales" component={SalesTab} />
+        <Route exact path="/:businessId/sales" component={LedgerTab} />
         <Route exact path="/:businessId/products" component={ProductsTab} />
         <Route exact path="/:businessId/manage" component={ManageTab} />
-        {/* Drill-downs reachable from manage tab share this outlet */}
-        <Route exact path="/:businessId/providers" component={ProvidersTab} />
+        {/* Drill-down reachable from the manage tab shares this outlet */}
         <Route exact path="/:businessId/team" component={TeamTab} />
-        <Route exact path="/:businessId/providers/:id" component={ProviderDetailPage} />
       </IonRouterOutlet>
       <IonTabBar slot="bottom">
         <IonTabButton tab="home" href={`/${businessId}/home`}>
@@ -178,6 +176,6 @@ Don't try to unify them. They look superficially similar but model different nav
 
 - **Internal state survives** tab switches: search filter input, expanded rows, in-progress modal data.
 - **Scroll position is preserved per tab** by Ionic — the inactive tab's scroll position is kept on the offscreen element and restored when the tab becomes active again.
-- **Drill-downs from a tab** (e.g., manage → providers → provider detail) push onto the tab's own stack. Going back unwinds to the parent tab in its prior state.
+- **Drill-downs from a tab** (e.g., manage → team) push onto the tab's own stack. Going back unwinds to the parent tab in its prior state.
 
 We don't need a `TabShell` component, an `useIdleMount` hook, or a `getActiveTab` function for this — Ionic owns it.

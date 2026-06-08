@@ -10,16 +10,16 @@ A multi-business management system for small businesses. Built for speed, simpli
 - **Sales Register** - Open/close sales sessions, ring up sales, daily aggregates
 - **Team Management** - Invite partners/employees with role-based access
 - **Ownership Transfer** - Transfer business ownership to another user
-- **Email Auth** - Simple email/password authentication
+- **Passwordless Auth** - Email one-time-code plus Google and Apple sign-in (better-auth, database-backed sessions)
 - **PWA** - Works offline, installable on mobile
-- **i18n** - English, Spanish, Japanese (driven by a single locale registry)
+- **i18n** - 11 languages (de, en-US, es, fil, fr, it, ja, ko, pt, vi, zh) driven by a single locale registry
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| **Frontend (apps/web/)** | Vite 6, React 19, TypeScript, Ionic React 8, react-router v5 |
-| **Backend (apps/api/)** | Next.js 15 (API-only), Drizzle ORM, jose JWT, bcryptjs |
+| **Frontend (apps/web/)** | Vite 8, React 19, TypeScript, Ionic React 8, react-router v5 |
+| **Backend (apps/api/)** | Next.js 16 (API-only), Drizzle ORM, better-auth (email-OTP + Google/Apple OAuth) |
 | **Shared (packages/shared/)** | Drizzle schema, types, ApiMessageCode, locale registry |
 | **Styling** | Tailwind CSS v4 + brand CSS variables + Ionic theme bridge |
 | **Database** | Local SQLite (dev) + Turso/libSQL (prod) |
@@ -69,7 +69,7 @@ Per-app scripts of note (run inside the workspace, or via `npm run <script> --wo
 Each app has its own `.env.local` (both gitignored). See `apps/api/.env.example` and `apps/web/.env.example` for the full templates.
 
 Required:
-- `AUTH_SECRET` (in `apps/api/.env.local`) — JWT signing secret, min 32 chars
+- `AUTH_SECRET` (in `apps/api/.env.local`) — better-auth session signing secret, min 32 chars
 
 Production only:
 - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
@@ -86,7 +86,7 @@ Local dev uses `apps/api/data/local.db` automatically — no Turso CLI or accoun
 ```
 kasero/
 ├── apps/
-│   ├── api/        # Next.js (API-only); 55 routes; serves SPA from public/ in prod
+│   ├── api/        # Next.js (API-only); 54 routes; serves SPA from public/ in prod
 │   └── web/        # Vite SPA (Ionic React Router shell)
 └── packages/
     └── shared/     # Drizzle schema, types, ApiMessageCode, locale registry,
