@@ -63,7 +63,7 @@ export function SuggestedCategoryStepWrapper() {
               {t.formatMessage(
                 { id: 'productAddEdit.suggested_title' },
                 {
-                  em: (chunks) => <em>{chunks}</em>,
+                  em: (chunks) => <em key="em">{chunks}</em>,
                   name: suggestedCategoryName ?? '',
                 },
               )}

@@ -83,7 +83,7 @@ export function PriceStep({ mode }: PriceStepProps) {
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_price_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
           </header>

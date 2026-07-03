@@ -63,7 +63,7 @@ export function DeleteSuccessStep() {
           >
             {t.formatMessage(
               { id: 'productAddEdit.success_deleted_title' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h2>
 

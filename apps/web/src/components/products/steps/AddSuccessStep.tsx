@@ -63,7 +63,7 @@ export function AddSuccessStep() {
           >
             {t.formatMessage(
               { id: 'productAddEdit.success_created_title' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h2>
 

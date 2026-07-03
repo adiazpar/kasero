@@ -139,7 +139,7 @@ export function OpenSessionModal({
           eyebrow={intl.formatMessage({ id: 'sales.session.open_modal.eyebrow' })}
           title={intl.formatMessage(
             { id: 'sales.session.open_modal.hero_title' },
-            { em: (chunks) => <em>{chunks}</em> },
+            { em: (chunks) => <em key="em">{chunks}</em> },
           )}
           subtitle={intl.formatMessage({ id: 'sales.session.open_modal.description' })}
           amountLabel={intl.formatMessage({ id: 'sales.session.open_modal.starting_cash' })}
@@ -199,7 +199,7 @@ export function OpenSessionModal({
               <h2 className="open-session__success-heading">
                 {intl.formatMessage(
                   { id: 'sales.session.open_modal.success_title' },
-                  { em: (chunks) => <em>{chunks}</em> },
+                  { em: (chunks) => <em key="em">{chunks}</em> },
                 )}
               </h2>
               <p className="open-session__success-desc">
@@ -228,7 +228,7 @@ export function OpenSessionModal({
               <h2 className="open-session__error-heading">
                 {intl.formatMessage(
                   { id: 'sales.session.open_modal.error_title' },
-                  { em: (chunks) => <em>{chunks}</em> },
+                  { em: (chunks) => <em key="em">{chunks}</em> },
                 )}
               </h2>
               <p className="open-session__error-body">{error}</p>

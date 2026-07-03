@@ -25,7 +25,7 @@ export function InviteDeleteCodeBody({ newCode }: InviteDeleteCodeBodyProps) {
         <h1 className="pm-hero__title pm-hero__title--danger">
           {t.formatMessage(
             { id: 'team.invite_v2.title_delete' },
-            { em: (chunks) => <em>{chunks}</em> },
+            { em: (chunks) => <em key="em">{chunks}</em> },
           )}
         </h1>
         <p className="pm-hero__subtitle">

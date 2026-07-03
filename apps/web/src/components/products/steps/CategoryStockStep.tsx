@@ -98,7 +98,7 @@ export function CategoryStockStep({ mode }: CategoryStockStepProps) {
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_category_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
           </header>

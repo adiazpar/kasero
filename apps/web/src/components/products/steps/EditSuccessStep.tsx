@@ -64,7 +64,7 @@ export function EditSuccessStep() {
           >
             {t.formatMessage(
               { id: 'productAddEdit.success_updated_title' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h2>
 

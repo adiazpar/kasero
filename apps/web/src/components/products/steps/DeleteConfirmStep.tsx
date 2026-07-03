@@ -89,7 +89,7 @@ export function DeleteConfirmStep() {
             <h1 className="pm-hero__title pm-hero__title--danger">
               {t.formatMessage(
                 { id: 'productAddEdit.delete_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
           </header>

@@ -113,7 +113,7 @@ export function AnalyzingStep() {
             <h2 className="pm-analyzing__heading">
               {t.formatMessage(
                 { id: 'aiPipeline.error_heading' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h2>
 
@@ -134,7 +134,7 @@ export function AnalyzingStep() {
             <h2 className="pm-analyzing__heading">
               {t.formatMessage(
                 { id: 'productAddEdit.analyzing_heading' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h2>
 

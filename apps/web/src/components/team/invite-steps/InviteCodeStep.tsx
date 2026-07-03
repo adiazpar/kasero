@@ -76,7 +76,7 @@ export function InviteCodeBody({
         <h1 className="pm-hero__title">
           {t.formatMessage(
             { id: 'team.invite_v2.title_step2' },
-            { em: (chunks) => <em>{chunks}</em> },
+            { em: (chunks) => <em key="em">{chunks}</em> },
           )}
         </h1>
       </header>

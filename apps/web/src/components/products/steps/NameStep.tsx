@@ -100,7 +100,7 @@ export function NameStep({ mode }: NameStepProps) {
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.step_name_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
           </header>

@@ -64,7 +64,7 @@ export function AddEntryStep() {
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.entry_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
             <p className="pm-hero__subtitle">

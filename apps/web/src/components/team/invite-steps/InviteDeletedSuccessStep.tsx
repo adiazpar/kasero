@@ -25,7 +25,7 @@ export function InviteDeletedSuccessBody() {
       <h2 className="pm-hero__title pm-hero__title--danger" style={{ textAlign: 'center' }}>
         {t.formatMessage(
           { id: 'team.invite_v2.title_deleted' },
-          { em: (chunks) => <em>{chunks}</em> },
+          { em: (chunks) => <em key="em">{chunks}</em> },
         )}
       </h2>
 

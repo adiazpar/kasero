@@ -316,7 +316,7 @@ export function MemberModal({
             <h2 className="manage-seal__title">
               {t.formatMessage(
                 { id: successTitleKey },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h2>
 

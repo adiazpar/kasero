@@ -301,7 +301,7 @@ export function LiveBarcodeScanner({
           <p className="pm-scanner__hint">
             {t.formatMessage(
               { id: 'productAddEdit.scanner_hint' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </p>
           {onSwitchToFilePicker && (

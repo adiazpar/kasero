@@ -505,7 +505,7 @@ export function ProductSettingsModal({
                   ? 'productSettings.manage_hero_title'
                   : 'productSettings.hero_title',
               },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h1>
           <p className="pm-hero__subtitle">

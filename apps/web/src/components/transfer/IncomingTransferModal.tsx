@@ -231,7 +231,7 @@ export function IncomingTransferModal({ isOpen, onClose }: Props) {
           <h2 className="manage-seal__title">
             {intl.formatMessage(
               { id: 'account.incoming_transfer_success_hero_title' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h2>
 

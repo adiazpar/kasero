@@ -200,7 +200,7 @@ export function EditLocationModal({ isOpen, onClose }: Props) {
           <h2 className="manage-seal__title">
             {intl.formatMessage(
               { id: 'manage.edit_location_success_title' },
-              { em: (chunks) => <em>{chunks}</em> },
+              { em: (chunks) => <em key="em">{chunks}</em> },
             )}
           </h2>
 

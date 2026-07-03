@@ -34,7 +34,7 @@ export function MemberRemoveBody({ member }: MemberRemoveBodyProps) {
             {
               // User-entered content — interpolate verbatim.
               name: member.name,
-              em: (chunks) => <em>{chunks}</em>,
+              em: (chunks) => <em key="em">{chunks}</em>,
             },
           )}
         </h1>

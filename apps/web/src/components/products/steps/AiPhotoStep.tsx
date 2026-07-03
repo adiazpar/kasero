@@ -76,7 +76,7 @@ export function AiPhotoStep() {
             <h1 className="pm-hero__title">
               {t.formatMessage(
                 { id: 'productAddEdit.ai_photo_title' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </h1>
             <p className="pm-hero__subtitle">
