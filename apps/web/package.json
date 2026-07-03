@@ -12,9 +12,22 @@
     "preview": "vite preview",
     "lint": "eslint src/",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "cap:sync": "npm run build && cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.4.1",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@ionic/react": "^8.4.0",
     "@ionic/react-router": "^8.4.0",
     "@kasero/shared": "*",
@@ -27,8 +40,6 @@
     "libphonenumber-js": "^1.13.1",
     "lottie-react": "^2.4.1",
     "lucide-react": "^1.8.0",
-    "nanoid": "^5.1.7",
-    "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-intl": "^7.0.0",
@@ -37,6 +48,7 @@
     "unpdf": "^1.4.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^9.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -44,7 +56,6 @@
     "@types/dompurify": "^3.0.5",
     "@types/jscodeshift": "^17.3.0",
     "@types/node": "^22.0.0",
-    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/react-router": "^5.1.20",

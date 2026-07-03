@@ -10,6 +10,8 @@ import {
   type ApiMessageEnvelope,
 } from '@kasero/shared/api-messages'
 import { getDeviceId } from './realtime/device-id'
+import { apiUrl } from './api-origin'
+import { getBearerToken } from './native/auth-token'
 
 export interface ApiResponse<T = unknown> {
   success?: boolean
@@ -94,11 +96,20 @@ export async function apiRequest<T extends ApiResponse>(
       // localStorage unavailable; omit the header rather than throw.
     }
   }
+  // Native (Capacitor) builds authenticate with a bearer token instead of
+  // cookies. getBearerToken() is always null on web, so this is a no-op
+  // for the browser cookie flow.
+  const bearerToken = getBearerToken()
+  if (bearerToken && !headers.has('authorization')) {
+    headers.set('Authorization', `Bearer ${bearerToken}`)
+  }
   const augmentedOptions: RequestInit = { ...options, headers }
 
   let response: Response
   try {
-    response = await fetch(url, augmentedOptions)
+    // apiUrl() is the identity on web (VITE_API_ORIGIN unset); on native
+    // it prefixes the deployed API origin.
+    response = await fetch(apiUrl(url), augmentedOptions)
   } catch (err) {
     // Network-layer failure (offline, DNS error, request blocked). The
     // browser-specific TypeError messages we recognise: Chrome ("Failed

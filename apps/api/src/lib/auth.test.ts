@@ -13,9 +13,18 @@ vi.mock('better-auth/api', async (orig) => {
   return { ...real, getSessionFromCtx: vi.fn() }
 })
 
+// The deleteUser.beforeDelete hook calls revokeAppleTokensForUser (Apple
+// 5.1.1(v) token revocation). Mock it so the wiring can be exercised
+// without a db or Apple envs; the function's own behavior is covered by
+// apple-revoke.test.ts.
+vi.mock('./apple-revoke', () => ({
+  revokeAppleTokensForUser: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { auth } from './auth'
 import { getSessionFromCtx } from 'better-auth/api'
 import { publishToUser } from './realtime/publisher'
+import { revokeAppleTokensForUser } from './apple-revoke'
 
 const mockGetSessionFromCtx = vi.mocked(getSessionFromCtx)
 const mockPublishToUser = vi.mocked(publishToUser)
@@ -26,6 +35,12 @@ const opts = (auth as unknown as {
     emailAndPassword?: { enabled?: boolean }
     account?: { accountLinking?: { trustedProviders?: string[] } }
     hooks?: { before?: unknown; after?: unknown }
+    user?: {
+      deleteUser?: {
+        enabled?: boolean
+        beforeDelete?: (user: { id: string }, request?: Request) => Promise<void>
+      }
+    }
     session?: { freshAge?: number }
     rateLimit?: { storage?: string; enabled?: boolean }
     secondaryStorage?: { get: unknown; set: unknown; delete: unknown }
@@ -104,6 +119,19 @@ describe('better-auth config', () => {
     } else {
       expect(opts.socialProviders?.apple).toBeUndefined()
     }
+  })
+
+  it('keeps deleteUser enabled with a beforeDelete hook for Apple token revocation', () => {
+    expect(opts.user?.deleteUser?.enabled).toBe(true)
+    expect(typeof opts.user?.deleteUser?.beforeDelete).toBe('function')
+  })
+
+  it('beforeDelete revokes Apple tokens for the deleted user (Apple 5.1.1(v))', async () => {
+    // Runs in beforeDelete (not afterDelete) because the account rows —
+    // and the stored Apple tokens on them — cascade-delete with the user.
+    await opts.user!.deleteUser!.beforeDelete!({ id: 'user-to-delete' })
+    expect(revokeAppleTokensForUser).toHaveBeenCalledOnce()
+    expect(revokeAppleTokensForUser).toHaveBeenCalledWith('user-to-delete')
   })
 
   it('registers a before hook for cross-account defense', () => {

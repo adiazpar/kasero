@@ -1,14 +1,17 @@
 import 'server-only'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
-import { emailOTP } from 'better-auth/plugins'
+import { bearer, emailOTP, oneTimeToken } from 'better-auth/plugins'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { eq } from 'drizzle-orm'
 import { Redis } from '@upstash/redis'
 import { db } from '@/db'
 import * as schema from '@kasero/shared/db/schema'
+import { NATIVE_APP_ORIGINS } from './native-origins'
 import { sendVerificationEmail } from './email'
 import { mintAppleClientSecret } from './apple-client-secret'
+import { getAppReviewOTP, isAppReviewEmail } from './app-review'
+import { revokeAppleTokensForUser } from './apple-revoke'
 
 async function lookupUserLanguage(email: string): Promise<string> {
   try {
@@ -128,6 +131,12 @@ export const auth = betterAuth({
   trustedOrigins: [
     'http://localhost:3000',
     'http://localhost:8000',
+    // Capacitor-native WebView origins (single source of truth in
+    // @/lib/native-origins). better-auth's origin check must accept them
+    // or every native sign-in POST 403s. An explicit exact-match
+    // allowlist, never a wildcard; the browser same-origin flow is
+    // unaffected.
+    ...NATIVE_APP_ORIGINS,
     ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
       ?.split(',')
       .map((s) => s.trim())
@@ -153,7 +162,20 @@ export const auth = betterAuth({
       phoneNumber: { type: 'string', required: false, input: true },
       phoneNumberVerified: { type: 'boolean', required: false, defaultValue: false, input: false },
     },
-    deleteUser: { enabled: true },
+    deleteUser: {
+      enabled: true,
+      // App Store guideline 5.1.1(v): apps offering Sign in with Apple
+      // must revoke the user's Apple tokens when the account is deleted.
+      // This runs in beforeDelete (not afterDelete) because the account
+      // rows — and the stored refresh/access tokens on them — cascade-
+      // delete with the user row. Fail-open: revokeAppleTokensForUser
+      // never throws, so a revocation blip cannot block the deletion.
+      // It is a silent no-op when no Apple account is linked or the
+      // APPLE_* envs are unset.
+      beforeDelete: async (user) => {
+        await revokeAppleTokensForUser(user.id)
+      },
+    },
   },
 
   // Passwordless by design. No password column is read or written by this
@@ -235,11 +257,39 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    // Native (Capacitor) session transport. The WebView origin is
+    // cross-origin to the API so cookies are unreliable there; `bearer()`
+    // lets the native app authenticate via `Authorization: Bearer
+    // <session-token>` and mirrors the session token into the
+    // `set-auth-token` response header whenever a response sets the
+    // session cookie (sign-in, one-time-token verify). Web clients never
+    // send the header, so the cookie flow is untouched.
+    bearer(),
+    // Bridges the native OAuth flow: after the system-browser OAuth
+    // round-trip, /api/native/auth-callback mints a one-time token
+    // (cookie-authenticated in the system browser) and deep-links it into
+    // the app, which exchanges it via POST /api/auth/one-time-token/verify
+    // for a session + set-auth-token header. Tokens are single-use,
+    // short-lived, and never logged.
+    oneTimeToken(),
     emailOTP({
       otpLength: 6,
       expiresIn: 600, // 10 minutes
       disableSignUp: false,
+      // Apple App Review demo account (App Store guideline 2.1): Apple's
+      // reviewers cannot receive OTP emails, so when APP_REVIEW_EMAIL and
+      // APP_REVIEW_OTP are BOTH configured, exactly that one address gets
+      // a deterministic static code. The code is written to the standard
+      // verification row, so the unmodified verify flow matches it.
+      // Returning undefined for every other address makes better-auth
+      // fall back to its random generator — the normal flow is untouched
+      // and the static code can never verify any other account. Entirely
+      // inert unless both envs are set. See lib/app-review.ts.
+      generateOTP: ({ email }) => getAppReviewOTP(email),
       async sendVerificationOTP({ email, otp }) {
+        // Skip the email for the Apple review account — the reviewer
+        // types the static code directly (guideline 2.1, see above).
+        if (isAppReviewEmail(email)) return
         const language = await lookupUserLanguage(email)
         await sendVerificationEmail({ email, otp, language })
       },

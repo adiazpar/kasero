@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { requireBusinessAccess, type BusinessAccess } from './business-auth'
 import { ApiMessageCode, type ApiMessageEnvelope } from '@kasero/shared/api-messages'
 import { auth } from './auth'
+import { isNativeAppOrigin } from './native-origins'
 import { checkRateLimit, getClientIp, RateLimits, UpstashUnavailableError, type RateLimitConfig } from './rate-limit'
 import { logServerError } from './server-logger'
 
@@ -64,6 +65,14 @@ export interface AuthedUser {
  * Returns null if the request passes; otherwise returns a 403
  * response the route should bubble up.
  */
+// Native (Capacitor) WebView origins live in @/lib/native-origins — the
+// single source of truth shared with proxy.ts, realtime/route.ts, and
+// auth.ts. `isNativeAppOrigin` accepts an exact origin match or an
+// origin-prefixed Referer. This is an explicit, exact-match allowlist for
+// the native app only — the browser same-origin rule below is unchanged,
+// and requests from these origins authenticate via the bearer plugin
+// (Authorization header), not cookies, so it is not a cookie-CSRF vector.
+
 function enforceSameOrigin(request: NextRequest): NextResponse | null {
   if (request.method === 'GET' || request.method === 'HEAD') return null
   const origin = request.headers.get('origin') ?? request.headers.get('referer')
@@ -76,6 +85,10 @@ function enforceSameOrigin(request: NextRequest): NextResponse | null {
     // browser.
     return errorResponse(ApiMessageCode.FORBIDDEN, 403)
   }
+
+  // Capacitor-native app: exact-match allowlist (see NATIVE_APP_ORIGINS).
+  // The startsWith form covers the Referer header, which carries a path.
+  if (isNativeAppOrigin(origin)) return null
 
   // Build the expected origin from the request's user-facing host, NOT
   // from `new URL(request.url).origin`. In Next.js's Edge runtime,

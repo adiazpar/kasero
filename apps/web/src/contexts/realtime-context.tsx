@@ -43,6 +43,9 @@ import { useIntl } from 'react-intl'
 import { useAuth } from '@/contexts/auth-context'
 import { useRouter } from '@/lib/next-navigation-shim'
 import { getDeviceId } from '@/lib/realtime/device-id'
+import { apiUrl } from '@/lib/api-origin'
+import { getBearerToken } from '@/lib/native/auth-token'
+import { fetchRealtimeTicket } from '@/lib/native/realtime-ticket'
 import { dispatchRealtimeEvent } from '@/lib/realtime/handlers'
 import { callRefetch } from '@/lib/realtime/refetch-registry'
 import { createSessionCache, CACHE_KEYS } from '@/hooks/useSessionCache'
@@ -107,6 +110,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const esRef = useRef<EventSource | null>(null)
   const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const consecutiveErrorsRef = useRef(0)
+  // Bumped on every openConnection call and every teardown. The native
+  // path mints an SSE ticket asynchronously before opening EventSource;
+  // this generation guard makes a slow ticket fetch abort if a newer open
+  // or a teardown superseded it during the await (prevents a stale stream
+  // escaping cleanup). Unused by the synchronous web path.
+  const connectionGenRef = useRef(0)
 
   // getDeviceId() reads localStorage — call once at mount, not per-message.
   const ownDeviceIdRef = useRef<string>('')
@@ -185,6 +194,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // AUTH-EXPIRED PATH
   // ============================================================
   const routeToLogin = useCallback(() => {
+    connectionGenRef.current++
     esRef.current?.close()
     esRef.current = null
     void logout()
@@ -217,75 +227,104 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       esRef.current.close()
       esRef.current = null
     }
+    // New generation for this open attempt. A slow native ticket fetch
+    // (below) aborts if this is superseded before it resolves.
+    const gen = ++connectionGenRef.current
 
-    const params = new URLSearchParams()
-    if (activeBusinessIdRef.current) {
-      params.set('businessId', activeBusinessIdRef.current)
-    }
-    params.set('deviceId', ownDeviceIdRef.current)
+    // Build the EventSource, wire handlers, and start the watchdog. Native
+    // supplies a single-use SSE ticket; web passes null (cookie auth).
+    const connect = (ticket: string | null) => {
+      const params = new URLSearchParams()
+      if (activeBusinessIdRef.current) {
+        params.set('businessId', activeBusinessIdRef.current)
+      }
+      params.set('deviceId', ownDeviceIdRef.current)
+      // Native (Capacitor): the ticket authenticates the stream (EventSource
+      // cannot set headers, and we never put the raw session token in the
+      // URL). Web passes no ticket — its session cookie authenticates — so
+      // the web URL stays exactly `/api/realtime?businessId&deviceId` as
+      // before, byte-identical.
+      if (ticket) params.set('ticket', ticket)
 
-    const es = new EventSource(`/api/realtime?${params.toString()}`)
-    esRef.current = es
+      const es = new EventSource(apiUrl(`/api/realtime?${params.toString()}`))
+      esRef.current = es
 
-    // ---- watchdog ----
-    const resetWatchdog = () => {
-      if (watchdogRef.current !== null) clearTimeout(watchdogRef.current)
-      watchdogRef.current = setTimeout(() => {
-        // Watchdog fired: no message for WATCHDOG_MS. Close and reopen.
-        // The browser preserves Last-Event-ID on reconnect so no events
-        // are lost.
-        es.close()
-        if (esRef.current === es) {
-          esRef.current = null
-          // Re-invoke via ref to avoid stale closure over openConnection.
-          openConnectionRef.current?.()
+      // ---- watchdog ----
+      const resetWatchdog = () => {
+        if (watchdogRef.current !== null) clearTimeout(watchdogRef.current)
+        watchdogRef.current = setTimeout(() => {
+          // Watchdog fired: no message for WATCHDOG_MS. Close and reopen.
+          // The browser preserves Last-Event-ID on reconnect so no events
+          // are lost.
+          es.close()
+          if (esRef.current === es) {
+            esRef.current = null
+            // Re-invoke via ref to avoid stale closure over openConnection.
+            openConnectionRef.current?.()
+          }
+        }, WATCHDOG_MS)
+      }
+
+      es.addEventListener('open', () => {
+        consecutiveErrorsRef.current = 0
+        resetWatchdog()
+      })
+
+      // ---- message handler ----
+      const ctx = {
+        ownDeviceId: ownDeviceIdRef.current,
+        revokeBusinessContext,
+        routeToLogin,
+        showToast,
+      }
+
+      const onMessage = (ev: MessageEvent) => {
+        resetWatchdog()
+        try {
+          const event = JSON.parse(ev.data as string) as RealtimeEvent
+          dispatchRealtimeEvent(event, ctx)
+        } catch (err) {
+          console.warn('[realtime] failed to parse event payload', err)
         }
-      }, WATCHDOG_MS)
-    }
-
-    es.addEventListener('open', () => {
-      consecutiveErrorsRef.current = 0
-      resetWatchdog()
-    })
-
-    // ---- message handler ----
-    const ctx = {
-      ownDeviceId: ownDeviceIdRef.current,
-      revokeBusinessContext,
-      routeToLogin,
-      showToast,
-    }
-
-    const onMessage = (ev: MessageEvent) => {
-      resetWatchdog()
-      try {
-        const event = JSON.parse(ev.data as string) as RealtimeEvent
-        dispatchRealtimeEvent(event, ctx)
-      } catch (err) {
-        console.warn('[realtime] failed to parse event payload', err)
       }
+
+      // Server emits every event as a default `message` frame (no
+      // `event:` field). The dispatch handler inspects payload.type to
+      // route. No per-type listener registration needed.
+      es.onmessage = onMessage
+
+      // ---- error handler ----
+      es.addEventListener('error', () => {
+        consecutiveErrorsRef.current += 1
+        if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+          es.close()
+          if (esRef.current === es) esRef.current = null
+          // 3 consecutive errors without a successful open — treat as
+          // auth expiry (browsers retry 401 indefinitely; this is the
+          // circuit breaker).
+          routeToLogin()
+        }
+      })
+
+      // Kick off the watchdog immediately on open.
+      resetWatchdog()
     }
 
-    // Server emits every event as a default `message` frame (no
-    // `event:` field). The dispatch handler inspects payload.type to
-    // route. No per-type listener registration needed.
-    es.onmessage = onMessage
+    // Web: synchronous, cookie-authenticated — unchanged behavior.
+    if (!getBearerToken()) {
+      connect(null)
+      return
+    }
 
-    // ---- error handler ----
-    es.addEventListener('error', () => {
-      consecutiveErrorsRef.current += 1
-      if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
-        es.close()
-        if (esRef.current === es) esRef.current = null
-        // 3 consecutive errors without a successful open — treat as
-        // auth expiry (browsers retry 401 indefinitely; this is the
-        // circuit breaker).
-        routeToLogin()
-      }
-    })
-
-    // Kick off the watchdog immediately on open.
-    resetWatchdog()
+    // Native: mint a single-use SSE ticket, then connect. If the mint
+    // fails (offline, auth lapsed) or a newer open/teardown superseded
+    // this attempt during the await, bail — the watchdog retries.
+    void (async () => {
+      const ticket = await fetchRealtimeTicket()
+      if (gen !== connectionGenRef.current) return
+      if (!ticket) return
+      connect(ticket)
+    })()
   }, [isAuthenticated, user, revokeBusinessContext, routeToLogin, showToast])
 
   // Keep ref in sync for the watchdog self-call.
@@ -307,6 +346,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   // body is invoked via the ref at that moment.
   useEffect(() => {
     if (!isAuthenticated) {
+      // Bump the generation so any in-flight native ticket fetch aborts
+      // instead of opening a stream after logout.
+      connectionGenRef.current++
       if (esRef.current) {
         esRef.current.close()
         esRef.current = null
@@ -321,6 +363,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     openConnectionRef.current?.()
 
     return () => {
+      // Abort any in-flight native ticket fetch from this effect run so it
+      // can't open a stream after teardown/unmount. Bumping a counter (not
+      // a DOM ref) at cleanup time is exactly the intent here.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      connectionGenRef.current++
       if (esRef.current) {
         esRef.current.close()
         esRef.current = null

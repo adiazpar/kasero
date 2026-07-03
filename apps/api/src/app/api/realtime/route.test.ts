@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 const getSession = vi.fn()
 const requireBusinessAccessForRealtime = vi.fn()
 const checkRateLimit = vi.fn()
+const consumeSseTicket = vi.fn()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const brokerSubscribe = vi.fn(() => () => {}) as any
 const getUserStreamTip = vi.fn()
@@ -14,8 +15,12 @@ vi.mock('@/lib/business-auth', () => ({ requireBusinessAccessForRealtime }))
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit,
   getClientIp: () => '127.0.0.1',
-  RateLimits: { userMutation: { limit: 30, windowSeconds: 60 } },
+  RateLimits: {
+    userMutation: { limit: 30, windowSeconds: 60 },
+    realtimeConnect: { limit: 300, windowSeconds: 60 },
+  },
 }))
+vi.mock('@/lib/native-token-store', () => ({ consumeSseTicket }))
 vi.mock('@/lib/realtime', () => ({
   subscribe: brokerSubscribe,
   getUserStreamTip,
@@ -26,6 +31,7 @@ beforeEach(() => {
   getSession.mockReset()
   requireBusinessAccessForRealtime.mockReset()
   checkRateLimit.mockReset()
+  consumeSseTicket.mockReset()
   brokerSubscribe.mockReset()
   getUserStreamTip.mockReset()
   readUserStreamSince.mockReset()
@@ -49,6 +55,38 @@ describe('GET /api/realtime', () => {
     const { GET } = await import('./route')
     const res = await GET(makeReq())
     expect(res.status).toBe(401)
+  })
+
+  it('authenticates a native connection via a valid SSE ticket', async () => {
+    getSession.mockResolvedValueOnce(null)
+    consumeSseTicket.mockResolvedValueOnce('u1')
+    checkRateLimit.mockResolvedValueOnce({ success: true, remaining: 299, resetAt: 0 })
+    getUserStreamTip.mockResolvedValueOnce('1700000000-0')
+    const { GET } = await import('./route')
+    const res = await GET(makeReq({ url: 'https://kasero.app/api/realtime?ticket=abcdef0123456789' }))
+    expect(res.status).toBe(200)
+    expect(consumeSseTicket).toHaveBeenCalledWith('abcdef0123456789')
+    const reader = res.body!.getReader()
+    await reader.read()
+    await reader.cancel()
+  })
+
+  it('returns 401 when the SSE ticket is missing/consumed/invalid', async () => {
+    getSession.mockResolvedValueOnce(null)
+    consumeSseTicket.mockResolvedValueOnce(null) // already consumed / unknown
+    const { GET } = await import('./route')
+    const res = await GET(makeReq({ url: 'https://kasero.app/api/realtime?ticket=abcdef0123456789' }))
+    expect(res.status).toBe(401)
+  })
+
+  it('no longer accepts a raw bearer session token in ?token= (must be a ticket)', async () => {
+    getSession.mockResolvedValueOnce(null)
+    const { GET } = await import('./route')
+    // A raw session-token query param must NOT authenticate; the ticket
+    // param is the only accepted query credential now.
+    const res = await GET(makeReq({ url: 'https://kasero.app/api/realtime?token=some.raw.session.token' }))
+    expect(res.status).toBe(401)
+    expect(consumeSseTicket).not.toHaveBeenCalled()
   })
 
   it('returns 403 when Sec-Fetch-Site is absent and Origin does not match host', async () => {

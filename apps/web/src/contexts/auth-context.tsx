@@ -17,6 +17,10 @@ import type { SupportedLocale } from '@/i18n/config'
 import { clearKaseroLocalStorage } from '@/hooks/useSessionCache'
 import { LANGUAGE_CHANGE_EVENT, setCachedUser } from '@/lib/user-cache'
 import { registerRefetch } from '@/lib/realtime/refetch-registry'
+import { Capacitor } from '@capacitor/core'
+import { clearBearerToken } from '@/lib/native/auth-token'
+import { clearCodeVerifier } from '@/lib/native/pkce'
+import { NATIVE_AUTH_EVENT } from '@/lib/native/events'
 
 // ============================================
 // TYPES
@@ -316,6 +320,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sign-out is best-effort. Even when the server rejects (rare),
       // the client-side cleanup below should still run.
     }
+    // Native (Capacitor) builds hold the session as a bearer token in
+    // Preferences; drop it alongside the cookie. Also clear any lingering
+    // PKCE verifier from an abandoned OAuth round trip. No-op on web.
+    await clearBearerToken()
+    await clearCodeVerifier()
     try {
       sessionStorage.clear()
     } catch {
@@ -334,6 +343,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return registerRefetch('profile', refreshUser)
   }, [refreshUser])
+
+  // Native (Capacitor) only: when the OAuth deep-link callback finishes
+  // (lib/native/bootstrap.ts stored the bearer token and dispatched
+  // NATIVE_AUTH_EVENT), re-pull the session so the freshly minted token
+  // is picked up without an app restart. Never registered on web.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    const onNativeAuth = () => {
+      void refetch()
+    }
+    window.addEventListener(NATIVE_AUTH_EVENT, onNativeAuth)
+    return () => window.removeEventListener(NATIVE_AUTH_EVENT, onNativeAuth)
+  }, [refetch])
 
   const changeLanguage = useCallback(
     async (language: SupportedLocale): Promise<{ success: boolean; error?: string }> => {

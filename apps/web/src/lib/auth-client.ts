@@ -13,6 +13,8 @@ import type {
   PathToObject as _PathToObject,
   InferClientAPI as _InferClientAPI,
 } from 'better-auth/client'
+import { API_ORIGIN } from './api-origin'
+import { getBearerToken, setBearerToken } from './native/auth-token'
 
 // Reference the imports so TS keeps them in scope for emit.
 type _PathToObjectAnchor =
@@ -26,7 +28,11 @@ void _pathToObjectAnchor
 // Vite proxies /api/* to the API server, so the empty baseURL still works.
 // VITE_AUTH_BASE_URL is only needed when the SPA needs to call a different
 // origin (e.g. a previewing developer pointing the web build at a remote API).
-const baseURL = import.meta.env.VITE_AUTH_BASE_URL ?? ''
+// Native (Capacitor) builds set VITE_API_ORIGIN, which API_ORIGIN mirrors —
+// the WebView origin is capacitor://kasero.localhost so the client must target
+// the deployed API absolutely. On web both env vars are unset and baseURL
+// stays '' exactly as before.
+const baseURL = import.meta.env.VITE_AUTH_BASE_URL ?? API_ORIGIN
 
 // Mirror of the `additionalFields` block in apps/api/src/lib/auth.ts. The
 // server auth module is `'server-only'` so we can't import its type here;
@@ -72,6 +78,23 @@ const userAdditionalFields = {
 function makeAuthClient() {
   return createAuthClient({
     baseURL,
+    // Native bearer-token flow. Both callbacks are inert on web:
+    // - getBearerToken() is always null on web, and better-fetch skips
+    //   the Authorization header entirely for a falsy Bearer token
+    //   (node_modules/@better-fetch/fetch/dist/index.js getAuthHeader),
+    //   so web requests are byte-identical to before.
+    // - set-auth-token is only emitted by the server's bearer plugin; on
+    //   web setBearerToken() is a guarded no-op anyway.
+    fetchOptions: {
+      auth: {
+        type: 'Bearer',
+        token: () => getBearerToken() ?? '',
+      },
+      onSuccess: (ctx: { response: Response }) => {
+        const token = ctx.response.headers.get('set-auth-token')
+        if (token) void setBearerToken(token)
+      },
+    },
     plugins: [
       emailOTPClient(),
       inferAdditionalFields({ user: userAdditionalFields }),

@@ -19,6 +19,8 @@
  * outside an active gesture, but short follow-ups usually go through.
  */
 
+import { Capacitor } from '@capacitor/core'
+
 function fireSwitchHaptic() {
   if (typeof document === 'undefined') return
   try {
@@ -52,6 +54,20 @@ function hasVibrate(): boolean {
 }
 
 export function haptic(pattern: number | number[] = 50) {
+  // Native (Capacitor) app: iOS WKWebView does not implement
+  // navigator.vibrate and the checkbox-switch fallback is a Safari-only
+  // trick, so route through the @capacitor/haptics plugin instead.
+  // Dynamically imported so the web bundle's hot path stays unchanged.
+  if (Capacitor.isNativePlatform()) {
+    void import('@capacitor/haptics')
+      .then(({ Haptics, ImpactStyle }) =>
+        Haptics.impact({ style: ImpactStyle.Light }),
+      )
+      .catch(() => {
+        // Plugin unavailable — haptics are best-effort.
+      })
+    return
+  }
   if (hasVibrate()) {
     navigator.vibrate(pattern)
     return

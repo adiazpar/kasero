@@ -13,6 +13,8 @@ import {
 } from '@kasero/shared/realtime'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
 import { checkRateLimit, RateLimits } from '@/lib/rate-limit'
+import { isNativeAppOrigin } from '@/lib/native-origins'
+import { consumeSseTicket } from '@/lib/native-token-store'
 import { logServerError } from '@/lib/server-logger'
 
 export const runtime = 'nodejs'
@@ -26,10 +28,18 @@ export const preferredRegion = 'iad1'
 // EventSource is a same-origin GET. Modern browsers set Sec-Fetch-Site
 // automatically. Absent => non-browser client; reject. As a fallback
 // we also accept an Origin that matches Host (covers older Safari).
+//
+// The Capacitor-native app is the one legitimate cross-origin caller:
+// its WebView origin is an explicit exact-match allowlist (see
+// @/lib/native-origins). Native connections authenticate via a
+// single-use SSE ticket (query param — EventSource cannot set headers),
+// not cookies, so this carve-out is not a cookie-CSRF vector.
+
 function isSameOrigin(req: NextRequest): boolean {
   const sfs = req.headers.get('sec-fetch-site')
   if (sfs === 'same-origin') return true
   const origin = req.headers.get('origin')
+  if (origin && isNativeAppOrigin(origin)) return true
   const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host')
   if (origin && host) {
     try {
@@ -61,25 +71,47 @@ function frame(event: RealtimeEvent, id?: string): string {
   return out
 }
 
+// Shape guard for the native SSE ticket query param. Tickets are
+// base64url(32 random bytes) minted by POST /api/realtime/ticket. This is
+// a format pre-filter only; the real check is the single-use lookup
+// below. NEVER log this value.
+const TICKET_PARAM_RE = /^[A-Za-z0-9_-]{16,64}$/
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
+    const url = new URL(request.url)
+
+    // Web resolves the user from the session cookie. Native (Capacitor)
+    // cannot set an Authorization header on EventSource, so instead of
+    // leaking the bearer SESSION token in the URL it presents a
+    // single-use SSE ticket minted at POST /api/realtime/ticket. We
+    // consume (get+delete) the ticket and resolve the bound userId. A
+    // raw session token in `?token=` is NO LONGER accepted.
+    let userId: string | null = null
     const session = await auth.api.getSession({ headers: request.headers })
-    if (!session) return jsonError(ApiMessageCode.UNAUTHORIZED, 401)
+    if (session) {
+      userId = session.user.id
+    } else {
+      const ticket = url.searchParams.get('ticket')
+      if (ticket && TICKET_PARAM_RE.test(ticket)) {
+        userId = await consumeSseTicket(ticket)
+      }
+    }
+    if (!userId) return jsonError(ApiMessageCode.UNAUTHORIZED, 401)
 
     if (!isSameOrigin(request)) return jsonError(ApiMessageCode.FORBIDDEN, 403)
 
-    const url = new URL(request.url)
     const businessId = url.searchParams.get('businessId') ?? null
     if (businessId) {
-      const granted = await requireBusinessAccessForRealtime(session.user.id, businessId)
+      const granted = await requireBusinessAccessForRealtime(userId, businessId)
       if (!granted) return jsonError(ApiMessageCode.FORBIDDEN, 403)
     }
 
     // Rate-limit reconnect storms per user. Uses a dedicated, generous
-    // budget (60/min) rather than userMutation (30/min) because legitimate
+    // budget (300/min) rather than userMutation (30/min) because legitimate
     // EventSource reconnects every ~5 min × N devices can otherwise share
     // a window with interactive mutations and starve one or the other.
-    const rl = await checkRateLimit(`realtime:${session.user.id}`, RateLimits.realtimeConnect)
+    const rl = await checkRateLimit(`realtime:${userId}`, RateLimits.realtimeConnect)
     if (!rl.success) {
       const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000))
       return jsonError(ApiMessageCode.RATE_LIMITED, 429, retryAfter)
@@ -87,7 +119,6 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const lastEventId = request.headers.get('last-event-id')
     const encoder = new TextEncoder()
-    const userId = session.user.id
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {

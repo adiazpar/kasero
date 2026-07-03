@@ -4,6 +4,11 @@ import { createContext, useContext, useEffect, useMemo, useRef, ReactNode, Suspe
 import { useRouter, usePathname, useSearchParams } from '@/lib/next-navigation-shim'
 import { useJoinBusiness } from '@/hooks'
 import { JoinBusinessModal } from '@/components/join'
+import {
+  NATIVE_INVITE_EVENT,
+  PENDING_INVITE_CODE_KEY,
+  type NativeInviteEventDetail,
+} from '@/lib/native/events'
 
 interface JoinBusinessContextValue {
   openJoinModal: () => void
@@ -58,6 +63,49 @@ function JoinBusinessProviderInner({ children }: JoinBusinessProviderProps) {
       }, 100)
     }
   }, [searchParams, router, pathname, joinBusiness])
+
+  // Native (Capacitor) invite deep links: kasero://invite?code=X or the
+  // universal-link form. lib/native/bootstrap.ts dispatches
+  // NATIVE_INVITE_EVENT for the warm-app case and stashes the code in
+  // sessionStorage for the cold-start case (deep link delivered before
+  // this provider mounted). Both paths funnel into the same handler as
+  // the web ?code= flow. Inert on web — the event never fires and the
+  // sessionStorage key is only written by the native bootstrap.
+  useEffect(() => {
+    const handleInviteCode = (code: string) => {
+      if (hasHandledCode.current) return
+      hasHandledCode.current = true
+      joinBusiness.setCode(code.toUpperCase())
+      joinBusiness.handleOpen()
+      setTimeout(() => {
+        joinBusiness.handleValidateCode()
+      }, 100)
+    }
+
+    const onNativeInvite = (e: Event) => {
+      try {
+        sessionStorage.removeItem(PENDING_INVITE_CODE_KEY)
+      } catch {
+        // ignore
+      }
+      const code = (e as CustomEvent<NativeInviteEventDetail>).detail?.code
+      if (code) handleInviteCode(code)
+    }
+    window.addEventListener(NATIVE_INVITE_EVENT, onNativeInvite)
+
+    // Cold-start deep link: consume the stashed code once.
+    try {
+      const pending = sessionStorage.getItem(PENDING_INVITE_CODE_KEY)
+      if (pending) {
+        sessionStorage.removeItem(PENDING_INVITE_CODE_KEY)
+        handleInviteCode(pending)
+      }
+    } catch {
+      // Storage error, ignore.
+    }
+
+    return () => window.removeEventListener(NATIVE_INVITE_EVENT, onNativeInvite)
+  }, [joinBusiness])
 
   // Reset the ref when modal closes so a new code param can trigger again
   useEffect(() => {

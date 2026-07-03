@@ -4,6 +4,8 @@
 
 'use client'
 
+import { publicWebOrigin } from './api-origin'
+
 const QR_OPTIONS = {
   bcid: 'qrcode',
   scale: 5,
@@ -24,7 +26,10 @@ const QR_OPTIONS = {
  */
 export async function generateInviteQRCode(inviteCode: string): Promise<string> {
   const { default: bwipjs } = await import('bwip-js/browser')
-  const registrationUrl = `${window.location.origin}/invite?code=${inviteCode}`
+  // publicWebOrigin() is window.location.origin on web; inside the native
+  // WebView (origin capacitor://kasero.localhost) it falls back to
+  // VITE_PUBLIC_WEB_ORIGIN so the QR encodes a real, shareable web URL.
+  const registrationUrl = `${publicWebOrigin()}/invite?code=${inviteCode}`
   const canvas = document.createElement('canvas')
   bwipjs.toCanvas(canvas, { ...QR_OPTIONS, text: registrationUrl })
   return canvas.toDataURL('image/png')

@@ -57,11 +57,33 @@ import './styles/utilities.css'
 import './styles/index.css'
 
 import { setupIonicReact } from '@ionic/react'
+import { Capacitor } from '@capacitor/core'
 
 // iOS-style chrome on every platform for UX consistency.
 // `swipeBackEnabled: false` disables Ionic's swipe-to-go-back gesture
 // app-wide; navigation is via IonBackButton instead.
 setupIonicReact({ mode: 'ios', swipeBackEnabled: false })
+
+// Native (Capacitor) bootstrap. Awaited BEFORE the React root renders so
+// the persisted bearer token is hydrated before authClient.useSession
+// issues its first request (otherwise the cold start would flash the
+// login screen). The dynamic import keeps every Capacitor plugin out of
+// the web bundle's critical path; on web this branch never runs and the
+// render below happens synchronously, exactly as before.
+//
+// Wrapped in try/catch: if the bootstrap chunk fails to load or throws
+// (a plugin init error, a corrupt Preferences read), we log and STILL
+// render the app. Degraded native features (a re-auth prompt, no deep
+// link) are far better than a permanently blank white screen from an
+// unhandled top-level await rejection.
+if (Capacitor.isNativePlatform()) {
+  try {
+    const { initNativeApp } = await import('./lib/native/bootstrap')
+    await initNativeApp()
+  } catch (err) {
+    console.error('[native] bootstrap failed; rendering with degraded native features', err)
+  }
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 root.render(
@@ -84,7 +106,10 @@ root.render(
 //   whose hashed JS bundles 404 against the dev server, presenting as a
 //   blank page with no traffic visible at Vite. Active unregistration here
 //   recovers without manual per-device cleanup.
-if ('serviceWorker' in navigator) {
+// Never register (or manage) the service worker inside the native
+// Capacitor WebView — the app shell is bundled locally there, and a SW
+// would only add a stale-cache failure mode. Web behavior is unchanged.
+if ('serviceWorker' in navigator && !Capacitor.isNativePlatform()) {
   if (import.meta.env.DEV) {
     navigator.serviceWorker.getRegistrations().then((regs) => {
       if (regs.length === 0) return

@@ -36,6 +36,7 @@ export function CartSheet({ cart }: CartSheetProps) {
           type="button"
           className="cart-fab__pill"
           disabled={isEmpty}
+          data-haptic
           onClick={() => {
             setOpen(true)
           }}

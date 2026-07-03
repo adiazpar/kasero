@@ -3,6 +3,7 @@
 import { useIntl } from 'react-intl';
 import { useEffect, useCallback, useSyncExternalStore } from 'react'
 import { applyThemeColorMeta } from '@/lib/theme-color'
+import { syncNativeStatusBar } from '@/lib/native/status-bar'
 
 export type Theme = 'light' | 'dark' | 'system'
 
@@ -51,6 +52,9 @@ function applyTheme(theme: Theme) {
   }
   root.classList.toggle('dark', resolved === 'dark')
   applyThemeColorMeta(resolved)
+  // Native (Capacitor) status bar follows the theme. No-op on web — the
+  // meta theme-color mechanism above stays the web path.
+  void syncNativeStatusBar(resolved)
 }
 
 /**
@@ -120,6 +124,7 @@ export function useTheme(): UseThemeReturn {
     const handler = (event: MediaQueryListEvent) => {
       document.documentElement.classList.toggle('dark', event.matches)
       applyThemeColorMeta(event.matches ? 'dark' : 'light')
+      void syncNativeStatusBar(event.matches ? 'dark' : 'light')
     }
 
     mediaQuery.addEventListener('change', handler)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isNativeAppOrigin } from '@/lib/native-origins'
 
 /**
  * Proxy — lightweight gate before page navigations.
@@ -23,6 +24,51 @@ import type { NextRequest } from 'next/server'
  * Anything more elaborate (signature check, DB lookup, refresh) happens
  * inside the route handler, not here.
  */
+
+/**
+ * CORS for the Capacitor-native app.
+ *
+ * The native WebView serves the bundled SPA from a cross-origin host (see
+ * @/lib/native-origins — the shared allowlist), so its /api/* requests are
+ * cross-origin and carry an Authorization bearer header — which makes
+ * every request preflighted. Route handlers never see OPTIONS requests
+ * (Next.js 405s them), so the proxy answers preflights and decorates
+ * real responses for exactly those origins. This is an exact-match
+ * allowlist — never widen to a wildcard, and never reflect arbitrary
+ * origins. Browser (same-origin) traffic sends a same-origin Origin
+ * header or none, matches no entry, and passes through untouched.
+ */
+const CORS_ALLOWED_METHODS = 'GET, POST, PATCH, PUT, DELETE, OPTIONS'
+const CORS_ALLOWED_HEADERS = 'Authorization, Content-Type, X-Device-Id'
+// set-auth-token: the native app reads the bearer session token from it.
+// Retry-After: rate-limit backoff hints.
+const CORS_EXPOSED_HEADERS = 'set-auth-token, Retry-After'
+
+function corsForNativeApp(request: NextRequest): NextResponse | null {
+  const origin = request.headers.get('origin')
+  if (!origin || !isNativeAppOrigin(origin)) return null
+
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': CORS_ALLOWED_METHODS,
+        'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
+        'Access-Control-Max-Age': '86400',
+        Vary: 'Origin',
+      },
+    })
+  }
+
+  const response = NextResponse.next()
+  response.headers.set('Access-Control-Allow-Origin', origin)
+  response.headers.set('Access-Control-Allow-Credentials', 'true')
+  response.headers.set('Access-Control-Expose-Headers', CORS_EXPOSED_HEADERS)
+  response.headers.set('Vary', 'Origin')
+  return response
+}
 
 const publicPaths = [
   '/',
@@ -55,6 +101,13 @@ function hasSessionCookie(request: NextRequest): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // /api/*: only the native-app CORS decoration applies; the session
+  // gate below is for page navigations. Requests without a native-app
+  // Origin pass through exactly as before.
+  if (pathname.startsWith('/api/')) {
+    return corsForNativeApp(request) ?? NextResponse.next()
+  }
+
   if (shouldSkip(pathname)) return NextResponse.next()
   if (isPublicPath(pathname)) return NextResponse.next()
 
@@ -84,5 +137,9 @@ export const config = {
   matcher: [
     // Anything not /api/*, not /_next/*, not a static asset.
     '/((?!api/|_next/|.*\\.).*)',
+    // /api/* — needed so the proxy can answer CORS preflights and
+    // decorate responses for the Capacitor-native app's WebView origins.
+    // Non-native requests fall straight through (see corsForNativeApp).
+    '/api/:path*',
   ],
 }

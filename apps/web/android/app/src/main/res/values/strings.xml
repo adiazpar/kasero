@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kasero</string>
+    <string name="title_activity_main">Kasero</string>
+    <string name="package_name">com.kasero.app</string>
+    <string name="custom_url_scheme">com.kasero.app</string>
+</resources>
