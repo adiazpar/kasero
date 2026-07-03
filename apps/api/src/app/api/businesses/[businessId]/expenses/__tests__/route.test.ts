@@ -27,6 +27,8 @@ vi.mock('@/lib/business-auth', async (orig) => {
 
 let selectRows: unknown[] = []
 let updateReturning: unknown[] = [{ reserved: 1 }]
+// POST creates via INSERT ... RETURNING — this is what the route echoes back.
+let insertReturning: unknown[] = []
 
 const dbMock = {
   select: vi.fn(),
@@ -56,7 +58,9 @@ function resetDbMock() {
   })
 
   dbMock.insert.mockReturnValue({
-    values: vi.fn().mockResolvedValue(undefined),
+    values: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue(insertReturning),
+    }),
   })
 
   dbMock.update.mockReturnValue({
@@ -165,6 +169,7 @@ beforeEach(() => {
   requireBusinessAccess.mockReset().mockResolvedValue(ACCESS)
   selectRows = []
   updateReturning = [{ reserved: 1 }]
+  insertReturning = []
   resetDbMock()
 })
 
@@ -174,7 +179,7 @@ beforeEach(() => {
 
 describe('POST /expenses', () => {
   it('creates an expense with required fields', async () => {
-    selectRows = [CREATED_ROW]
+    insertReturning = [CREATED_ROW]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -193,7 +198,7 @@ describe('POST /expenses', () => {
   it('assigns sequential expense numbers per business', async () => {
     const row2 = { ...CREATED_ROW, expenseNumber: 2, amount: 2 }
     updateReturning = [{ reserved: 2 }]
-    selectRows = [row2]
+    insertReturning = [row2]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -241,7 +246,7 @@ describe('POST /expenses', () => {
   })
 
   it('publishes expense.created event', async () => {
-    selectRows = [CREATED_ROW]
+    insertReturning = [CREATED_ROW]
     resetDbMock()
 
     const { POST } = await import('../route')

@@ -48,10 +48,11 @@ export const POST = withBusinessAuth(async (request, access) => {
   const adjustmentId = nanoid()
   const originDeviceId = getOriginDeviceId(request)
 
-  let expenseRow: typeof expenses.$inferSelect | null = null
-
+  // .returning() on the inserts threads the created rows out of the
+  // transaction, so no post-transaction SELECTs are needed.
   const result = await db.transaction(async (tx) => {
     let expenseId: string | null = null
+    let expense: typeof expenses.$inferSelect | null = null
 
     if (body.expense) {
       const newExpenseId = nanoid()
@@ -64,29 +65,36 @@ export const POST = withBusinessAuth(async (request, access) => {
         .returning({ reserved: sql<number>`${businesses.nextExpenseNumber} - 1` })
       const expenseNumber = Number(reservation[0]?.reserved ?? 1)
 
-      await tx.insert(expenses).values({
-        id: newExpenseId,
-        businessId: access.businessId,
-        createdByUserId: access.userId,
-        expenseNumber,
-        date: new Date(),
-        amount: body.expense.amount,
-        categoryId: body.expense.categoryId ?? null,
-        note: body.reason ?? null,
-      })
+      const [expenseRow] = await tx
+        .insert(expenses)
+        .values({
+          id: newExpenseId,
+          businessId: access.businessId,
+          createdByUserId: access.userId,
+          expenseNumber,
+          date: new Date(),
+          amount: body.expense.amount,
+          categoryId: body.expense.categoryId ?? null,
+          note: body.reason ?? null,
+        })
+        .returning()
 
       expenseId = newExpenseId
+      expense = expenseRow ?? null
     }
 
-    await tx.insert(inventoryAdjustments).values({
-      id: adjustmentId,
-      businessId: access.businessId,
-      productId: body.productId,
-      createdByUserId: access.userId,
-      delta: body.delta,
-      reason: body.reason ?? null,
-      relatedExpenseId: expenseId,
-    })
+    const [adjustment] = await tx
+      .insert(inventoryAdjustments)
+      .values({
+        id: adjustmentId,
+        businessId: access.businessId,
+        productId: body.productId,
+        createdByUserId: access.userId,
+        delta: body.delta,
+        reason: body.reason ?? null,
+        relatedExpenseId: expenseId,
+      })
+      .returning()
 
     await tx
       .update(products)
@@ -96,24 +104,8 @@ export const POST = withBusinessAuth(async (request, access) => {
       })
       .where(eq(products.id, body.productId))
 
-    return { expenseId }
+    return { expenseId, adjustment, expense }
   })
-
-  // Fetch the inserted rows for the response.
-  const [adjustment] = await db
-    .select()
-    .from(inventoryAdjustments)
-    .where(eq(inventoryAdjustments.id, adjustmentId))
-    .limit(1)
-
-  if (result.expenseId) {
-    const [row] = await db
-      .select()
-      .from(expenses)
-      .where(eq(expenses.id, result.expenseId))
-      .limit(1)
-    expenseRow = row ?? null
-  }
 
   void publishToBusiness(
     access.businessId,
@@ -138,7 +130,7 @@ export const POST = withBusinessAuth(async (request, access) => {
   }
 
   return successResponse(
-    { data: { adjustment, expense: expenseRow } },
+    { data: { adjustment: result.adjustment, expense: result.expense } },
     ApiMessageCode.INVENTORY_ADJUSTMENT_CREATED,
   )
 })

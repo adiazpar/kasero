@@ -58,22 +58,22 @@ export const POST = withBusinessAuth(async (request, access) => {
     .returning({ reserved: sql<number>`${businesses.nextExpenseNumber} - 1` })
   const expenseNumber = Number(reservation[0]?.reserved ?? 1)
 
-  await db.insert(expenses).values({
-    id,
-    businessId: access.businessId,
-    createdByUserId: access.userId,
-    expenseNumber,
-    date,
-    amount: body.amount,
-    categoryId: body.categoryId ?? null,
-    note: body.note ?? null,
-    photoUrl: body.photoUrl ?? null,
-  })
-
+  // .returning() hands back the created row in the same round trip — no
+  // follow-up SELECT needed.
   const [createdRow] = await db
-    .select()
-    .from(expenses)
-    .where(eq(expenses.id, id))
+    .insert(expenses)
+    .values({
+      id,
+      businessId: access.businessId,
+      createdByUserId: access.userId,
+      expenseNumber,
+      date,
+      amount: body.amount,
+      categoryId: body.categoryId ?? null,
+      note: body.note ?? null,
+      photoUrl: body.photoUrl ?? null,
+    })
+    .returning()
 
   void publishToBusiness(
     access.businessId,

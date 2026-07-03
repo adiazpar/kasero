@@ -60,27 +60,30 @@ export const GET = withBusinessAuth(async (request, access) => {
   // products on one list call; pathological inserts (malicious or bugged)
   // can't drag the bandwidth / parse cost past this ceiling.
   //
-  // LEFT JOIN sale_items + COUNT lets us derive `hasSold` per row without
+  // A correlated EXISTS on sale_items derives `hasSold` per row without
   // adding a denormalized column to the products table (which would mean
   // maintaining the flag on every sale confirm + every sale delete/refund —
-  // another invariant to drift). The (sale_items.product_id) index already
-  // exists, so the aggregate is cheap at the catalog ceiling. `hasSold`
-  // distinguishes "brand new, awaiting initial stock" (READY) from
-  // "depleted SKU that has sold before" (OUT OF STOCK) on the list row.
+  // another invariant to drift). EXISTS short-circuits on the first match
+  // via the (sale_items.product_id) index — cheaper than the previous
+  // LEFT JOIN + GROUP BY, which counted every sale line per product.
+  // `hasSold` distinguishes "brand new, awaiting initial stock" (READY)
+  // from "depleted SKU that has sold before" (OUT OF STOCK) on the list row.
   const rows = await db
     .select({
       product: products,
-      soldCount: sql<number>`COUNT(${saleItems.id})`.as('sold_count'),
+      // The eq() wrapper (not `${col} = ${col}`) matters: on a single-table
+      // select, drizzle renders directly-interpolated columns unqualified,
+      // which would make both sides resolve against sale_items inside the
+      // subquery. eq() keeps the table qualification.
+      sold: sql<number>`EXISTS (SELECT 1 FROM ${saleItems} WHERE ${eq(saleItems.productId, products.id)})`.as('has_sold'),
     })
     .from(products)
-    .leftJoin(saleItems, eq(saleItems.productId, products.id))
     .where(and(...conditions))
-    .groupBy(products.id)
     .limit(500)
 
   const productsList = rows.map((r) => ({
     ...r.product,
-    hasSold: Number(r.soldCount) > 0,
+    hasSold: Number(r.sold) > 0,
   }))
 
   return successResponse({ products: productsList })

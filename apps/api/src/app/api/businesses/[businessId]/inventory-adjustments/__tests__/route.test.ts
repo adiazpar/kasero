@@ -31,6 +31,10 @@ vi.mock('@/lib/business-auth', async (orig) => {
 
 // Queue-based select: each call to the select chain pops the next batch.
 let selectQueue: unknown[][] = []
+// Queue-based insert RETURNING: the route creates rows via
+// INSERT ... RETURNING inside the transaction (expense first when the
+// payload carries one, then the adjustment) instead of re-selecting them.
+let insertReturningQueue: unknown[][] = []
 
 const dbMock = {
   select: vi.fn(),
@@ -64,7 +68,11 @@ function resetDbMock() {
   })
 
   dbMock.insert.mockReturnValue({
-    values: vi.fn().mockResolvedValue(undefined),
+    values: vi.fn().mockReturnValue({
+      returning: vi.fn().mockImplementation(() =>
+        Promise.resolve(insertReturningQueue.shift() ?? []),
+      ),
+    }),
   })
 
   dbMock.update.mockReturnValue({
@@ -209,6 +217,7 @@ beforeEach(() => {
   publishToBusiness.mockReset().mockResolvedValue(undefined)
   requireBusinessAccess.mockReset().mockResolvedValue(ACCESS)
   selectQueue = []
+  insertReturningQueue = []
   // Route calls nanoid() for adjustmentId first, then for expenseId (if expense payload).
   nanoidImpl.mockReset().mockReturnValueOnce(ADJ_ID).mockReturnValue(EXPENSE_ID)
   resetDbMock()
@@ -220,8 +229,9 @@ beforeEach(() => {
 
 describe('POST /inventory-adjustments', () => {
   it('creates adjustment only (no expense payload)', async () => {
-    // select calls: [0] product check, [1] adjustment fetch after txn
-    selectQueue = [[PRODUCT_ROW], [ADJ_ROW]]
+    // select calls: [0] product check; adjustment comes back via INSERT RETURNING
+    selectQueue = [[PRODUCT_ROW]]
+    insertReturningQueue = [[ADJ_ROW]]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -239,8 +249,9 @@ describe('POST /inventory-adjustments', () => {
 
   it('creates adjustment + expense atomically, relatedExpenseId is set', async () => {
     const adjRowWithExpense = { ...ADJ_ROW, relatedExpenseId: EXPENSE_ID, delta: -3 }
-    // select calls: [0] product check, [1] adjustment fetch, [2] expense fetch
-    selectQueue = [[PRODUCT_ROW], [adjRowWithExpense], [EXPENSE_ROW]]
+    // select calls: [0] product check; INSERT RETURNING order: expense, then adjustment
+    selectQueue = [[PRODUCT_ROW]]
+    insertReturningQueue = [[EXPENSE_ROW], [adjRowWithExpense]]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -307,7 +318,8 @@ describe('POST /inventory-adjustments', () => {
   })
 
   it('publishes inventory.adjusted event', async () => {
-    selectQueue = [[PRODUCT_ROW], [ADJ_ROW]]
+    selectQueue = [[PRODUCT_ROW]]
+    insertReturningQueue = [[ADJ_ROW]]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -327,7 +339,8 @@ describe('POST /inventory-adjustments', () => {
   it('publishes expense.created only when expense payload is present', async () => {
     // With expense payload — should publish expense.created
     const adjRowWithExpense = { ...ADJ_ROW, relatedExpenseId: EXPENSE_ID }
-    selectQueue = [[PRODUCT_ROW], [adjRowWithExpense], [EXPENSE_ROW]]
+    selectQueue = [[PRODUCT_ROW]]
+    insertReturningQueue = [[EXPENSE_ROW], [adjRowWithExpense]]
     resetDbMock()
 
     const { POST } = await import('../route')
@@ -347,7 +360,8 @@ describe('POST /inventory-adjustments', () => {
 
     // Without expense payload — should NOT publish expense.created
     publishToBusiness.mockReset().mockResolvedValue(undefined)
-    selectQueue = [[PRODUCT_ROW], [ADJ_ROW]]
+    selectQueue = [[PRODUCT_ROW]]
+    insertReturningQueue = [[ADJ_ROW]]
     resetDbMock()
 
     await POST(
