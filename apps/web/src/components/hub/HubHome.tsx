@@ -2,7 +2,12 @@
 
 import { useIntl } from 'react-intl'
 import { useCallback, useEffect, useState, useMemo } from 'react'
-import { useIonViewWillEnter } from '@ionic/react'
+import {
+  IonRefresher,
+  IonRefresherContent,
+  useIonViewWillEnter,
+  type RefresherEventDetail,
+} from '@ionic/react'
 import { useRouter } from '@/lib/next-navigation-shim'
 import { Building2, SearchX, X } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
@@ -13,7 +18,7 @@ import { useJoinBusinessModal } from '@/contexts/join-business-context'
 import { fetchDeduped } from '@/lib/fetch'
 import { createSessionCache, CACHE_KEYS } from '@/hooks'
 import { registerRefetch } from '@/lib/realtime/refetch-registry'
-import { FeatureCard, GroupLabel, ModalShell, PageSpinner } from '@/components/ui'
+import { FeatureCard, GroupLabel, ModalShell, SkeletonList } from '@/components/ui'
 
 // Threshold above which the search input appears. Below this the list is
 // short enough to scan visually without a filter.
@@ -30,6 +35,9 @@ interface Business {
   icon: string | null
   locale: string
   currency: string
+  // Optional so pre-tax-feature sessionStorage caches still parse.
+  taxRate?: number
+  taxMode?: 'none' | 'inclusive' | 'exclusive'
 }
 
 const hubBusinessesCache = createSessionCache<Business[]>(CACHE_KEYS.HUB_BUSINESSES)
@@ -149,8 +157,15 @@ function HubHomeBody() {
   const hasFilteredResults = filteredBusinesses.length > 0
 
   if (authLoading || isLoading) {
+    // Skeleton rows matching the BusinessRow ledger below (mark + name +
+    // role caption) so the page doesn't jump when data lands. Greeting
+    // renders as soon as auth resolves (it self-hides while userName is
+    // null), keeping the hero stable across the load.
     return (
-      <PageSpinner />
+      <div className="hub-body">
+        <HubGreeting userName={user?.name ?? null} locale={intl.locale} />
+        <SkeletonList rows={4} />
+      </div>
     )
   }
 
@@ -208,8 +223,23 @@ function HubHomeBody() {
     </ModalShell>
   )
 
+  const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
+    try {
+      await fetchBusinesses()
+    } finally {
+      event.detail.complete()
+    }
+  }
+
   return (
-    <div className={hasBusinesses ? 'hub-body' : 'hub-body hub-body--empty'}>
+    <>
+      {/* Fragment sibling (not inside .hub-body) so the refresher is a
+          direct DOM child of the page's IonContent — required for the
+          slot="fixed" projection. */}
+      <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+        <IonRefresherContent />
+      </IonRefresher>
+      <div className={hasBusinesses ? 'hub-body' : 'hub-body hub-body--empty'}>
       <HubGreeting userName={user?.name ?? null} locale={intl.locale} />
 
       {hasBusinesses ? (
@@ -325,7 +355,8 @@ function HubHomeBody() {
       )}
 
       {actionSheet}
-    </div>
+      </div>
+    </>
   )
 }
 

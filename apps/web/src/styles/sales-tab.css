@@ -1064,6 +1064,25 @@
 }
 
 /* ===== Payment split (donut + legend) ================================ */
+
+/* Mount entrance: each donut arc sweeps open from its start angle
+ * (dasharray grows 0 → arc length while the offset pins the start),
+ * staggered cash → card → other via the per-segment --seg-delay set
+ * inline in PaymentSplitCard. The px values resolve to SVG user units. */
+.payment-split-arc {
+  animation: payment-split-sweep var(--duration-slow) var(--ease-out-expo) backwards;
+  animation-delay: var(--seg-delay, 0ms);
+}
+
+@keyframes payment-split-sweep {
+  from {
+    stroke-dasharray: 0px var(--circ);
+  }
+  to {
+    stroke-dasharray: var(--arc) var(--gap);
+  }
+}
+
 .payment-split-grid {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1243,6 +1262,19 @@
   border-radius: 2px;
   min-height: 3px;
   transition: height var(--duration-base) ease-out;
+  /* Mount entrance: each bar grows up from the baseline, staggered
+   * left-to-right via the per-bar --bar-delay set inline in
+   * HourlyDistributionCard. `backwards` fill keeps delayed bars
+   * collapsed until their turn. */
+  transform-origin: bottom;
+  animation: hourly-bar-grow var(--duration-medium) var(--ease-out-expo) backwards;
+  animation-delay: var(--bar-delay, 0ms);
+}
+
+@keyframes hourly-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 .hourly-bar--peak {
@@ -1258,4 +1290,12 @@
   letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
+}
+
+/* Chart mount animations settle instantly for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  .hourly-bar,
+  .payment-split-arc {
+    animation: none;
+  }
 }

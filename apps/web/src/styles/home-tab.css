@@ -241,6 +241,10 @@
   background: var(--color-paper-deep);
   border-color: var(--color-hair);
   cursor: default;
+  /* Column flex so the stacked stat rows (sales today / products) split
+   * the tile height evenly — each row's flex: 1 resolves against this. */
+  display: flex;
+  flex-direction: column;
 }
 
 .home-mini__stat-row {

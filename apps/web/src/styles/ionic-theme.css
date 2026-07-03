@@ -162,6 +162,20 @@ ion-toolbar {
   --padding-top: 0;
 }
 
+/* Modal geometry: pin the mobile presentation at every viewport size.
+   The app body is a centered column capped at --max-viewport-width, but
+   Ionic's own >=768px media query switches non-sheet modals to a floating
+   600x600 "card" — inside the 440px column that renders as a stubby
+   centered card with a dead gap below it. Every modal in this app must
+   read as a sheet anchored to the bottom edge of the screen: full column
+   width, full height for card modals, and sheet modals keep their
+   breakpoint-driven height but stay bottom-anchored. Declared after
+   Ionic's core CSS so the equal-specificity override wins by order. */
+ion-modal {
+  --width: 100%;
+  --height: 100%;
+}
+
 /* Page-level header toolbars (AccountPage, BusinessHeader, etc.) get the
    same horizontal page-padding inset that the body content uses, so the
    visible left edge of the back chevron and the visible right edge of the
@@ -398,4 +412,45 @@ ion-action-sheet {
      stays neutral so the text color does the work. Ripple disabled
      to prevent any brand-tinted overlay on tap. */
   --button-color-activated: var(--color-text-primary);
+}
+
+/* ===== IonToast — Modern Mercantile (.kasero-toast) ====================
+ * Brand-styled toast for non-blocking feedback (POS out-of-stock /
+ * no-barcode-match, and any future presentToast caller that passes
+ * cssClass: 'kasero-toast'). Ink plate on paper: inverse surface so the
+ * toast reads above any page without a scrim, pill radius to match the
+ * button vocabulary, warm shadow from the token scale. Scoped to the
+ * class so Ionic-default toasts (e.g. realtime session notices) keep
+ * their existing look until they opt in. */
+ion-toast.kasero-toast {
+  --background: var(--color-ink);
+  --color: var(--color-paper);
+  --border-radius: var(--radius-full);
+  --box-shadow: var(--shadow-lg);
+  --start: var(--page-padding);
+  --end: var(--page-padding);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Dark mode flips the plate back to cream-on-ink's inverse: a lifted
+ * warm surface with primary ink text, so the toast still contrasts
+ * against the deep paper canvas. */
+.dark ion-toast.kasero-toast {
+  --background: var(--color-paper-deep);
+  --color: var(--color-text-primary);
+}
+
+/* ===== IonRefresher — pull-to-refresh ==================================
+ * The refresher content renders in light DOM, so plain selectors reach
+ * the pulling arrow + refreshing spinner. Tertiary ink keeps the pull
+ * gesture quiet chrome rather than a brand moment. */
+ion-refresher ion-spinner {
+  color: var(--color-text-tertiary);
+}
+ion-refresher .refresher-pulling-icon,
+ion-refresher .refresher-refreshing-icon {
+  color: var(--color-text-tertiary);
 }

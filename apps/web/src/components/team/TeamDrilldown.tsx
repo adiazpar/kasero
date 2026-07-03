@@ -3,8 +3,14 @@
 import { useMemo } from 'react'
 import { useIntl } from 'react-intl'
 import { Plus } from 'lucide-react'
-import { IonItem, IonList } from '@ionic/react'
-import { PageSpinner, SwipeRow } from '@/components/ui'
+import {
+  IonItem,
+  IonList,
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
+} from '@ionic/react'
+import { SkeletonList, SwipeRow } from '@/components/ui'
 import { useAuth } from '@/contexts/auth-context'
 import { useTeamManagement, type TeamMember } from '@/hooks/useTeamManagement'
 import { TeamMemberListItem, InviteCodeListItem } from '@/components/team'
@@ -46,6 +52,7 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
     teamMembers,
     inviteCodes,
     isLoading,
+    refresh,
     error,
     canManageTeam,
     callerRole,
@@ -126,11 +133,30 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
   // slide-up and reading as a diagonal entrance. ProductsView uses this
   // same early-return pattern for the same reason.
   if (isLoading) {
-    return <PageSpinner />
+    // Skeleton roster matching the loaded ledger (avatar circle + name +
+    // mono role caption) so the page doesn't jump when data lands.
+    return (
+      <div className="tm-roster">
+        <SkeletonList rows={5} leading="circle" />
+      </div>
+    )
+  }
+
+  const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
+    try {
+      await refresh()
+    } finally {
+      event.detail.complete()
+    }
   }
 
   return (
     <>
+      {/* Direct DOM child of TeamTab's IonContent (fragments render no
+          element), so the slot="fixed" projection works. */}
+      <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+        <IonRefresherContent />
+      </IonRefresher>
       <div className="tm-roster">
         {/* Hero band */}
           <header className="tm-roster__hero">
@@ -144,7 +170,7 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
               <h1 className="pm-hero__title">
                 {t.formatMessage(
                   { id: titleId },
-                  { em: (chunks) => <em>{chunks}</em> },
+                  { em: (chunks) => <em key="em">{chunks}</em> },
                 )}
               </h1>
               <p className="pm-hero__subtitle">
@@ -178,7 +204,7 @@ export function TeamDrilldown({ businessId }: TeamDrilldownProps) {
             <p className="tm-roster__solo-hint">
               {t.formatMessage(
                 { id: 'team.roster.solo_hint' },
-                { em: (chunks) => <em>{chunks}</em> },
+                { em: (chunks) => <em key="em">{chunks}</em> },
               )}
             </p>
           )}

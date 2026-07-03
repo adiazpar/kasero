@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useIntl } from 'react-intl'
 import { useSalesAggregate } from '@/hooks/useSalesAggregate'
+import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import { DailyRevenueCard } from './DailyRevenueCard'
 import { RecentSessionsCard } from './RecentSessionsCard'
 import { PaymentSplitCard } from './PaymentSplitCard'
@@ -21,6 +23,12 @@ interface SalesReportsProps {
 export function SalesReports({ businessId }: SalesReportsProps) {
   const t = useIntl()
   const { data, isLoaded, error, refetch } = useSalesAggregate(businessId)
+
+  // Register this instance's aggregate refetch under the 'sales' key so
+  // both realtime sale events and the ledger's pull-to-refresh fan-out
+  // revalidate the visible report cards (the hook itself doesn't
+  // register — it's instance-scoped).
+  useEffect(() => registerRefetch('sales', refetch), [refetch])
 
   if (error && !isLoaded) {
     return (

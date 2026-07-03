@@ -2,13 +2,21 @@
 
 import { useEffect, useMemo } from 'react'
 import { useIntl } from 'react-intl'
-import { useIonRouter } from '@ionic/react'
+import {
+  IonRefresher,
+  IonRefresherContent,
+  useIonRouter,
+  type RefresherEventDetail,
+} from '@ionic/react'
 import { useBusiness } from '@/contexts/business-context'
+import { useExpenses } from '@/contexts/expenses-context'
 import { useSales } from '@/contexts/sales-context'
 import { useSalesSessions } from '@/contexts/sales-sessions-context'
 import { useProducts } from '@/contexts/products-context'
 import { useSalesAggregate } from '@/hooks/useSalesAggregate'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
+import { useFeatureFlag } from '@/lib/feature-flags'
+import { callRefetch } from '@/lib/realtime/refetch-registry'
 import {
   HomeHero,
   RevenueCard,
@@ -20,12 +28,28 @@ import {
 export function HomeView() {
   const intl = useIntl()
   const { businessId } = useBusiness()
-  const { sales, stats, isLoaded: salesLoaded, ensureLoaded: ensureSalesLoaded } = useSales()
+  const {
+    sales,
+    stats,
+    isLoaded: salesLoaded,
+    ensureLoaded: ensureSalesLoaded,
+    refetch: refetchSales,
+  } = useSales()
   const {
     currentSession,
     ensureLoaded: ensureSessionsLoaded,
+    refetch: refetchSessions,
   } = useSalesSessions()
-  const { products, ensureLoaded: ensureProductsLoaded } = useProducts()
+  const {
+    products,
+    ensureLoaded: ensureProductsLoaded,
+    refetch: refetchProducts,
+  } = useProducts()
+  const expensesEnabled = useFeatureFlag('expenses_v1')
+  // Read-only view of the expenses store — HomeView never triggers the
+  // list fetch itself (no ensureLoaded here); it only derives from data
+  // that a Ledger visit or the sessionStorage cache already loaded.
+  const { expenses, isLoaded: expensesLoaded } = useExpenses()
   const aggregate = useSalesAggregate(businessId ?? '')
   const { formatCurrency } = useBusinessFormat()
   // Ionic-aware router. Used for cross-tab navigation (Home -> Sales /
@@ -53,8 +77,10 @@ export function HomeView() {
   // the wire and not kept live for the open session).
   const sessionRunningTotal = useMemo(() => {
     if (!currentSession) return 0
+    // Voided sales are excluded — matches SalesStatsCard and every
+    // server-side aggregate.
     return sales
-      .filter((s) => s.sessionId === currentSession.id)
+      .filter((s) => s.sessionId === currentSession.id && s.status !== 'voided')
       .reduce((sum, s) => sum + s.total, 0)
   }, [sales, currentSession])
 
@@ -73,6 +99,44 @@ export function HomeView() {
     if (!aggregate.isLoaded || !aggregate.data) return null
     return aggregate.data.dailyRevenue.reduce((sum, e) => sum + e.total, 0)
   }, [aggregate.isLoaded, aggregate.data])
+
+  // This-week spend for the trend card's "spent" micro-row. Derived from
+  // the expenses store only when it's already populated (Ledger visit or
+  // sessionStorage cache) — no fetch is triggered from Home. Window
+  // mirrors the revenue sparkline: today minus six days, local midnight.
+  // The store holds the 100 most-recent expenses, which comfortably
+  // covers a 7-day window for the target businesses.
+  const thisWeekSpend = useMemo(() => {
+    if (!expensesEnabled || !expensesLoaded) return null
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - 6)
+    return expenses.reduce(
+      (sum, e) => (new Date(e.date) >= start ? sum + e.amount : sum),
+      0,
+    )
+  }, [expensesEnabled, expensesLoaded, expenses])
+
+  // Pull-to-refresh: refetch every store this surface renders from, and
+  // fan the 'sales' key out through the refetch registry so instance-
+  // scoped listeners (the MonthlySummaryCard's expenses summary registers
+  // under 'sales') revalidate too. The direct refetches above set their
+  // inFlight guards synchronously, so the registry fan-out dedupes into
+  // the same requests instead of doubling them.
+  const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
+    try {
+      const jobs = [
+        refetchSales(),
+        refetchSessions(),
+        refetchProducts(),
+        aggregate.refetch(),
+      ]
+      callRefetch('sales')
+      await Promise.all(jobs)
+    } finally {
+      event.detail.complete()
+    }
+  }
 
   // Cross-tab navigation. push(href, 'none', 'replace') tells Ionic to
   // perform a tab swap instead of stacking a push on top of Home — so
@@ -95,7 +159,13 @@ export function HomeView() {
   }
 
   return (
-    <div className="home-body">
+    <>
+      {/* Direct DOM child of the page's IonContent (fragments render no
+          element), so the slot="fixed" projection works. */}
+      <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+        <IonRefresherContent />
+      </IonRefresher>
+      <div className="home-body">
       <HomeHero />
       <MonthlySummaryCard />
       <RevenueCard
@@ -129,6 +199,16 @@ export function HomeView() {
           <button
             type="button"
             className="home-mini__stat-row"
+            onClick={handleSalesClick}
+          >
+            <span className="home-mini__stat-value">{stats?.todayCount ?? 0}</span>
+            <span className="home-mini__stat-label">
+              {intl.formatMessage({ id: 'home.stat_sales_today' })}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-mini__stat-row"
             onClick={handleProductsClick}
           >
             <span className="home-mini__stat-value">{products.length}</span>
@@ -143,12 +223,13 @@ export function HomeView() {
         dailyRevenue={aggregate.data?.dailyRevenue ?? null}
         thisWeekTotal={thisWeekTotal}
         previousWeekTotal={aggregate.data?.previousWeekRevenue ?? null}
-        thisWeekSpend={null}
+        thisWeekSpend={thisWeekSpend}
       />
       <AlertsSection
         lowStockCount={lowStockCount}
         onLowStockClick={handleLowStockClick}
       />
-    </div>
+      </div>
+    </>
   )
 }

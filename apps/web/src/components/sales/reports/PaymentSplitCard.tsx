@@ -97,21 +97,33 @@ function Donut({ segments, total }: DonutProps) {
   const circumference = 2 * Math.PI * radius
 
   let cumulative = 0
-  const arcs = segments.map((seg) => {
+  const arcs = segments.map((seg, i) => {
     const fraction = total > 0 ? seg.amount / total : 0
     const arcLength = fraction * circumference
+    const gap = circumference - arcLength
     const arc = (
       <circle
         key={seg.key}
+        className="payment-split-arc"
         cx="50"
         cy="50"
         r={radius}
         fill="none"
         stroke={seg.color}
         strokeWidth={stroke}
-        strokeDasharray={`${arcLength} ${circumference - arcLength}`}
+        strokeDasharray={`${arcLength} ${gap}`}
         strokeDashoffset={-cumulative}
         transform="rotate(-90 50 50)"
+        // Feeds the mount sweep (payment-split-sweep in sales-tab.css):
+        // dasharray animates 0 -> arc while the offset pins the start
+        // angle, staggered per segment. CSS-only; disabled under
+        // prefers-reduced-motion.
+        style={{
+          ['--arc' as string]: `${arcLength}px`,
+          ['--gap' as string]: `${gap}px`,
+          ['--circ' as string]: `${circumference}px`,
+          ['--seg-delay' as string]: `${i * 120}ms`,
+        }}
       />
     )
     cumulative += arcLength

@@ -634,6 +634,79 @@
 .page-spinner--md ion-spinner { width: 32px; height: 32px; }
 .page-spinner--lg ion-spinner { width: 48px; height: 48px; }
 
+/* ===== SkeletonList — list-row loading placeholders =====
+ * Shimmer rows matching the leading-visual + two-line ledger layout
+ * (Hub businesses, Products list, Team roster). Same pulse cadence as
+ * .report-skeleton__bar in sales-tab.css so all loading surfaces breathe
+ * together. Static under prefers-reduced-motion. */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+}
+
+.skeleton-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target-min);
+  padding: var(--space-3) 0;
+}
+
+.skeleton-list__leading {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: var(--color-bg-muted);
+  animation: skeleton-list-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-list__leading--square { border-radius: var(--radius-md); }
+.skeleton-list__leading--circle { border-radius: var(--radius-full); }
+
+.skeleton-list__lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-list__line {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-muted);
+  animation: skeleton-list-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-list__line--primary { width: 55%; }
+.skeleton-list__line--secondary { width: 32%; height: 10px; }
+
+/* Stagger alternating rows a half-beat so the list reads as a gentle
+ * wave rather than a synchronized blink. */
+.skeleton-list__row:nth-child(even) .skeleton-list__leading,
+.skeleton-list__row:nth-child(even) .skeleton-list__line {
+  animation-delay: 0.4s;
+}
+
+@keyframes skeleton-list-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-list__leading,
+  .skeleton-list__line {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 /* When IonFooter wraps the footer in IonToolbar, give it sensible padding
    regardless of theme. */
 ion-modal ion-footer ion-toolbar {

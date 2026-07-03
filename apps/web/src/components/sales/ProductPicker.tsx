@@ -2,9 +2,9 @@
 
 import { useIntl } from 'react-intl'
 import Image from '@/lib/Image'
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { Loader2, Minus, Package, Plus, ScanLine, SearchX, X } from 'lucide-react'
-import { useIonRouter } from '@ionic/react'
+import { useIonRouter, useIonToast } from '@ionic/react'
 import { useBusiness } from '@/contexts/business-context'
 import { useProducts } from '@/contexts/products-context'
 import { useBarcodeScan } from '@/hooks/useBarcodeScan'
@@ -48,7 +48,22 @@ export function ProductPicker({ cart }: ProductPickerProps) {
   const { products, ensureLoaded } = useProducts()
   const { formatCurrency } = useBusinessFormat()
   const ionRouter = useIonRouter()
+  const [presentToast] = useIonToast()
   const [search, setSearch] = useState('')
+
+  // Non-blocking POS feedback. window.alert() froze the sell loop mid-
+  // rush; a short brand-styled toast (styled via .kasero-toast in
+  // ionic-theme.css) keeps the cashier's hands on the grid.
+  const showPosToast = (
+    id: 'sales.cart.out_of_stock' | 'sales.toast.no_barcode_match',
+  ) => {
+    void presentToast({
+      message: t.formatMessage({ id }),
+      duration: 2200,
+      position: 'top',
+      cssClass: 'kasero-toast',
+    })
+  }
 
   useEffect(() => {
     void ensureLoaded()
@@ -84,7 +99,7 @@ export function ProductPicker({ cart }: ProductPickerProps) {
         const stock = product.stock ?? 0
         const current = cart.lines.find((l) => l.productId === product.id)?.quantity ?? 0
         if (stock <= 0 || current >= stock) {
-          alert(t.formatMessage({ id: 'sales.cart.out_of_stock' }))
+          showPosToast('sales.cart.out_of_stock')
           return
         }
         cart.addLine(product)
@@ -93,13 +108,13 @@ export function ProductPicker({ cart }: ProductPickerProps) {
     } catch {
       /* fall through to no-match */
     }
-    alert(t.formatMessage({ id: 'sales.toast.no_barcode_match' }))
+    showPosToast('sales.toast.no_barcode_match')
   }
 
   const { open: openScanner, busy: scanBusy, hiddenInput: scanHiddenInput } =
     useBarcodeScan({
       onResult: handleScanResult,
-      onError: () => alert(t.formatMessage({ id: 'sales.toast.no_barcode_match' })),
+      onError: () => showPosToast('sales.toast.no_barcode_match'),
     })
 
   const isSearching = search.trim().length > 0
@@ -156,7 +171,9 @@ export function ProductPicker({ cart }: ProductPickerProps) {
                 key={product.id}
                 product={product}
                 qty={qtyMap.get(product.id) ?? 0}
-                cart={cart}
+                addLine={cart.addLine}
+                removeLine={cart.removeLine}
+                updateQty={cart.updateQty}
                 formatCurrency={formatCurrency}
                 t={t}
               />
@@ -198,12 +215,26 @@ export function ProductPicker({ cart }: ProductPickerProps) {
 interface ProductTileProps {
   product: Product
   qty: number
-  cart: UseCartResult
+  addLine: UseCartResult['addLine']
+  removeLine: UseCartResult['removeLine']
+  updateQty: UseCartResult['updateQty']
   formatCurrency: (n: number) => string
   t: ReturnType<typeof useIntl>
 }
 
-function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps) {
+// Memoized: the POS grid re-renders on every cart change, but only the
+// tile whose qty changed gets new props — the cart callbacks are
+// useCallback-stable and product references are stable across cart
+// mutations, so untouched tiles skip re-rendering entirely.
+const ProductTile = memo(function ProductTile({
+  product,
+  qty,
+  addLine,
+  removeLine,
+  updateQty,
+  formatCurrency,
+  t,
+}: ProductTileProps) {
   const stockTotal = product.stock ?? 0
   const outOfStock = stockTotal <= 0
   const isSelected = qty > 0
@@ -212,8 +243,8 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
 
   const handleToggle = () => {
     if (outOfStock) return
-    if (isSelected) cart.removeLine(product.id)
-    else cart.addLine(product)
+    if (isSelected) removeLine(product.id)
+    else addLine(product)
   }
   const handleKey = (e: React.KeyboardEvent) => {
     if (outOfStock) return
@@ -240,6 +271,10 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
       onClick={handleToggle}
       onKeyDown={handleKey}
       className={tileClass}
+      // Haptic on the core sell loop — HapticFeedbackProvider picks this
+      // up via its [data-haptic] allow-list. Out-of-stock tiles are
+      // silenced by the provider's aria-disabled opt-out check.
+      data-haptic
     >
       <div className="product-tile__head">
         <div
@@ -269,7 +304,7 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
               ariaLabel={t.formatMessage({ id: 'sales.cart.qty_decrease' })}
               onClick={(e) => {
                 e.stopPropagation()
-                cart.updateQty(product.id, qty - 1)
+                updateQty(product.id, qty - 1)
               }}
             >
               <Minus size={14} strokeWidth={2.5} />
@@ -283,7 +318,7 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
               onClick={(e) => {
                 e.stopPropagation()
                 if (atMaxQty) return
-                cart.addLine(product)
+                addLine(product)
               }}
             >
               <Plus size={14} strokeWidth={2.5} />
@@ -297,7 +332,7 @@ function ProductTile({ product, qty, cart, formatCurrency, t }: ProductTileProps
       </div>
     </div>
   )
-}
+})
 
 function renderProductIcon(product: Product, iconUrl: string | null) {
   if (iconUrl && isPresetIcon(iconUrl)) {
@@ -337,6 +372,7 @@ function QtyButton({ variant, active, disabled, ariaLabel, onClick, children }: 
       className={`product-tile__qty-button product-tile__qty-button--${variant}${active ? ' is-active' : ''}`}
       aria-label={ariaLabel}
       disabled={disabled}
+      data-haptic
       onClick={(e) => {
         onClick(e)
       }}

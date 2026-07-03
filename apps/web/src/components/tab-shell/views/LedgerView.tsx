@@ -2,11 +2,20 @@
 
 import { useState } from 'react'
 import { useIntl } from 'react-intl'
+import {
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
+} from '@ionic/react'
 
 import { TabContainer } from '@/components/ui'
 import { SalesView } from '@/components/tab-shell/views/SalesView'
 import { ExpensesView } from '@/components/expenses/ExpensesView'
+import { useExpenses } from '@/contexts/expenses-context'
+import { useSales } from '@/contexts/sales-context'
+import { useSalesSessions } from '@/contexts/sales-sessions-context'
 import { useFeatureFlag } from '@/lib/feature-flags'
+import { callRefetch } from '@/lib/realtime/refetch-registry'
 import { useSearchParams } from '@/lib/next-navigation-shim'
 
 type LedgerTab = 'sales' | 'expenses'
@@ -27,12 +36,47 @@ export function LedgerView() {
     tabParam === 'expenses' ? 'expenses' : 'sales'
   const [activeTab, setActiveTab] = useState<LedgerTab>(initialTab)
 
+  const { refetch: refetchSales } = useSales()
+  const { refetch: refetchSessions } = useSalesSessions()
+  const { refetch: refetchExpenses } = useExpenses()
+
+  // Pull-to-refresh for the whole ledger surface. Awaits the shared
+  // context refetches, and fans the 'sales' key out through the refetch
+  // registry so instance-scoped listeners (the SalesReports aggregate,
+  // the expenses summary) revalidate too — the direct refetches set
+  // their inFlight guards synchronously, so the fan-out dedupes into
+  // the same requests.
+  const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
+    try {
+      const jobs = [refetchSales(), refetchSessions()]
+      if (expensesEnabled) jobs.push(refetchExpenses())
+      callRefetch('sales')
+      await Promise.all(jobs)
+    } finally {
+      event.detail.complete()
+    }
+  }
+
+  const refresher = (
+    // Direct DOM child of the page's IonContent (fragments render no
+    // element), so the slot="fixed" projection works.
+    <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+      <IonRefresherContent />
+    </IonRefresher>
+  )
+
   if (!expensesEnabled) {
-    return <SalesView />
+    return (
+      <>
+        {refresher}
+        <SalesView />
+      </>
+    )
   }
 
   return (
     <>
+      {refresher}
       <div className="ledger-segment-wrap">
       <div
         role="tablist"

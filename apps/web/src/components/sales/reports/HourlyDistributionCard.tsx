@@ -45,6 +45,10 @@ export function HourlyDistributionCard({ entries }: HourlyDistributionCardProps)
                   className={`hourly-bar${isPeak ? ' hourly-bar--peak' : ''}`}
                   style={{
                     height: e.total > 0 ? `${heightPct}%` : '3px',
+                    // Left-to-right stagger for the mount animation
+                    // (hourly-bar-grow in sales-tab.css). CSS-only;
+                    // disabled under prefers-reduced-motion.
+                    ['--bar-delay' as string]: `${idx * 16}ms`,
                   }}
                   aria-hidden="true"
                 />

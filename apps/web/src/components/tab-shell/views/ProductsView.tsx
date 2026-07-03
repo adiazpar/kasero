@@ -4,9 +4,15 @@ import { useIntl } from 'react-intl';
 import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from '@/lib/next-dynamic-shim'
 import { useRouter, useSearchParams } from '@/lib/next-navigation-shim'
+import {
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
+} from '@ionic/react'
 import { useBusiness } from '@/contexts/business-context'
 import { useProductFilters, useProductSettings } from '@/hooks'
-import { TabContainer, PageSpinner } from '@/components/ui'
+import { callRefetch } from '@/lib/realtime/refetch-registry'
+import { TabContainer, SkeletonList } from '@/components/ui'
 // Tabs render on mount so they stay static. Add/edit/settings modals are
 // closed by default and open on user action; dynamic import keeps their
 // bundle (plus framer-motion's Reorder in ProductSettingsModal) out of
@@ -260,6 +266,7 @@ export function ProductsView() {
     isLoaded: productsLoaded,
     error: productsError,
     ensureLoaded: ensureProductsLoaded,
+    refetch: refetchProducts,
   } = useProducts()
   const [isLoading, setIsLoading] = useState(() => !productsLoaded)
   const [error, setError] = useState('')
@@ -613,8 +620,12 @@ export function ProductsView() {
 
 
   if (isLoading) {
+    // Skeleton rows matching the product list layout (icon + name/price
+    // lines) so the surface doesn't jump when the context resolves.
     return (
-      <PageSpinner />
+      <div className="products-page">
+        <SkeletonList rows={8} />
+      </div>
     )
   }
 
@@ -624,8 +635,30 @@ export function ProductsView() {
     router.replace(urlForTab(tab), { scroll: false })
   }
 
+  // Pull-to-refresh: revalidate the products store, then fan the
+  // 'categories' / 'product-settings' / 'inventory-adjustments' keys out
+  // through the refetch registry so the filter pills and the Inventory
+  // sub-tab pick up remote changes too (their stores register instance
+  // refetches under those keys; fire-and-forget by design).
+  const handleRefresh = async (event: CustomEvent<RefresherEventDetail>) => {
+    try {
+      const job = refetchProducts()
+      callRefetch('categories')
+      callRefetch('product-settings')
+      callRefetch('inventory-adjustments')
+      await job
+    } finally {
+      event.detail.complete()
+    }
+  }
+
   return (
     <>
+      {/* Direct DOM child of the page's IonContent (fragments render no
+          element), so the slot="fixed" projection works. */}
+      <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+        <IonRefresherContent />
+      </IonRefresher>
       <div className="products-page">
         {/* Custom pill segmented control — matches the mono uppercase
             tracked vocabulary used elsewhere (tab-bar labels, eyebrows,
