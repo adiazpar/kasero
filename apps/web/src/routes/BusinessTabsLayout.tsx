@@ -9,12 +9,33 @@ import {
 import { Home, BookOpen, Package, Settings } from 'lucide-react'
 import { useIntl } from 'react-intl'
 
-import { HomeTab } from '@/routes/tabs/HomeTab'
-import { ManageTab } from '@/routes/tabs/ManageTab'
-import { ProductsTab } from '@/routes/tabs/ProductsTab'
-import { LedgerTab } from '@/routes/tabs/LedgerTab'
-import { TeamTab } from '@/routes/tabs/TeamTab'
+import dynamic from '@/lib/next-dynamic-shim'
 import { shellBackTransition } from '@/lib/shell-back-transition'
+
+// Each tab page is its own chunk, fetched on first navigation to that
+// tab. IonRouterOutlet keeps visited tabs mounted, so the lazy boundary
+// only costs once per tab per session. Every tab page mounts an IonPage
+// at its root, which is what Ionic's router requires of lazy pages.
+const HomeTab = dynamic(
+  () => import('@/routes/tabs/HomeTab').then((m) => m.HomeTab),
+  { ssr: false },
+)
+const ManageTab = dynamic(
+  () => import('@/routes/tabs/ManageTab').then((m) => m.ManageTab),
+  { ssr: false },
+)
+const ProductsTab = dynamic(
+  () => import('@/routes/tabs/ProductsTab').then((m) => m.ProductsTab),
+  { ssr: false },
+)
+const LedgerTab = dynamic(
+  () => import('@/routes/tabs/LedgerTab').then((m) => m.LedgerTab),
+  { ssr: false },
+)
+const TeamTab = dynamic(
+  () => import('@/routes/tabs/TeamTab').then((m) => m.TeamTab),
+  { ssr: false },
+)
 
 const BUSINESS_PATH = '/:businessId([A-Za-z0-9_-]{9,})'
 

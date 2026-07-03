@@ -3,7 +3,10 @@ import {
   IonInput, IonItem, IonLabel, IonSelect, IonSelectOption,
 } from '@ionic/react'
 import { useIntl } from 'react-intl'
-import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
+// The /min entrypoint ships reduced metadata (no extended validation /
+// geolocation data) — sufficient for parse-to-E.164 validation here and
+// roughly half the size of the default entrypoint.
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js/min'
 import { useAuth } from '@/contexts/auth-context'
 import './PhoneInput.css'
 

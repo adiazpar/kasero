@@ -4,7 +4,10 @@ import { useEffect } from 'react'
 import { useRouter } from '@/lib/next-navigation-shim'
 import { useAuth } from '@/contexts/auth-context'
 import { useBusiness } from '@/contexts/business-context'
-import { PageSpinner } from '@/components/ui'
+// Deep import (not the '@/components/ui' barrel) so this shared guard
+// never drags the whole ui barrel (TabContainer -> framer-motion) into
+// its importer's chunk.
+import { PageSpinner } from '@/components/ui/PageSpinner'
 
 /**
  * ContentGuard - Protects page content while allowing the layout shell to render.

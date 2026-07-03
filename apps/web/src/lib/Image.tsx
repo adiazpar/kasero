@@ -41,5 +41,16 @@ export default function Image({
   const fillStyle = _fill
     ? { position: 'absolute' as const, inset: 0, width: '100%', height: '100%' }
     : undefined
-  return <img {...rest} style={{ ...fillStyle, ...style }} />
+  // Perf defaults: async decode keeps large icons off the main thread's
+  // paint path, and lazy loading skips offscreen list images. `priority`
+  // (next/image semantics) opts back into eager loading; any explicit
+  // `decoding` / `loading` in props wins via the spread below.
+  return (
+    <img
+      decoding="async"
+      loading={_priority ? 'eager' : 'lazy'}
+      {...rest}
+      style={{ ...fillStyle, ...style }}
+    />
+  )
 }

@@ -1,13 +1,39 @@
 import { Route } from 'react-router-dom'
 import { IonRouterOutlet } from '@ionic/react'
 
-import { AccountPage } from '@/routes/AccountPage'
-import { Sessions } from '@/routes/account/Sessions'
-import { BusinessProvidersFromUrl } from '@/routes/BusinessProvidersFromUrl'
-import { BusinessTabsLayout } from '@/routes/BusinessTabsLayout'
-import { HubPage } from '@/routes/HubPage'
-import { JoinPage } from '@/routes/JoinPage'
+import dynamic from '@/lib/next-dynamic-shim'
 import { shellBackTransition } from '@/lib/shell-back-transition'
+
+// Route-level code splitting: each page below is its own chunk, fetched
+// on first navigation. The dynamic() shim wraps each in Suspense with a
+// null fallback; Ionic's router supports lazily loaded pages as long as
+// the resolved component mounts an IonPage at its root (they all do).
+// Once a page has been visited, IonRouterOutlet keeps it mounted, so the
+// lazy boundary only costs on first entry.
+const AccountPage = dynamic(
+  () => import('@/routes/AccountPage').then((m) => m.AccountPage),
+  { ssr: false },
+)
+const Sessions = dynamic(
+  () => import('@/routes/account/Sessions').then((m) => m.Sessions),
+  { ssr: false },
+)
+const BusinessProvidersFromUrl = dynamic(
+  () => import('@/routes/BusinessProvidersFromUrl').then((m) => m.BusinessProvidersFromUrl),
+  { ssr: false },
+)
+const BusinessTabsLayout = dynamic(
+  () => import('@/routes/BusinessTabsLayout').then((m) => m.BusinessTabsLayout),
+  { ssr: false },
+)
+const HubPage = dynamic(
+  () => import('@/routes/HubPage').then((m) => m.HubPage),
+  { ssr: false },
+)
+const JoinPage = dynamic(
+  () => import('@/routes/JoinPage').then((m) => m.JoinPage),
+  { ssr: false },
+)
 
 // `BusinessProvidersFromUrl` is mounted INSIDE the `/:businessId` route,
 // not around the outlet. Wrapping the outlet with a component whose

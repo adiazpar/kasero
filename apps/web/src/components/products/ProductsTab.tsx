@@ -3,7 +3,7 @@
 import { useIntl } from 'react-intl'
 
 import Image from '@/lib/Image'
-import { Fragment, memo } from 'react'
+import { Fragment, memo, useMemo } from 'react'
 import {
   X,
   Plus,
@@ -126,6 +126,16 @@ export function ProductsTab({
   scanHiddenInput,
 }: ProductsTabProps) {
   const intl = useIntl()
+
+  // Category id -> name lookup built once per categories change, so each
+  // row avoids an O(categories) .find(). A missing id resolves to null
+  // (defensive against stale categoryIds during a delete) and renders
+  // the "Not categorized" label in the row.
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories) map.set(c.id, c.name)
+    return map
+  }, [categories])
 
   const sortLabels: Record<SortPreference, string> = {
     name_asc: intl.formatMessage({ id: 'products.sort_name_asc' }),
@@ -252,7 +262,11 @@ export function ProductsTab({
                   <Fragment key={product.id}>
                     <ProductListItem
                       product={product}
-                      categories={categories}
+                      categoryName={
+                        product.categoryId
+                          ? categoryNameById.get(product.categoryId) ?? null
+                          : null
+                      }
                       onEdit={onEditProduct}
                       onView={onViewProduct}
                       onAdjustInventory={onAdjustInventory}
@@ -388,7 +402,7 @@ export function ProductsTab({
 
 interface ProductListItemProps {
   product: Product
-  categories: ProductCategory[]
+  categoryName: string | null
   onEdit: (product: Product) => void
   onView?: (product: Product) => void
   onAdjustInventory?: (product: Product) => void
@@ -398,7 +412,7 @@ interface ProductListItemProps {
 
 const ProductListItem = memo(function ProductListItem({
   product,
-  categories,
+  categoryName,
   onEdit,
   onView,
   onAdjustInventory,
@@ -439,12 +453,6 @@ const ProductListItem = memo(function ProductListItem({
         : 'in-stock'
   const hasBarcode = !!product.barcode
   const isActive = product.active
-  // Category lookup — falls back to a "Not categorized" label when the
-  // product has no categoryId or the id doesn't match any known
-  // category (defensive against stale categoryIds during a delete).
-  const categoryName = product.categoryId
-    ? categories.find((c) => c.id === product.categoryId)?.name ?? null
-    : null
 
   // Swipe actions render left-to-right. Same semantic contract as every
   // other list in the app: primary leftmost, secondary middle, destructive

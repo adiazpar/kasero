@@ -95,5 +95,11 @@ export function useCart(businessId: string): UseCartResult {
     [state.lines],
   )
 
-  return { lines: state.lines, total, addLine, updateQty, removeLine, clear }
+  // Memoize the result object so consumers that receive the whole cart
+  // as a prop (ProductPicker, CartModal) don't re-render on every parent
+  // render — the callbacks above are already useCallback-stable.
+  return useMemo(
+    () => ({ lines: state.lines, total, addLine, updateQty, removeLine, clear }),
+    [state.lines, total, addLine, updateQty, removeLine, clear],
+  )
 }

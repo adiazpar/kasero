@@ -3,7 +3,10 @@
 import { useIntl } from 'react-intl'
 import { useMemo } from 'react'
 import { IonButton } from '@ionic/react'
-import { ModalShell } from '@/components/ui'
+// Deep import (not the '@/components/ui' barrel): this modal sits in the
+// always-loaded entry graph via AuthGateProvider, and the barrel would
+// drag TabContainer -> framer-motion into the entry chunk.
+import { ModalShell } from '@/components/ui/modal-shell'
 
 interface LogoutConfirmModalProps {
   isOpen: boolean

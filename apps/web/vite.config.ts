@@ -114,14 +114,16 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      // libphonenumber-js is only reachable through PhoneInput, which lives
-      // behind the lazy-loaded EditProfileModal (and the register wizard).
-      // Vite's startup scan doesn't crawl into those dynamic imports, so the
-      // dep isn't pre-bundled until the modal first opens — at which point
-      // Vite triggers an on-demand re-optimization and the in-flight request
-      // for the not-yet-bundled module fails with a 504. Force-including it
-      // here makes Vite pre-bundle it at startup so the modal loads cleanly.
-      include: ['libphonenumber-js'],
+      // libphonenumber-js/min is only reachable through PhoneInput, which
+      // lives behind the lazy-loaded EditProfileModal (and the register
+      // wizard). Vite's startup scan doesn't crawl into those dynamic
+      // imports, so the dep isn't pre-bundled until the modal first opens —
+      // at which point Vite triggers an on-demand re-optimization and the
+      // in-flight request for the not-yet-bundled module fails with a 504.
+      // Force-including it here makes Vite pre-bundle it at startup so the
+      // modal loads cleanly. Must match the import specifier used in
+      // PhoneInput ('libphonenumber-js/min', the reduced-metadata build).
+      include: ['libphonenumber-js/min'],
     },
     build: {
       // Default minifier (lightningcss) doesn't recognize Ionic's shadow-DOM
@@ -135,6 +137,30 @@ export default defineConfig(({ mode }) => {
       // minification. Raise the threshold so the perf hint isn't constant
       // noise for chunks we've already triaged.
       chunkSizeWarningLimit: 2200,
+      rollupOptions: {
+        output: {
+          // Split stable, rarely-updated vendors into their own chunks so
+          // an app-code deploy doesn't invalidate the browser cache for
+          // Ionic / React / intl / auth. Function form keys off module id,
+          // which avoids the circular-chunk pitfalls of the object form.
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined
+            if (/node_modules\/(?:react|react-dom|scheduler)\//.test(id)) {
+              return 'vendor-react'
+            }
+            if (/node_modules\/(?:@ionic|ionicons)\//.test(id)) {
+              return 'vendor-ionic'
+            }
+            if (/node_modules\/(?:react-intl|intl-messageformat|@formatjs)\//.test(id)) {
+              return 'vendor-intl'
+            }
+            if (/node_modules\/(?:better-auth|@better-auth)\//.test(id)) {
+              return 'vendor-auth'
+            }
+            return undefined
+          },
+        },
+      },
     },
     test: {
       environment: 'jsdom',
