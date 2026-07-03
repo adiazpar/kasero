@@ -16,6 +16,9 @@ export interface BusinessAccess {
   businessIcon: string | null
   businessLocale: string
   businessCurrency: string
+  /** Percent, e.g. 12 = 12%. 0 when the business collects no tax. */
+  businessTaxRate: number
+  businessTaxMode: 'none' | 'inclusive' | 'exclusive'
   role: BusinessRole
 }
 
@@ -149,6 +152,8 @@ export async function requireBusinessAccess(
       businessIcon: businesses.icon,
       businessLocale: businesses.locale,
       businessCurrency: businesses.currency,
+      businessTaxRate: businesses.taxRate,
+      businessTaxMode: businesses.taxMode,
     })
     .from(businessUsers)
     .innerJoin(businesses, eq(businessUsers.businessId, businesses.id))
@@ -174,6 +179,8 @@ export async function requireBusinessAccess(
     businessIcon: membership.businessIcon,
     businessLocale: membership.businessLocale ?? 'en-US',
     businessCurrency: membership.businessCurrency ?? 'USD',
+    businessTaxRate: membership.businessTaxRate ?? 0,
+    businessTaxMode: membership.businessTaxMode ?? 'none',
     role: membership.role as BusinessRole,
   }
 

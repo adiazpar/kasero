@@ -48,8 +48,10 @@ export function SalesStatsCard({
   const [historyOpen, setHistoryOpen] = useState(false)
   const [sessionSalesOpen, setSessionSalesOpen] = useState(false)
 
+  // Voided sales are excluded from the live session revenue/count — a
+  // void is a reversal, not revenue (matches every server-side aggregate).
   const sessionSales = currentSession
-    ? sales.filter((s) => s.sessionId === currentSession.id)
+    ? sales.filter((s) => s.sessionId === currentSession.id && s.status !== 'voided')
     : []
   const sessionRevenue = sessionSales.reduce((sum, s) => sum + s.total, 0)
   const sessionCount = sessionSales.length

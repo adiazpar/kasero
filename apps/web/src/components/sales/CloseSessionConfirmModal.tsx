@@ -58,9 +58,13 @@ export function CloseSessionConfirmModal({
 
   // Session-scoped stats from cached sales filtered by sessionId.
   // NOT useSales().stats — that's today's UTC totals, not session totals.
+  // Voided sales are excluded so this preview matches the server's
+  // close-time aggregation (which filters status = 'completed').
   const sessionStats = useMemo(() => {
     if (!currentSession) return null
-    const sessionSales = sales.sales.filter((s) => s.sessionId === currentSession.id)
+    const sessionSales = sales.sales.filter(
+      (s) => s.sessionId === currentSession.id && s.status !== 'voided',
+    )
     const transactions = sessionSales.length
     const totalRevenue = sessionSales.reduce((acc, s) => acc + s.total, 0)
     const avgTicket = transactions > 0 ? totalRevenue / transactions : null
@@ -182,7 +186,7 @@ export function CloseSessionConfirmModal({
           eyebrow={intl.formatMessage({ id: 'sales.session.close_modal.step0_eyebrow' })}
           title={intl.formatMessage(
             { id: 'sales.session.close_modal.step0_title' },
-            { em: (chunks) => <em>{chunks}</em> },
+            { em: (chunks) => <em key="em">{chunks}</em> },
           )}
           amountLabel={intl.formatMessage({ id: 'sales.session.close_modal.counted_label' })}
           helper={intl.formatMessage({ id: 'sales.session.close_modal.count_helper' })}

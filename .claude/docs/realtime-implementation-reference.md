@@ -17,7 +17,7 @@
 | Profile | account/change-email confirm, better-auth update-user (`after` hook) | `profile` | — |
 | Products + inventory | businesses/[id]/products (POST), products/[id] (PATCH/DELETE), products/[id]/stock (PATCH), product-settings (PATCH) | `products`, `product-settings` | `product` |
 | Categories | categories (POST), categories/[id] (PATCH/DELETE), categories/reorder | `categories` | `category` |
-| Sales / sessions | sales (POST), sales-sessions/{open,close} | `sales`, `sales-sessions` | `sale`, `sales-session` |
+| Sales / sessions | sales (POST), sales/[id]/void (POST), sales-sessions/{open,close} | `sales`, `sales-sessions` | `sale`, `sales-session` |
 | Inventory adjustments | products/[id]/stock (PATCH) | `inventory-adjustments` | — |
 | Expenses | expenses (POST/PATCH/DELETE), expense-categories (POST/PATCH/DELETE) | `expenses`, `expense-categories` | `expense`, `expense-category` |
 

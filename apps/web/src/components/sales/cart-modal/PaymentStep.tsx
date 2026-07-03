@@ -3,12 +3,27 @@
 import { useIntl } from 'react-intl';
 import { PriceInput } from '@/components/ui'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
+import { sanitizeDecimalInput } from '@/lib/locale-number'
 import { roundToCurrencyDecimals, nextRoundBills } from '@kasero/shared/sales-helpers'
 import { PAYMENT_METHODS } from '@/lib/payment-methods'
-import type { PaymentMethod } from '@kasero/shared/types/sale'
+import type { PaymentMethod, TaxMode } from '@kasero/shared/types/sale'
+
+export type DiscountMode = 'amount' | 'percent'
 
 interface PaymentStepContentProps {
+  /** Final charge total (subtotal - discount + exclusive tax). */
   total: number
+  /** Rounded sum of cart lines, before discount/tax. */
+  subtotal: number
+  discountStr: string
+  discountMode: DiscountMode
+  onDiscountChange: (value: string, mode: DiscountMode) => void
+  /** Effective absolute discount (0 while the input is invalid). */
+  discountAmount: number
+  discountInvalid: boolean
+  taxRate: number
+  taxMode: TaxMode
+  taxAmount: number
   currency: string
   methodId: PaymentMethod
   setMethodId: (id: PaymentMethod) => void
@@ -33,6 +48,15 @@ const STOCK_RELATED_CODES = new Set([
  */
 export function PaymentStepContent({
   total,
+  subtotal,
+  discountStr,
+  discountMode,
+  onDiscountChange,
+  discountAmount,
+  discountInvalid,
+  taxRate,
+  taxMode,
+  taxAmount,
   currency,
   methodId,
   setMethodId,
@@ -44,7 +68,10 @@ export function PaymentStepContent({
   tenderedSufficient,
 }: PaymentStepContentProps) {
   const t = useIntl()
-  const { formatCurrency } = useBusinessFormat()
+  const { formatCurrency, locale } = useBusinessFormat()
+
+  const showTaxRow = taxMode !== 'none' && taxRate > 0
+  const showBreakdown = discountAmount > 0 || showTaxRow
 
   const isCash = methodId === 'cash'
   const tendered = parseFloat(tenderedStr) || 0
@@ -65,7 +92,7 @@ export function PaymentStepContent({
         <h2 className="cart-modal__title">
           {t.formatMessage(
             { id: 'sales.cart.modal_payment_title' },
-            { em: (chunks) => <em>{chunks}</em> },
+            { em: (chunks) => <em key="em">{chunks}</em> },
           )}
         </h2>
       </div>
@@ -106,6 +133,76 @@ export function PaymentStepContent({
             )
           })}
         </div>
+      </div>
+
+      {/* Optional cart-level discount — amount or percent entry. The
+        * percent path is a UI convenience only: the converted absolute
+        * amount is what gets charged and stored. */}
+      <div className="modal-step-item">
+        <div className="payment-discount__head">
+          <div id="payment-discount-label" className="payment-step__field-label">
+            {t.formatMessage({ id: 'sales.cart.discount_label' })}
+          </div>
+          <div
+            role="group"
+            aria-labelledby="payment-discount-label"
+            className="payment-discount__toggle"
+          >
+            <button
+              type="button"
+              className="payment-discount__toggle-option"
+              aria-pressed={discountMode === 'amount'}
+              onClick={() => {
+                if (discountMode !== 'amount') onDiscountChange('', 'amount')
+              }}
+            >
+              {t.formatMessage({ id: 'sales.cart.discount_mode_amount' })}
+            </button>
+            <button
+              type="button"
+              className="payment-discount__toggle-option"
+              aria-pressed={discountMode === 'percent'}
+              onClick={() => {
+                if (discountMode !== 'percent') onDiscountChange('', 'percent')
+              }}
+            >
+              {t.formatMessage({ id: 'sales.cart.discount_mode_percent' })}
+            </button>
+          </div>
+        </div>
+        {discountMode === 'amount' ? (
+          <PriceInput
+            id="payment-discount"
+            value={discountStr}
+            onValueChange={(v) => onDiscountChange(v, 'amount')}
+            placeholder="0"
+            ariaLabel={t.formatMessage({ id: 'sales.cart.discount_label' })}
+          />
+        ) : (
+          <div className="payment-discount__percent">
+            <input
+              id="payment-discount"
+              type="text"
+              inputMode="decimal"
+              className="payment-discount__percent-input"
+              value={discountStr}
+              onChange={(e) => {
+                // Locale-aware: a comma-decimal locale ("8,5") must parse to
+                // 8.5, not 85. sanitizeDecimalInput yields PriceInput's
+                // canonical (dot) shape so the downstream parseFloat is correct.
+                onDiscountChange(sanitizeDecimalInput(e.target.value, locale), 'percent')
+              }}
+              placeholder="0"
+              aria-label={t.formatMessage({ id: 'sales.cart.discount_label' })}
+            />
+            <span className="payment-discount__percent-sign" aria-hidden="true">%</span>
+          </div>
+        )}
+        {discountInvalid && (
+          <p className="payment-discount__error" role="alert">
+            {t.formatMessage({ id: 'sales.cart.discount_error_exceeds' })}
+          </p>
+        )}
       </div>
 
       {/* Cash form reveal — gridTemplateRows 0fr ↔ 1fr collapse trick. */}
@@ -217,8 +314,34 @@ export function PaymentStepContent({
         </div>
       )}
 
-      {/* Sticky Total stamp — italic Fraunces label, oversized mono total. */}
+      {/* Sticky Total stamp — italic Fraunces label, oversized mono total.
+        * When a discount or tax applies, a small mono breakdown ledger sits
+        * above the Total row so the math is auditable at a glance. */}
       <div className="payment-total">
+        {showBreakdown && (
+          <div className="payment-total__breakdown">
+            <div className="payment-total__breakdown-row">
+              <span>{t.formatMessage({ id: 'sales.cart.modal_subtotal_label' })}</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {discountAmount > 0 && (
+              <div className="payment-total__breakdown-row payment-total__breakdown-row--discount">
+                <span>{t.formatMessage({ id: 'sales.cart.discount_label' })}</span>
+                <span>-{formatCurrency(discountAmount)}</span>
+              </div>
+            )}
+            {showTaxRow && (
+              <div className="payment-total__breakdown-row">
+                <span>
+                  {taxMode === 'inclusive'
+                    ? t.formatMessage({ id: 'sales.cart.tax_row_inclusive' }, { rate: taxRate })
+                    : t.formatMessage({ id: 'sales.cart.tax_row_exclusive' }, { rate: taxRate })}
+                </span>
+                <span>{formatCurrency(taxAmount)}</span>
+              </div>
+            )}
+          </div>
+        )}
         <div className="payment-total__row">
           <span className="payment-total__label">
             {t.formatMessage({ id: 'sales.cart.modal_total_label' })}

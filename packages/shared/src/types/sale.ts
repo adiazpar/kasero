@@ -1,5 +1,15 @@
 export type PaymentMethod = 'cash' | 'card' | 'other'
 
+export type SaleStatus = 'completed' | 'voided'
+
+/**
+ * Business tax mode.
+ *   'none'      — no tax collected
+ *   'inclusive' — prices already include tax; taxAmount is display-only
+ *   'exclusive' — tax is added on top of the discounted subtotal
+ */
+export type TaxMode = 'none' | 'inclusive' | 'exclusive'
+
 export interface SaleItem {
   productId: string | null
   productName: string
@@ -16,6 +26,13 @@ export interface Sale {
   total: number
   paymentMethod: PaymentMethod
   notes: string | null
+  status: SaleStatus
+  voidedAt: string | null   // ISO timestamp, set when status === 'voided'
+  voidedBy: string | null   // user id of the manager who voided
+  discountAmount: number    // cart-level discount snapshot (absolute amount)
+  taxRate: number           // percent snapshot at commit time
+  taxAmount: number         // absolute amount snapshot at commit time
+  taxMode: TaxMode          // mode snapshot at commit time
   items: SaleItem[]
   createdByUserId: string
   createdAt: string         // ISO timestamp

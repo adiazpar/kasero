@@ -9,7 +9,14 @@ import {
   validationError,
 } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
-import { roundToCurrencyDecimals, startOfUtcDay, startOfPrevUtcDay } from '@kasero/shared/sales-helpers'
+import {
+  roundToCurrencyDecimals,
+  computeSubtotal,
+  computeSaleTotals,
+  startOfUtcDay,
+  startOfPrevUtcDay,
+} from '@kasero/shared/sales-helpers'
+import { applyStockDeltas } from '@/lib/sales-stock'
 import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 import { postSaleSchema } from './schema'
 
@@ -84,10 +91,17 @@ export const POST = withBusinessAuth(async (request, access) => {
     }
   }
 
-  const hasInsufficientStock = body.items.some((item) => {
-    const product = productsMap.get(item.productId)!
-    return item.quantity > (product.stock ?? 0)
-  })
+  // Validate against the per-product quantity SUM, matching the aggregated
+  // CASE decrement below — per-line checks would let a sale that repeats a
+  // product across lines pass individually while the summed decrement
+  // drives stock negative.
+  const requestedByProduct = new Map<string, number>()
+  for (const item of body.items) {
+    requestedByProduct.set(item.productId, (requestedByProduct.get(item.productId) ?? 0) + item.quantity)
+  }
+  const hasInsufficientStock = Array.from(requestedByProduct).some(
+    ([productId, quantity]) => quantity > (productsMap.get(productId)!.stock ?? 0),
+  )
   if (hasInsufficientStock) {
     return errorResponse(ApiMessageCode.SALE_INSUFFICIENT_STOCK, 409)
   }
@@ -107,10 +121,31 @@ export const POST = withBusinessAuth(async (request, access) => {
       subtotal,
     }
   })
-  const total = roundToCurrencyDecimals(
-    lineRows.reduce((acc, r) => acc + r.subtotal, 0),
+
+  // NEVER trust a client-provided total. The server recomputes everything
+  // from its own price snapshots: subtotal from line rows, then discount,
+  // then tax from the business's settings (snapshotted onto the sale row).
+  // computeSubtotal is the shared, authoritative rounding order (round each
+  // line, then sum) — the checkout UI runs the exact same function, so the
+  // customer-facing total provably equals the stored total.
+  const subtotal = computeSubtotal(lineRows, currency)
+  const requestedDiscount = roundToCurrencyDecimals(body.discountAmount ?? 0, currency)
+  if (requestedDiscount > subtotal) {
+    return errorResponse(ApiMessageCode.SALE_DISCOUNT_EXCEEDS_SUBTOTAL, 400)
+  }
+  const taxRate = access.businessTaxRate ?? 0
+  const taxMode = access.businessTaxMode ?? 'none'
+  const { discountAmount, taxAmount, total } = computeSaleTotals(
+    subtotal,
+    requestedDiscount,
+    taxRate,
+    taxMode,
     currency,
   )
+  // Snapshot the effective settings: a 'none' mode (or zero rate) stamps
+  // zeros so historical receipts stay self-describing.
+  const effectiveTaxRate = taxMode !== 'none' && taxRate > 0 ? taxRate : 0
+  const effectiveTaxMode = effectiveTaxRate > 0 ? taxMode : 'none'
 
   const saleId = nanoid()
   const createdAt = new Date()
@@ -157,6 +192,10 @@ export const POST = withBusinessAuth(async (request, access) => {
         total,
         paymentMethod: body.paymentMethod,
         notes: body.notes ?? null,
+        discountAmount,
+        taxRate: effectiveTaxRate,
+        taxAmount,
+        taxMode: effectiveTaxMode,
         createdAt,
       })
 
@@ -171,12 +210,15 @@ export const POST = withBusinessAuth(async (request, access) => {
         })),
       )
 
+      // Decrement stock in one CASE UPDATE (see applyStockDeltas). Quantities
+      // are pre-aggregated per product and NEGATED so a sale carrying the
+      // same product on two lines decrements the summed quantity. The void
+      // route calls the same helper with positive deltas to restore it.
+      const stockDeltas = new Map<string, number>()
       for (const r of lineRows) {
-        await tx
-          .update(products)
-          .set({ stock: sql`${products.stock} - ${r.quantity}` })
-          .where(and(eq(products.id, r.productId), eq(products.businessId, access.businessId)))
+        stockDeltas.set(r.productId, (stockDeltas.get(r.productId) ?? 0) - r.quantity)
       }
+      await applyStockDeltas(tx, access.businessId, stockDeltas)
 
       return { openSessionId, saleNumber }
     })
@@ -199,6 +241,13 @@ export const POST = withBusinessAuth(async (request, access) => {
         total,
         paymentMethod: body.paymentMethod,
         notes: body.notes ?? null,
+        status: 'completed' as const,
+        voidedAt: null,
+        voidedBy: null,
+        discountAmount,
+        taxRate: effectiveTaxRate,
+        taxAmount,
+        taxMode: effectiveTaxMode,
         items: lineRows.map((r) => ({
           productId: r.productId,
           productName: r.productName,
@@ -315,6 +364,13 @@ export const GET = withBusinessAuth(async (request, access) => {
     total: sale.total,
     paymentMethod: sale.paymentMethod,
     notes: sale.notes,
+    status: sale.status,
+    voidedAt: sale.voidedAt ? sale.voidedAt.toISOString() : null,
+    voidedBy: sale.voidedBy,
+    discountAmount: sale.discountAmount,
+    taxRate: sale.taxRate,
+    taxAmount: sale.taxAmount,
+    taxMode: sale.taxMode,
     items: (itemsBySaleId.get(sale.id) ?? []).map((it) => ({
       productId: it.productId,
       productName: it.productName,
@@ -352,25 +408,30 @@ async function computeStats(businessId: string): Promise<StatsResult> {
   const todayStart = startOfUtcDay(now)
   const yesterdayStart = startOfPrevUtcDay(now)
 
-  const todayRows = await db
-    .select({ total: sales.total })
-    .from(sales)
-    .where(and(eq(sales.businessId, businessId), gte(sales.date, todayStart)))
-
-  const yesterdayRows = await db
-    .select({ total: sales.total })
+  // One conditional-aggregate query replaces the two row-pulling selects
+  // + JS reduce (same pattern as sales-sessions/close). The outer WHERE
+  // narrows to rows since yesterdayStart; the CASEs bucket them into
+  // today vs yesterday. Voided sales are excluded — a void is a reversal,
+  // not revenue.
+  const row = await db
+    .select({
+      todayRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${gte(sales.date, todayStart)} THEN ${sales.total} END), 0)`,
+      todayCount: sql<number>`COUNT(CASE WHEN ${gte(sales.date, todayStart)} THEN 1 END)`,
+      yesterdayRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${lt(sales.date, todayStart)} THEN ${sales.total} END), 0)`,
+    })
     .from(sales)
     .where(
       and(
         eq(sales.businessId, businessId),
         gte(sales.date, yesterdayStart),
-        lt(sales.date, todayStart),
+        eq(sales.status, 'completed'),
       ),
     )
+    .get()
 
-  const todayRevenue = todayRows.reduce((acc, r) => acc + r.total, 0)
-  const todayCount = todayRows.length
-  const yesterdayRevenue = yesterdayRows.reduce((acc, r) => acc + r.total, 0)
+  const todayRevenue = Number(row?.todayRevenue ?? 0)
+  const todayCount = Number(row?.todayCount ?? 0)
+  const yesterdayRevenue = Number(row?.yesterdayRevenue ?? 0)
   const todayAvgTicket = todayCount > 0 ? todayRevenue / todayCount : null
   const vsYesterdayPct =
     yesterdayRevenue > 0

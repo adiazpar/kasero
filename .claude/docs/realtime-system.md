@@ -148,6 +148,7 @@ All types are defined in `packages/shared/src/realtime/types.ts`. The TypeScript
 | `expense_category.updated` | `categoryId` | `PATCH /expense-categories/[id]` | refetch `expenses` |
 | `expense_category.deleted` | `categoryId` | `DELETE /expense-categories/[id]` | refetch `expenses` |
 | `sale.created` | `saleId` | `POST /sales` | refetch `sales` + `products` (stock cascade) |
+| `sale.voided` | `saleId` | `POST /sales/[id]/void` | refetch `sales` + `products` (stock restore cascade) |
 | `inventory.adjusted` | `adjustmentId`, `productId`, `relatedExpenseId` | `PATCH /products/[id]/stock` | refetch `products` |
 | `sales_session.opened` | `sessionId` | `POST /sales-sessions/open` | refetch `sales-sessions` |
 | `sales_session.closed` | `sessionId` | `POST /sales-sessions/close` | refetch `sales-sessions` |

@@ -31,6 +31,9 @@ export interface Business {
   icon: string | null
   locale: string
   currency: string
+  /** Percent, e.g. 12 = 12%. 0 when the business collects no tax. */
+  taxRate: number
+  taxMode: 'none' | 'inclusive' | 'exclusive'
 }
 
 interface BusinessContextType {
@@ -81,6 +84,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         businessIcon?: string | null
         businessLocale?: string
         businessCurrency?: string
+        businessTaxRate?: number
+        businessTaxMode?: 'none' | 'inclusive' | 'exclusive'
         role: BusinessRole
       }>(`/api/businesses/${businessId}/access`)
       setBusiness({
@@ -89,6 +94,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         icon: data.businessIcon ?? null,
         locale: data.businessLocale ?? 'en-US',
         currency: data.businessCurrency ?? 'USD',
+        taxRate: data.businessTaxRate ?? 0,
+        taxMode: data.businessTaxMode ?? 'none',
       })
       setRole(data.role as BusinessRole)
       setCachedBusiness(data.businessId, {
@@ -96,6 +103,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         icon: data.businessIcon ?? null,
         locale: data.businessLocale ?? 'en-US',
         currency: data.businessCurrency ?? 'USD',
+        taxRate: data.businessTaxRate ?? 0,
+        taxMode: data.businessTaxMode ?? 'none',
         role: data.role,
         isOwner: data.role === 'owner',
       })
@@ -154,6 +163,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         icon: cached.icon ?? null,
         locale: cached.locale,
         currency: cached.currency,
+        taxRate: cached.taxRate ?? 0,
+        taxMode: cached.taxMode ?? 'none',
       })
       setRole(cached.role as BusinessRole)
       setIsLoading(false)

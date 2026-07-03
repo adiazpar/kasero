@@ -24,6 +24,17 @@ export const businesses = sqliteTable('businesses', {
   // Monotonic counter for expenses.expense_number. Incremented atomically
   // on each expense insert so references are stable even after deletes.
   nextExpenseNumber: integer('next_expense_number').notNull().default(1),
+  // Simple tax settings. taxRate is a percent (12 = 12%). taxMode:
+  //   'none'      — no tax collected (default)
+  //   'inclusive' — prices already include tax; taxAmount is a display-only
+  //                 extraction, totals unchanged
+  //   'exclusive' — tax is added on top of the discounted subtotal at checkout
+  // Sales snapshot these at commit time so a later settings change never
+  // rewrites historical receipts.
+  taxRate: real('tax_rate').notNull().default(0),
+  taxMode: text('tax_mode', { enum: ['none', 'inclusive', 'exclusive'] })
+    .notNull()
+    .default('none'),
 })
 
 // ===========================================
@@ -235,6 +246,23 @@ export const sales = sqliteTable('sales', {
   total: real('total').notNull(),
   paymentMethod: text('payment_method', { enum: ['cash', 'card', 'other'] }).notNull(),
   notes: text('notes'),
+  // Lifecycle. Voided sales stay in history (struck-through in the UI) but
+  // are excluded from every revenue/stat aggregation. Voiding restores the
+  // stock the sale decremented. voidedAt/voidedBy audit who reversed it.
+  status: text('status', { enum: ['completed', 'voided'] })
+    .notNull()
+    .default('completed'),
+  voidedAt: integer('voided_at', { mode: 'timestamp' }),
+  voidedBy: text('voided_by').references(() => users.id),
+  // Cart-level discount snapshot (absolute amount in business currency, not
+  // a percent). total already reflects the discount.
+  discountAmount: real('discount_amount').notNull().default(0),
+  // Tax snapshot at commit time (see businesses.taxRate/taxMode).
+  taxRate: real('tax_rate').notNull().default(0),
+  taxAmount: real('tax_amount').notNull().default(0),
+  taxMode: text('tax_mode', { enum: ['none', 'inclusive', 'exclusive'] })
+    .notNull()
+    .default('none'),
   // Actual record creation time. Distinct from `date` for backdated entries.
   // Not used for stats bucketing — see design spec section 4.
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

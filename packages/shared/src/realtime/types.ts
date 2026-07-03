@@ -32,7 +32,7 @@ export type BusinessRealtimeEvent =
   | ({ type: 'team.invite.deleted'; inviteId: string } & WithOrigin)
   | ({
       type: 'business.updated'
-      fields: Array<'name' | 'locale' | 'currency' | 'iconUrl'>
+      fields: Array<'name' | 'locale' | 'currency' | 'iconUrl' | 'taxRate' | 'taxMode'>
     } & WithOrigin)
   // Product catalog events. Inventory ("stock") is not a separate domain
   // in this codebase — it's the `products.stock` column adjusted by the
@@ -80,13 +80,14 @@ export type BusinessRealtimeEvent =
   | ({ type: 'expense_category.created'; categoryId: string } & WithOrigin)
   | ({ type: 'expense_category.updated'; categoryId: string } & WithOrigin)
   | ({ type: 'expense_category.deleted'; categoryId: string } & WithOrigin)
-  // Sales (customer-facing transactions). POST /sales is the only mutation
-  // — there is no PATCH or DELETE route, so no `sale.updated` /
-  // `sale.deleted` variants are declared. The handler for `sale.created`
-  // also refetches `products` because the route decrements `products.stock`
-  // for every line item; that cascade is intentionally handled by the
-  // client refetch instead of an extra `product.updated` publish.
+  // Sales (customer-facing transactions). POST /sales creates; POST
+  // /sales/[id]/void reverses (rows are never hard-deleted, so there is no
+  // `sale.deleted` variant). The handlers for both events also refetch
+  // `products` because create decrements `products.stock` per line item and
+  // void restores it; that cascade is intentionally handled by the client
+  // refetch instead of extra `product.updated` publishes.
   | ({ type: 'sale.created'; saleId: string } & WithOrigin)
+  | ({ type: 'sale.voided'; saleId: string } & WithOrigin)
   // Inventory adjustments (manual stock corrections tracked in inventory_adjustments).
   | ({ type: 'inventory.adjusted'; adjustmentId: string; productId: string; relatedExpenseId: string | null } & WithOrigin)
   // Sales sessions (cash-drawer reconciliation framing a stretch of sales).

@@ -392,6 +392,23 @@ describe('dispatchRealtimeEvent', () => {
     expect(emitEntityDeleted).not.toHaveBeenCalled()
   })
 
+  it('sale.voided -> callRefetch(sales) + callRefetch(products)', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent({ type: 'sale.voided', saleId: 's1' }, ctx)
+    expect(callRefetch).toHaveBeenCalledWith('sales')
+    expect(callRefetch).toHaveBeenCalledWith('products')
+  })
+
+  it('sale.voided -> does NOT emitEntityUpdated or emitEntityDeleted', async () => {
+    const { dispatchRealtimeEvent } = await import('./handlers')
+    dispatchRealtimeEvent(
+      { type: 'sale.voided', saleId: 's1', originDeviceId: 'other-device' },
+      ctx,
+    )
+    expect(emitEntityUpdated).not.toHaveBeenCalled()
+    expect(emitEntityDeleted).not.toHaveBeenCalled()
+  })
+
   // --- sales-session events ---
 
   it('sales_session.opened -> callRefetch(sales-sessions)', async () => {

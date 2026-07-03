@@ -12,6 +12,7 @@ export interface SaleProjection {
   saleNumber: number
   total: number
   paymentMethod: 'cash' | 'card' | 'other'
+  status: 'completed' | 'voided'
   createdAt: string
 }
 
@@ -130,6 +131,7 @@ export function SessionSalesList({
       <div className="session-sales-list">
         {items.map((s) => {
           const methodKey = `sales.cart.modal_method_${s.paymentMethod}` as const
+          const isVoided = s.status === 'voided'
           return (
             <button
               key={s.id}
@@ -137,7 +139,7 @@ export function SessionSalesList({
               onClick={() => {
                 onSaleTap(s.id)
               }}
-              className="session-sales-row"
+              className={`session-sales-row${isVoided ? ' session-sales-row--voided' : ''}`}
             >
               <div className="session-sales-row__lead">
                 <span className="session-sales-row__stamp">
@@ -157,6 +159,11 @@ export function SessionSalesList({
                   <span className="session-sales-row__method">
                     {t.formatMessage({ id: methodKey })}
                   </span>
+                  {isVoided && (
+                    <span className="session-sales-row__voided-badge">
+                      {t.formatMessage({ id: 'sales.void.voided_stamp' })}
+                    </span>
+                  )}
                 </span>
               </div>
               <span className="session-sales-row__total">

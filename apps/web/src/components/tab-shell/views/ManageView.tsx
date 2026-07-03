@@ -7,6 +7,7 @@ import dynamic from '@/lib/next-dynamic-shim'
 import {
   Building2,
   MapPin,
+  Percent,
   Users,
   ArrowRightLeft,
   LogOut,
@@ -33,6 +34,10 @@ const EditNameModal = dynamic(
 )
 const EditLocationModal = dynamic(
   () => import('@/components/manage/EditLocationModal').then(m => m.EditLocationModal),
+  { ssr: false },
+)
+const EditTaxModal = dynamic(
+  () => import('@/components/manage/EditTaxModal').then(m => m.EditTaxModal),
   { ssr: false },
 )
 const EditLogoModal = dynamic(
@@ -69,6 +74,7 @@ export function ManageView() {
 
   const [nameOpen, setNameOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
+  const [taxOpen, setTaxOpen] = useState(false)
   const [logoOpen, setLogoOpen] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
   const [cancelTransferOpen, setCancelTransferOpen] = useState(false)
@@ -105,6 +111,13 @@ export function ManageView() {
   const slideTo = (href: string) => navigate(href)
 
   const localeLabel = `${business.locale} · ${business.currency}`
+
+  const taxLabel =
+    business.taxMode === 'none' || business.taxRate <= 0
+      ? intl.formatMessage({ id: 'manage.row_tax_none' })
+      : business.taxMode === 'inclusive'
+        ? intl.formatMessage({ id: 'manage.row_tax_inclusive' }, { rate: business.taxRate })
+        : intl.formatMessage({ id: 'manage.row_tax_exclusive' }, { rate: business.taxRate })
 
   return (
     <>
@@ -235,6 +248,17 @@ export function ManageView() {
             </IonLabel>
             <IonNote slot="end">{localeLabel}</IonNote>
           </IonItem>
+          <IonItem
+            button={isOwner}
+            detail={isOwner}
+            onClick={isOwner ? () => setTaxOpen(true) : undefined}
+          >
+            <Percent slot="start" className="text-text-secondary w-5 h-5" />
+            <IonLabel>
+              <h3>{intl.formatMessage({ id: 'manage.row_tax' })}</h3>
+            </IonLabel>
+            <IonNote slot="end">{taxLabel}</IonNote>
+          </IonItem>
         </IonList>
 
         <GroupLabel>
@@ -292,6 +316,7 @@ export function ManageView() {
 
       <EditNameModal isOpen={nameOpen} onClose={() => setNameOpen(false)} />
       <EditLocationModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />
+      <EditTaxModal isOpen={taxOpen} onClose={() => setTaxOpen(false)} />
       <EditLogoModal isOpen={logoOpen} onClose={() => setLogoOpen(false)} />
       <TransferOwnershipModal isOpen={transferOpen} onClose={() => setTransferOpen(false)} />
       <CancelTransferModal isOpen={cancelTransferOpen} onClose={() => setCancelTransferOpen(false)} />

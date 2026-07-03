@@ -11,6 +11,8 @@ interface UpdateBusinessPayload {
   locale?: string
   logoFile?: File | null
   removeLogo?: boolean
+  taxRate?: number
+  taxMode?: 'none' | 'inclusive' | 'exclusive'
 }
 
 interface UseUpdateBusinessReturn {
@@ -38,6 +40,8 @@ export function useUpdateBusiness(): UseUpdateBusinessReturn {
       if (payload.locale !== undefined) fd.set('locale', payload.locale)
       if (payload.removeLogo) fd.set('removeLogo', 'true')
       if (payload.logoFile) fd.set('logo', payload.logoFile)
+      if (payload.taxRate !== undefined) fd.set('taxRate', String(payload.taxRate))
+      if (payload.taxMode !== undefined) fd.set('taxMode', payload.taxMode)
 
       await apiPatchForm(`/api/businesses/${businessId}`, fd)
       await refreshBusiness()

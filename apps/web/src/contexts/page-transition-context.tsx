@@ -14,6 +14,10 @@ interface CachedBusiness {
   isOwner: boolean
   locale: string
   currency: string
+  // Optional so entries persisted to sessionStorage before the tax feature
+  // shipped still parse — readers default to 0 / 'none'.
+  taxRate?: number
+  taxMode?: 'none' | 'inclusive' | 'exclusive'
   icon: string | null
 }
 
@@ -34,7 +38,7 @@ interface PageTransitionContextValue {
   // Business cache for instant display and access validation
   getCachedBusiness: (businessId: string) => CachedBusiness | null
   setCachedBusiness: (businessId: string, data: CachedBusiness) => void
-  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; icon: string | null }>) => void
+  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; icon: string | null }>) => void
   clearCachedBusiness: (businessId: string) => void
 }
 
@@ -126,7 +130,7 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
     }
   }, [])
 
-  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; icon: string | null }>) => {
+  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; icon: string | null }>) => {
     businesses.forEach(b => {
       businessCacheRef.current[b.id] = {
         name: b.name,
@@ -134,6 +138,8 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
         isOwner: b.isOwner,
         locale: b.locale,
         currency: b.currency,
+        taxRate: b.taxRate ?? 0,
+        taxMode: b.taxMode ?? 'none',
         icon: b.icon ?? null,
       }
     })

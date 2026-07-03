@@ -222,6 +222,7 @@
 }
 
 .cart-line__qty-button {
+  position: relative;
   width: 40px;
   height: 28px;
   display: inline-flex;
@@ -237,6 +238,24 @@
     color var(--duration-fast) ease-out,
     background-color var(--duration-fast) ease-out,
     transform var(--duration-instant) ease-out;
+}
+
+/* Expand the tap target to the 44px Fitts/HIG minimum without enlarging the
+   visible pill. The overlay is invisible and sits in the cart row's right
+   grid column, vertically centered within the ~56px row — no other
+   interactive element sits above, below, or (past the 12px gap) beside it,
+   and the cart row itself is not a tap target, so the larger hit area can't
+   steal a tap from anything. */
+.cart-line__qty-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .cart-line__qty-button:active {
@@ -877,4 +896,162 @@
 .cart-success__done {
   margin-top: var(--space-5);
   width: 100%;
+}
+
+/* ===== Cart-level discount (payment step) ============================= */
+
+/* Head row: mono field label on the left, Amount/% segmented toggle on
+ * the right. The toggle reuses the quick-bill chip vocabulary. */
+.payment-discount__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.payment-discount__toggle {
+  display: inline-flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.payment-discount__toggle-option {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-hair);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--duration-fast) ease-out,
+    border-color var(--duration-fast) ease-out,
+    color var(--duration-fast) ease-out;
+}
+
+.payment-discount__toggle-option[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-paper-deep);
+  color: var(--color-brand);
+}
+
+/* Percent entry — bare numeric input with a fixed % sign, mirroring the
+ * PriceInput's mono tabular styling so the two modes feel like one field. */
+.payment-discount__percent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.payment-discount__percent-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-hair);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-discount__percent-input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.payment-discount__percent-sign {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.payment-discount__error {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-error);
+}
+
+/* Breakdown ledger above the sticky Total — small mono rows so the
+ * subtotal → discount → tax → total math is auditable at a glance. */
+.payment-total__breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--color-hair);
+}
+
+.payment-total__breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.payment-total__breakdown-row--discount {
+  color: var(--color-success);
+}
+
+/* ===== Share receipt action =========================================== */
+
+/* Quiet mono ghost pill — used on the cart success step and the sale
+ * detail receipt. The receipt itself is the star; sharing is a side door. */
+.receipt-share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-5);
+  margin-top: var(--space-5);
+  border: 1px solid var(--color-hair);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color var(--duration-fast) ease-out,
+    color var(--duration-fast) ease-out,
+    transform var(--duration-instant) ease-out;
+}
+
+.receipt-share-button:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .receipt-share-button:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
 }

@@ -5,6 +5,29 @@ import { vi } from 'vitest'
 import React from 'react'
 
 /**
+ * jsdom does not implement window.matchMedia. @ionic/core (8.7+) calls it
+ * while presenting any overlay (setInitialSafeAreaOverrides), which
+ * surfaces as unhandled rejections in every test that opens an Ionic
+ * overlay and fails the run even though all assertions pass. Standard
+ * never-matching stub.
+ */
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
+/**
  * IonModal renders its children into a `<template>` element in JSDOM (Ionic
  * uses a `createInlineOverlayComponent` factory that wraps in `<template>` so
  * the overlay portal can be moved into the ion-app at runtime). JSDOM never

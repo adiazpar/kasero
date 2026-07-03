@@ -132,6 +132,13 @@ export function dispatchRealtimeEvent(
       callRefetch('products')
       return
 
+    case 'sale.voided':
+      // Void restores products.stock per line item — same dual-refetch
+      // cascade as sale.created, in reverse.
+      callRefetch('sales')
+      callRefetch('products')
+      return
+
     case 'sales_session.opened':
       callRefetch('sales-sessions')
       return

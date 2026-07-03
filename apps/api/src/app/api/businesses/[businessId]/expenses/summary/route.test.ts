@@ -19,8 +19,9 @@ vi.mock('@/lib/business-auth', async (orig) => {
 })
 
 // --- db mock ---
-// The summary route issues two sequential selects: first for sales, then for
-// expenses. We track call order so we can return different values for each.
+// The summary route issues two selects (in parallel via Promise.all, but the
+// builders are constructed in order): first for sales, then for expenses.
+// We track call order so we can return different values for each.
 let selectCallIndex = 0
 let salesTotal: string | null = null
 let expensesTotal: string | null = null
@@ -51,6 +52,8 @@ vi.mock('@/db', () => ({
     businessId: 'sales.business_id',
     date: 'sales.date',
     total: 'sales.total',
+    status: 'sales.status',
+    taxAmount: 'sales.tax_amount',
   },
   expenses: {
     businessId: 'expenses.business_id',

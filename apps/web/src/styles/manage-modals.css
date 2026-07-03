@@ -1385,3 +1385,109 @@
   color: var(--color-text-tertiary);
   margin-top: var(--space-2);
 }
+
+/* ===== Tax settings modal ============================================= */
+
+/* Mode selector — three stacked radio plates (none / included / added).
+ * Same printed-card mood as the payment-method stamps. */
+.edit-tax__modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.edit-tax__mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1.5px solid var(--color-hair);
+  background: var(--color-paper-warm);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color var(--duration-fast) ease-out,
+    background-color var(--duration-fast) ease-out;
+}
+
+.edit-tax__mode--active {
+  border-color: var(--color-brand);
+  background: var(--color-paper-deep);
+}
+
+.edit-tax__mode-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.edit-tax__mode--active .edit-tax__mode-label {
+  color: var(--color-brand);
+}
+
+.edit-tax__mode-desc {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.edit-tax__rate-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.edit-tax__rate-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.edit-tax__rate-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-hair);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.edit-tax__rate-input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.edit-tax__rate-sign {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.edit-tax__rate-error {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-error);
+}

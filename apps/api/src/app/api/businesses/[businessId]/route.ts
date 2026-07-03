@@ -50,6 +50,8 @@ export const GET = withBusinessAuth(async (_request, access) => {
       icon: row.icon,
       locale: row.locale,
       currency: row.currency,
+      taxRate: row.taxRate,
+      taxMode: row.taxMode,
     },
   })
 })
@@ -94,7 +96,7 @@ export const PATCH = withBusinessAuth(async (request, access) => {
     return validationError(validation)
   }
 
-  const { name, locale, removeLogo } = validation.data
+  const { name, locale, removeLogo, taxRate, taxMode } = validation.data
 
   // Validate locale — getLocaleConfig returns undefined for unknown locales
   let currency: string | undefined
@@ -152,6 +154,13 @@ export const PATCH = withBusinessAuth(async (request, access) => {
   if (logoFile && logoBuffer && sniffedLogoType) {
     update.icon = `data:${sniffedLogoType};base64,${logoBuffer.toString('base64')}`
   }
+  if (taxRate !== undefined) update.taxRate = taxRate
+  if (taxMode !== undefined) {
+    update.taxMode = taxMode
+    // 'none' zeroes the rate so a later mode flip never resurrects a stale
+    // rate the owner thought was gone.
+    if (taxMode === 'none') update.taxRate = 0
+  }
 
   if (Object.keys(update).length === 0) {
     // Nothing to update — treat as success (idempotent)
@@ -161,16 +170,19 @@ export const PATCH = withBusinessAuth(async (request, access) => {
       business: {
         id: row.id, name: row.name, icon: row.icon,
         locale: row.locale, currency: row.currency,
+        taxRate: row.taxRate, taxMode: row.taxMode,
       },
     }, ApiMessageCode.BUSINESS_UPDATE_SUCCESS)
   }
 
   // Determine which user-visible fields changed for the realtime event.
-  const changedFields: Array<'name' | 'locale' | 'currency' | 'iconUrl'> = []
+  const changedFields: Array<'name' | 'locale' | 'currency' | 'iconUrl' | 'taxRate' | 'taxMode'> = []
   if (update.name !== undefined) changedFields.push('name')
   if (update.locale !== undefined) changedFields.push('locale')
   if (update.currency !== undefined) changedFields.push('currency')
   if (update.icon !== undefined) changedFields.push('iconUrl')
+  if (update.taxRate !== undefined) changedFields.push('taxRate')
+  if (update.taxMode !== undefined) changedFields.push('taxMode')
 
   try {
     const [row] = await db
@@ -209,6 +221,7 @@ export const PATCH = withBusinessAuth(async (request, access) => {
       business: {
         id: row.id, name: row.name, icon: row.icon,
         locale: row.locale, currency: row.currency,
+        taxRate: row.taxRate, taxMode: row.taxMode,
       },
     }, ApiMessageCode.BUSINESS_UPDATE_SUCCESS)
   } catch (err) {

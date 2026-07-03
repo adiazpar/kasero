@@ -80,7 +80,11 @@ export const POST = withBusinessAuth(async (request, access) => {
       const sessionId = claimed[0].id
       const startingCash = claimed[0].startingCash
 
-      // Step 2: Aggregate sales for this session.
+      // Step 2: Aggregate sales for this session. Sales voided while the
+      // session was still open are excluded (their cash never stayed in the
+      // drawer). NOTE: these denormalized stats are a settled snapshot —
+      // voiding a sale AFTER the session closes does not retroactively
+      // rewrite them (see sales/[id]/void/route.ts).
       const aggRow = await tx
         .select({
           salesCount: sql<number>`COUNT(*)`,
@@ -88,7 +92,7 @@ export const POST = withBusinessAuth(async (request, access) => {
           cashSalesTotal: sql<number>`COALESCE(SUM(CASE WHEN ${sales.paymentMethod} = 'cash' THEN ${sales.total} ELSE 0 END), 0)`,
         })
         .from(sales)
-        .where(eq(sales.sessionId, sessionId))
+        .where(and(eq(sales.sessionId, sessionId), eq(sales.status, 'completed')))
         .get()
 
       const salesCount = Number(aggRow?.salesCount ?? 0)

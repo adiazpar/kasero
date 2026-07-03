@@ -773,10 +773,11 @@ All AI and HEIC routes require authentication (`withAuth` wrapper) and share a p
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/sales` | GET | List sales |
-| `/sales` | POST | Record a sale |
-| `/sales/[id]` | GET / PATCH / DELETE | Read / update / void a sale |
-| `/sales/aggregate` | GET | Daily / period aggregates |
+| `/sales` | GET | List sales (includes voided rows with `status`; stats exclude voided) |
+| `/sales` | POST | Record a sale (server recomputes totals: discount + tax snapshot) |
+| `/sales/[id]` | GET | Read a sale with line items |
+| `/sales/[id]/void` | POST | Void a completed sale (manager only); restores stock, 409 `SALE_ALREADY_VOIDED` if already voided |
+| `/sales/aggregate` | GET | Daily / period aggregates (voided sales excluded) |
 
 ### Test Endpoints (E2E only)
 

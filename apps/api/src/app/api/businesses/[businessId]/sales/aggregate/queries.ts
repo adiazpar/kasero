@@ -6,7 +6,12 @@ import type { PaymentMethod } from '@kasero/shared/types/sale'
  * All four queries window on `sales.date` (the user-facing back-dateable
  * date), matching the existing `computeStats` precedent in
  * `src/app/api/businesses/[businessId]/sales/route.ts`. Uses the existing
- * `idx_sales_business_date` composite index on (business_id, date).
+ * `idx_sales_business_date` composite index on (business_id, date) — the
+ * extra `status = 'completed'` predicate is a cheap residual filter on the
+ * rows the index already narrowed, so no new index is needed.
+ *
+ * Voided sales are excluded from every aggregate here: a void is a
+ * reversal, not revenue.
  *
  * Hour buckets are UTC. Documented limitation — see startOfUtcDay in
  * `src/lib/sales-helpers.ts` for the v1.1 locale-aware-buckets todo.
@@ -45,7 +50,13 @@ export async function queryDailyRevenue(
       total: sql<number>`SUM(${sales.total})`,
     })
     .from(sales)
-    .where(and(eq(sales.businessId, businessId), gte(sales.date, since)))
+    .where(
+      and(
+        eq(sales.businessId, businessId),
+        gte(sales.date, since),
+        eq(sales.status, 'completed'),
+      ),
+    )
     .groupBy(dayExpr)
     .orderBy(dayExpr)
     .all()
@@ -65,7 +76,13 @@ export async function queryTopProducts(
     })
     .from(saleItems)
     .innerJoin(sales, eq(saleItems.saleId, sales.id))
-    .where(and(eq(sales.businessId, businessId), gte(sales.date, since)))
+    .where(
+      and(
+        eq(sales.businessId, businessId),
+        gte(sales.date, since),
+        eq(sales.status, 'completed'),
+      ),
+    )
     .groupBy(saleItems.productId, saleItems.productName)
     .orderBy(desc(revenueExpr))
     .limit(10)
@@ -82,7 +99,13 @@ export async function queryPaymentSplit(
       total: sql<number>`SUM(${sales.total})`,
     })
     .from(sales)
-    .where(and(eq(sales.businessId, businessId), gte(sales.date, since)))
+    .where(
+      and(
+        eq(sales.businessId, businessId),
+        gte(sales.date, since),
+        eq(sales.status, 'completed'),
+      ),
+    )
     .groupBy(sales.paymentMethod)
     .all()
 }
@@ -111,6 +134,7 @@ export async function queryPreviousWeekRevenue(
         eq(sales.businessId, businessId),
         gte(sales.date, since),
         lt(sales.date, until),
+        eq(sales.status, 'completed'),
       ),
     )
     .get()
@@ -128,7 +152,13 @@ export async function queryHourly(
       total: sql<number>`SUM(${sales.total})`,
     })
     .from(sales)
-    .where(and(eq(sales.businessId, businessId), gte(sales.date, since)))
+    .where(
+      and(
+        eq(sales.businessId, businessId),
+        gte(sales.date, since),
+        eq(sales.status, 'completed'),
+      ),
+    )
     .groupBy(hourExpr)
     .orderBy(hourExpr)
     .all()

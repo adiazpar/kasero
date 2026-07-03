@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { computeSubtotal, computeSaleTotals } from '@kasero/shared/sales-helpers'
 
 /**
  * Unit tests for POST /api/businesses/[businessId]/sales — realtime
@@ -6,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  *
  * The full POST path runs an async transaction that claims the open
  * session, reserves a sale_number, inserts the sale + items, and
- * decrements stock per line. These tests mock the transaction
+ * decrements stock in one CASE UPDATE. These tests mock the transaction
  * coarse-grained so we can assert publish behavior at the route level
  * without exercising the SQLite write path.
  */
@@ -257,5 +258,141 @@ describe('POST /api/businesses/[businessId]/sales — realtime publishes', () =>
 
     expect(res.status).toBe(409)
     expect(publishToBusiness).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/businesses/[businessId]/sales — discount and tax', () => {
+  it('applies a valid discount to the server-computed total', async () => {
+    const { POST } = await import('./route')
+    // 2 x $5 = $10 subtotal, $2 discount -> $8 total.
+    const res = await POST(
+      makePostRequest({ ...VALID_BODY, discountAmount: 2 }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sale.total).toBe(8)
+    expect(body.sale.discountAmount).toBe(2)
+    expect(body.sale.taxAmount).toBe(0)
+    expect(body.sale.taxMode).toBe('none')
+  })
+
+  it('rejects a discount exceeding the subtotal (400, no publish)', async () => {
+    const { POST } = await import('./route')
+    // Subtotal is $10; $10.01 must be rejected.
+    const res = await POST(
+      makePostRequest({ ...VALID_BODY, discountAmount: 10.01 }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(body.messageCode).toBe('SALE_DISCOUNT_EXCEEDS_SUBTOTAL')
+    expect(publishToBusiness).not.toHaveBeenCalled()
+  })
+
+  it('rejects a negative discount via schema validation (400)', async () => {
+    const { POST } = await import('./route')
+    const res = await POST(
+      makePostRequest({ ...VALID_BODY, discountAmount: -1 }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+
+    expect(res.status).toBe(400)
+    expect(publishToBusiness).not.toHaveBeenCalled()
+  })
+
+  it('adds exclusive tax on top of the discounted subtotal', async () => {
+    requireBusinessAccess.mockResolvedValue({
+      ...ACCESS,
+      businessTaxRate: 10,
+      businessTaxMode: 'exclusive' as const,
+    })
+
+    const { POST } = await import('./route')
+    // (10 - 2) * 10% = 0.8 tax -> 8.8 total.
+    const res = await POST(
+      makePostRequest({ ...VALID_BODY, discountAmount: 2 }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sale.total).toBe(8.8)
+    expect(body.sale.taxAmount).toBe(0.8)
+    expect(body.sale.taxRate).toBe(10)
+    expect(body.sale.taxMode).toBe('exclusive')
+  })
+
+  it('extracts inclusive tax without changing the charged total', async () => {
+    requireBusinessAccess.mockResolvedValue({
+      ...ACCESS,
+      businessTaxRate: 10,
+      businessTaxMode: 'inclusive' as const,
+    })
+
+    const { POST } = await import('./route')
+    // Total stays 10; extracted tax = 10 - 10/1.1 = 0.91.
+    const res = await POST(
+      makePostRequest(VALID_BODY) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sale.total).toBe(10)
+    expect(body.sale.taxAmount).toBe(0.91)
+    expect(body.sale.taxMode).toBe('inclusive')
+  })
+
+  it('ignores any client-provided total field (server recomputes)', async () => {
+    const { POST } = await import('./route')
+    const res = await POST(
+      makePostRequest({ ...VALID_BODY, total: 0.01 }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sale.total).toBe(10)
+  })
+
+  it('stores the shared-helper subtotal (round-each-then-sum) for a sub-cent cart', async () => {
+    // Two distinct $0.125 products, one each. The server must round EACH line
+    // (0.13 + 0.13 = 0.26), not round(sum(raw)) = 0.25. The client runs the
+    // exact same computeSubtotal, so the displayed Charge total provably
+    // equals this stored total. Regression guard for FINDING 3.
+    productsList = [
+      { id: 'prod-a', name: 'A', price: 0.125, active: true, stock: 100 },
+      { id: 'prod-b', name: 'B', price: 0.125, active: true, stock: 100 },
+    ]
+    const items = [
+      { productId: 'prod-a', quantity: 1 },
+      { productId: 'prod-b', quantity: 1 },
+    ]
+
+    const { POST } = await import('./route')
+    const res = await POST(
+      makePostRequest({ paymentMethod: 'cash', items }) as Parameters<typeof POST>[0],
+      { params: Promise.resolve({ businessId: BUSINESS_ID }) },
+    )
+    const body = await res.json()
+
+    const lines = items.map((i) => ({ unitPrice: 0.125, quantity: i.quantity }))
+    const expected = computeSaleTotals(
+      computeSubtotal(lines, 'USD'),
+      0,
+      0,
+      'none',
+      'USD',
+    )
+
+    expect(res.status).toBe(200)
+    // Server total === shared-helper total (the client's displayed total).
+    expect(body.sale.total).toBe(expected.total)
+    expect(body.sale.total).toBe(0.26)
+    // NOT the round(sum(raw)) value that caused the one-cent divergence.
+    expect(body.sale.total).not.toBe(0.25)
   })
 })

@@ -13,6 +13,8 @@ export const GET = withBusinessAuth(async (_request, access) => {
     businessIcon: access.businessIcon,
     businessLocale: access.businessLocale,
     businessCurrency: access.businessCurrency,
+    businessTaxRate: access.businessTaxRate,
+    businessTaxMode: access.businessTaxMode,
     role: access.role,
   })
 })

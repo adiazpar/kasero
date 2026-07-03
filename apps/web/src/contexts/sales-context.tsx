@@ -28,6 +28,8 @@ interface CommitSaleParams {
   paymentMethod: PaymentMethod
   date?: string
   notes?: string
+  /** Cart-level discount as an absolute amount (server re-validates). */
+  discountAmount?: number
   items: Array<{ productId: string; quantity: number }>
 }
 

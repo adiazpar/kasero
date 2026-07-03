@@ -599,3 +599,167 @@
   background: var(--color-error);
   margin-bottom: var(--space-1);
 }
+
+/* ===== Voided sales =================================================== */
+
+/* List row for a voided sale — the row stays tappable (drill into the
+ * receipt) but the money is visibly struck out of the ledger. */
+.session-sales-row--voided .session-sales-row__total {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.session-sales-row--voided .session-sales-row__stamp {
+  color: var(--color-text-tertiary);
+}
+
+.session-sales-row__voided-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Receipt detail — VOIDED stamp under the sale number, struck total. */
+.sale-receipt-voided-stamp {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding: 2px var(--space-3);
+  border: 1.5px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+.sale-receipt--voided .sale-receipt-item__name,
+.sale-receipt--voided .sale-receipt-item__subtotal {
+  color: var(--color-text-tertiary);
+}
+
+.sale-receipt--voided .sale-receipt-totals__row--total .sale-receipt-totals__value--strikeable {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Receipt actions (share + void) ================================= */
+
+.sale-receipt-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.sale-receipt-actions .receipt-share-button {
+  margin-top: 0;
+}
+
+/* Destructive Void entry point — quiet mono ghost in error ink. */
+.sale-void-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Inline confirm plate — bordered error card with Cancel / Void pair.
+ * The confirm lives inside the receipt (no nested modal) so the user
+ * keeps the full sale in view while deciding. */
+.sale-void-confirm {
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  text-align: center;
+}
+
+.sale-void-confirm__title {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--color-error);
+}
+
+.sale-void-confirm__desc {
+  margin: 0 0 var(--space-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.sale-void-confirm__error {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-error);
+}
+
+.sale-void-confirm__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.sale-void-confirm__cancel,
+.sale-void-confirm__confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sale-void-confirm__cancel {
+  border: 1px solid var(--color-hair);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+}
+
+.sale-void-confirm__confirm {
+  border: 1px solid var(--color-error);
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+.sale-void-confirm__cancel:disabled,
+.sale-void-confirm__confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

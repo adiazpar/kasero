@@ -64,6 +64,7 @@ export const GET = withBusinessAuth(async (request, access, params) => {
       saleNumber: sales.saleNumber,
       total: sales.total,
       paymentMethod: sales.paymentMethod,
+      status: sales.status,
       createdAt: sales.createdAt,
       date: sales.date,
     })
@@ -81,6 +82,8 @@ export const GET = withBusinessAuth(async (request, access, params) => {
     saleNumber: s.saleNumber,
     total: s.total,
     paymentMethod: s.paymentMethod,
+    // Voided sales stay in the list (rendered struck-through client-side).
+    status: s.status,
     createdAt: s.createdAt.toISOString(),
     date: s.date.toISOString(),
   }))

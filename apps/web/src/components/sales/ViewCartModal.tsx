@@ -7,11 +7,12 @@ import { Minus, Plus } from 'lucide-react'
 import { ModalShell } from '@/components/ui/modal-shell'
 import { useProducts } from '@/contexts/products-context'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
+import { computeSaleTotals, computeSubtotal, roundToCurrencyDecimals } from '@kasero/shared/sales-helpers'
 import type { Product } from '@kasero/shared/types'
 import type { CartLine, UseCartResult } from '@/hooks/useCart'
 import { useBusiness } from '@/contexts/business-context'
 import type { PaymentMethod } from '@kasero/shared/types/sale'
-import { PaymentStepContent } from './cart-modal/PaymentStep'
+import { PaymentStepContent, type DiscountMode } from './cart-modal/PaymentStep'
 import { ChargeButton } from './cart-modal/ChargeButton'
 import { SuccessStepContent, type ConfirmedSaleRecap } from './cart-modal/SuccessStep'
 
@@ -46,27 +47,93 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
   const [isLocked, setIsLocked] = useState(false)
   const [methodId, setMethodId] = useState<PaymentMethod>('cash')
   const [tenderedStr, setTenderedStr] = useState<string>('')
+  const [discountStr, setDiscountStr] = useState<string>('')
+  const [discountMode, setDiscountMode] = useState<DiscountMode>('amount')
   const [submitting, setSubmitting] = useState(false)
   const [confirmedSale, setConfirmedSale] = useState<ConfirmedSaleRecap | null>(null)
   const [error, setError] = useState<string>('')
   const [errorMessageCode, setErrorMessageCode] = useState<string | undefined>(undefined)
 
+  // ----- checkout math (shared helper — the same function the server runs) -----
+  const taxRate = business?.taxRate ?? 0
+  const taxMode = business?.taxMode ?? 'none'
+  // Authoritative rounding order (round each line, then sum) shared with the
+  // server — so the displayed Charge total is byte-for-byte the stored total.
+  // NOT round(cart.total): cart.total is the raw sum and diverges by a cent
+  // from the server for sub-cent unit prices.
+  const subtotal = computeSubtotal(cart.lines, currency)
+
+  const parsedDiscountInput = parseFloat(discountStr) || 0
+  // Percent entry is a UI convenience: convert to an absolute amount here;
+  // only the amount is ever sent to (and stored by) the server.
+  const requestedDiscount =
+    discountMode === 'percent'
+      ? roundToCurrencyDecimals(subtotal * (parsedDiscountInput / 100), currency)
+      : roundToCurrencyDecimals(parsedDiscountInput, currency)
+  const discountInvalid =
+    discountMode === 'percent'
+      ? parsedDiscountInput > 100
+      : requestedDiscount > subtotal
+
+  const totals = useMemo(
+    () =>
+      computeSaleTotals(
+        subtotal,
+        discountInvalid ? 0 : requestedDiscount,
+        taxRate,
+        taxMode,
+        currency,
+      ),
+    [subtotal, requestedDiscount, discountInvalid, taxRate, taxMode, currency],
+  )
+  const chargeTotal = totals.total
+
   const tendered = parseFloat(tenderedStr) || 0
   const isCash = methodId === 'cash'
-  const tenderedSufficient = !isCash || tendered >= cart.total
+  const tenderedSufficient = !isCash || tendered >= chargeTotal
+  // A $0 charge total is chargeable when it's a genuine fully-comped sale:
+  // real line value (subtotal > 0) that a 100% discount brought to zero.
+  // Gating on `subtotal > 0` (not `chargeTotal > 0`) keeps the empty-cart
+  // case disabled via the lines check while letting a legitimately free
+  // sale — cash tender 0 satisfies `tenderedSufficient` at total 0 — commit.
   const canConfirm =
     !submitting &&
     cart.lines.length > 0 &&
-    cart.total > 0 &&
+    subtotal > 0 &&
+    !discountInvalid &&
     tenderedSufficient
 
   const lineCount = cart.lines.reduce((n, l) => n + l.quantity, 0)
+
+  // Single invariant, mirroring the method-change tender reset: any discount
+  // edit re-defaults the tender to the NEW exact charge total so the Charge
+  // pill stays live and the change math never shows a stale "short".
+  const handleDiscountChange = (value: string, mode: DiscountMode) => {
+    setDiscountStr(value)
+    setDiscountMode(mode)
+    const parsed = parseFloat(value) || 0
+    const nextDiscount =
+      mode === 'percent'
+        ? roundToCurrencyDecimals(subtotal * (parsed / 100), currency)
+        : roundToCurrencyDecimals(parsed, currency)
+    const invalid = mode === 'percent' ? parsed > 100 : nextDiscount > subtotal
+    const next = computeSaleTotals(
+      subtotal,
+      invalid ? 0 : nextDiscount,
+      taxRate,
+      taxMode,
+      currency,
+    )
+    setTenderedStr(next.total.toString())
+  }
 
   const resetState = useCallback(() => {
     setStep(0)
     setIsLocked(false)
     setMethodId('cash')
     setTenderedStr('')
+    setDiscountStr('')
+    setDiscountMode('amount')
     setSubmitting(false)
     setConfirmedSale(null)
     setError('')
@@ -76,12 +143,12 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
   const handleClose = () => {
     if (isLocked) return
     onClose()
-    setTimeout(() => {
-      if (confirmedSale != null) {
-        cart.clear()
-      }
-      resetState()
-    }, 250)
+    // Reset local step/payment state after the close animation completes so
+    // the success step doesn't flash back to the cart step mid-dismiss. The
+    // cart itself is cleared at commit time (see onGoToSuccess) for committed
+    // sales; a checkout cancelled before commit intentionally keeps its lines
+    // so the user can resume where they left off.
+    setTimeout(resetState, 250)
   }
 
   const handleBack = () => {
@@ -102,12 +169,13 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
   // step 1's terracotta Charge pill. Default chrome on the confirm button
   // keeps the receipt step quiet so the line items + subtotal are the
   // moments of attention.
-  // Step 0 → 1 transition: default tender to the cart total (EXACT) so the
-  // Charge button is active from frame 1 for the 70%+ of small-vendor sales
-  // that are exact cash. Method stays 'cash' from resetState. Users can
-  // override by tapping a denomination chip or editing the input.
+  // Step 0 → 1 transition: default tender to the charge total (EXACT —
+  // including any tax) so the Charge button is active from frame 1 for the
+  // 70%+ of small-vendor sales that are exact cash. Method stays 'cash'
+  // from resetState. Users can override by tapping a denomination chip or
+  // editing the input.
   const handleConfirmCart = () => {
-    setTenderedStr(cart.total.toString())
+    setTenderedStr(chargeTotal.toString())
     setStep(1)
   }
 
@@ -127,7 +195,9 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
             ·
           </span>
           <span style={{ fontFamily: 'var(--font-mono)' }}>
-            {formatCurrency(cart.total)}
+            {/* The amount the user is about to commit to — includes
+                exclusive tax, so it matches the payment step's Total. */}
+            {formatCurrency(chargeTotal)}
           </span>
         </>
       )}
@@ -141,13 +211,24 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
       currency={currency}
       methodId={methodId}
       tenderedStr={tenderedStr}
+      chargeTotal={chargeTotal}
+      discountAmount={totals.discountAmount}
       submitting={submitting}
       setSubmitting={setSubmitting}
       setConfirmedSale={setConfirmedSale}
       setError={setError}
       setErrorMessageCode={setErrorMessageCode}
       canConfirm={canConfirm}
-      onGoToSuccess={() => setStep(2)}
+      onGoToSuccess={() => {
+        // Clear the cart the instant the sale commits — not deferred to the
+        // Done tap. The background POS (cart pill + product tile qty badges)
+        // immediately reflects an empty cart, and there is no delayed-clear
+        // race where a quick tap on the next product could be wiped by a
+        // pending timer. The success step renders from the `confirmedSale`
+        // snapshot, so emptying the live cart here is invisible to it.
+        cart.clear()
+        setStep(2)
+      }}
       onLock={() => setIsLocked(true)}
       onUnlock={() => setIsLocked(false)}
     />
@@ -201,7 +282,7 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
                 <h2 className="cart-modal__title">
                   {t.formatMessage(
                     { id: 'sales.cart.modal_receipt_title' },
-                    { em: (chunks) => <em>{chunks}</em> },
+                    { em: (chunks) => <em key="em">{chunks}</em> },
                   )}
                 </h2>
                 <div className="cart-modal__rule">
@@ -231,7 +312,7 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
                     {t.formatMessage({ id: 'sales.cart.modal_subtotal_label' })}
                   </span>
                   <span className="cart-receipt__subtotal-value">
-                    {formatCurrency(cart.total)}
+                    {formatCurrency(subtotal)}
                   </span>
                 </div>
                 <div className="cart-receipt__subtotal-meta">
@@ -249,7 +330,16 @@ export function ViewCartModal({ isOpen, onClose, cart }: ViewCartModalProps) {
       {/* Step 1: Payment */}
       {step === 1 && (
         <PaymentStepContent
-          total={cart.total}
+          total={chargeTotal}
+          subtotal={subtotal}
+          discountStr={discountStr}
+          discountMode={discountMode}
+          onDiscountChange={handleDiscountChange}
+          discountAmount={totals.discountAmount}
+          discountInvalid={discountInvalid}
+          taxRate={taxRate}
+          taxMode={taxMode}
+          taxAmount={totals.taxAmount}
           currency={currency}
           methodId={methodId}
           setMethodId={setMethodId}

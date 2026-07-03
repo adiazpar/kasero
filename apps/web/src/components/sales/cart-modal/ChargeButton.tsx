@@ -17,6 +17,10 @@ interface ChargeButtonProps {
   currency: string
   methodId: PaymentMethod
   tenderedStr: string
+  /** Final charge total (subtotal - discount + exclusive tax). */
+  chargeTotal: number
+  /** Cart-level discount as an absolute amount (0 when none). */
+  discountAmount: number
   submitting: boolean
   setSubmitting: (v: boolean) => void
   setConfirmedSale: (recap: ConfirmedSaleRecap | null) => void
@@ -44,6 +48,8 @@ export function ChargeButton({
   currency,
   methodId,
   tenderedStr,
+  chargeTotal,
+  discountAmount,
   submitting,
   setSubmitting,
   setConfirmedSale,
@@ -74,6 +80,9 @@ export function ChargeButton({
           quantity: l.quantity,
         })),
         paymentMethod: methodId,
+        // Only the absolute amount travels — the server recomputes the
+        // authoritative total (discount + tax) from its own snapshots.
+        ...(discountAmount > 0 ? { discountAmount } : {}),
       })
       // Server decremented stock atomically inside the sale transaction —
       // refresh the products cache in the background so the picker reflects
@@ -82,9 +91,7 @@ export function ChargeButton({
       void products.refetch()
       const isCash = methodId === 'cash'
       setConfirmedSale({
-        saleNumber: sale.saleNumber,
-        total: sale.total,
-        method: methodId,
+        sale,
         tendered: isCash ? tendered : null,
         change: isCash ? roundToCurrencyDecimals(tendered - sale.total, currency) : null,
       })
@@ -117,7 +124,7 @@ export function ChargeButton({
           </span>
           <span className="charge-pill__divider" aria-hidden="true">·</span>
           <span className="charge-pill__amount">
-            {formatCurrency(cart.total)}
+            {formatCurrency(chargeTotal)}
           </span>
         </>
       )}

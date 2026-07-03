@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { db, businesses, businessUsers } from '@/db'
 import { eq, and, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { auth } from '@/lib/auth'
 import { errorResponse, successResponse } from '@/lib/api-middleware'
 import { ApiMessageCode } from '@kasero/shared/api-messages'
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
     // / pending rows across the wire just to drop them client-side.
     // LIMIT 100 is a defensive ceiling — real users have single-digit
     // memberships.
+    //
+    // memberCount is a correlated subquery so the whole list is one round
+    // trip on the libSQL HTTP driver. The inner scan is aliased away, so
+    // the unaliased business_users reference resolves to the outer join row.
+    const memberRows = alias(businessUsers, 'member_rows')
     const activeMemberships = await db
       .select({
         businessId: businessUsers.businessId,
@@ -36,6 +42,9 @@ export async function GET(request: NextRequest) {
         businessIcon: businesses.icon,
         businessLocale: businesses.locale,
         businessCurrency: businesses.currency,
+        businessTaxRate: businesses.taxRate,
+        businessTaxMode: businesses.taxMode,
+        memberCount: sql<number>`(SELECT COUNT(*) FROM ${businessUsers} AS ${memberRows} WHERE ${memberRows.businessId} = ${businessUsers.businessId} AND ${memberRows.status} = 'active')`,
       })
       .from(businessUsers)
       .innerJoin(businesses, eq(businessUsers.businessId, businesses.id))
@@ -47,38 +56,18 @@ export async function GET(request: NextRequest) {
       )
       .limit(100)
 
-    // Get member counts for each business
-    const businessIds = activeMemberships.map(m => m.businessId)
-    const memberCounts: Record<string, number> = {}
-
-    if (businessIds.length > 0) {
-      const counts = await db
-        .select({
-          businessId: businessUsers.businessId,
-          count: sql<number>`count(*)`.as('count'),
-        })
-        .from(businessUsers)
-        .where(and(
-          sql`${businessUsers.businessId} IN (${sql.join(businessIds.map(id => sql`${id}`), sql`, `)})`,
-          eq(businessUsers.status, 'active')
-        ))
-        .groupBy(businessUsers.businessId)
-
-      for (const row of counts) {
-        memberCounts[row.businessId] = Number(row.count)
-      }
-    }
-
     return successResponse({
       businesses: activeMemberships.map(m => ({
         id: m.businessId,
         name: m.businessName,
         role: m.role,
         isOwner: m.role === 'owner',
-        memberCount: memberCounts[m.businessId] || 1,
+        memberCount: Number(m.memberCount) || 1,
         icon: m.businessIcon,
         locale: m.businessLocale ?? 'en-US',
         currency: m.businessCurrency ?? 'USD',
+        taxRate: m.businessTaxRate ?? 0,
+        taxMode: m.businessTaxMode ?? 'none',
       })),
     })
   } catch (error) {
