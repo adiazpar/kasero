@@ -15,6 +15,10 @@ export const GET = withBusinessAuth(async (_request, access) => {
     businessCurrency: access.businessCurrency,
     businessTaxRate: access.businessTaxRate,
     businessTaxMode: access.businessTaxMode,
+    // Raw tier + expiry. Clients must derive entitlement via
+    // isPro(plan, planExpiresAt) from @kasero/shared/entitlements.
+    plan: access.plan,
+    planExpiresAt: access.planExpiresAt,
     role: access.role,
   })
 })

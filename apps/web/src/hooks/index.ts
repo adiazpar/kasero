@@ -35,6 +35,9 @@ export type { UseCreateBusinessReturn } from './useCreateBusiness'
 
 export { useBusinessFormat } from './useBusinessFormat'
 
+export { useSubscription } from './useSubscription'
+export type { SubscriptionState } from './useSubscription'
+
 export { useHorizontalSwipeIntent } from './useHorizontalSwipeIntent'
 
 export { useInfoAlert } from './useInfoAlert'

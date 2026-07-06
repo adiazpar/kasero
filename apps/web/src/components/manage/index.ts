@@ -1,6 +1,7 @@
 export { EditNameModal } from './EditNameModal'
 export { EditLocationModal } from './EditLocationModal'
 export { EditTaxModal } from './EditTaxModal'
+export { ProUpgradeModal } from './ProUpgradeModal'
 export { EditLogoModal } from './EditLogoModal'
 export { TransferOwnershipModal } from './TransferOwnershipModal'
 export { CancelTransferModal } from './CancelTransferModal'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useIntl } from 'react-intl'
 import {
   IonHeader,
@@ -12,11 +12,15 @@ import {
   IonIcon,
 } from '@ionic/react'
 import { close } from 'ionicons/icons'
+import { ScanLine } from 'lucide-react'
 import { ModalShell, PriceInput } from '@/components/ui'
-import { ApiError } from '@/lib/api-client'
+import { ApiError, apiPost, type ApiResponse } from '@/lib/api-client'
 import { useApiMessage } from '@/hooks/useApiMessage'
+import { useBusiness } from '@/contexts/business-context'
 import { useExpenses } from '@/contexts/expenses-context'
 import { useExpenseCategories } from '@/contexts/expense-categories-context'
+import { useImageCompression } from '@/hooks/useImageCompression'
+import type { ExpenseCategory } from '@kasero/shared/types'
 import { ExpenseCategoryPicker } from './ExpenseCategoryPicker'
 import { AddExpenseCategoryModal } from './AddExpenseCategoryModal'
 
@@ -26,6 +30,51 @@ function toDateInputValue(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+interface ReceiptScanResult {
+  amount: number
+  date: string | null
+  merchant: string | null
+  note: string | null
+  categoryName: string | null
+}
+
+// Case- and diacritics-insensitive normalization for the category fuzzy
+// match ("Café" == "cafe").
+function normalizeForMatch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+/**
+ * Fuzzy-match the AI's suggested category name against the business's
+ * existing expense categories: normalized equality first, then
+ * startsWith, then includes (both directions). No match -> null; the
+ * category field is simply left unset for the user to pick.
+ */
+function matchCategory(
+  name: string | null,
+  categories: ExpenseCategory[],
+): ExpenseCategory | null {
+  if (!name) return null
+  const target = normalizeForMatch(name)
+  if (!target) return null
+  const normalized = categories.map((category) => ({
+    category,
+    n: normalizeForMatch(category.name),
+  }))
+  return (
+    normalized.find((x) => x.n === target)?.category ??
+    normalized.find((x) => x.n.startsWith(target) || target.startsWith(x.n))
+      ?.category ??
+    normalized.find((x) => x.n.includes(target) || target.includes(x.n))
+      ?.category ??
+    null
+  )
 }
 
 export interface AddExpenseModalProps {
@@ -41,8 +90,12 @@ export interface AddExpenseModalProps {
  * categoryId (ExpenseCategoryPicker), note (textarea, max 2000 chars).
  *
  * Save calls useExpenses().create(...). Error path shows inline error
- * and keeps the modal open. Photo upload is deferred to v2 (depends on
- * the icon-upload pipeline).
+ * and keeps the modal open.
+ *
+ * Receipt snap: the scan affordance at the top of the form runs
+ * useImageCompression -> POST /ai/parse-receipt and PREFILLS the fields
+ * for review — it never auto-saves. Category comes from a fuzzy match
+ * of the AI's categoryName against the existing expense categories.
  */
 export function AddExpenseModal({
   isOpen,
@@ -51,8 +104,10 @@ export function AddExpenseModal({
 }: AddExpenseModalProps) {
   const t = useIntl()
   const translateApiMessage = useApiMessage()
+  const { businessId } = useBusiness()
   const { create } = useExpenses()
-  const { create: createCategory } = useExpenseCategories()
+  const { categories, create: createCategory } = useExpenseCategories()
+  const { compressImage } = useImageCompression()
 
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(() => toDateInputValue(new Date()))
@@ -61,6 +116,10 @@ export function AddExpenseModal({
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [scanApplied, setScanApplied] = useState(false)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
 
   // Reset form every time the modal opens.
   useEffect(() => {
@@ -71,6 +130,9 @@ export function AddExpenseModal({
       setNote('')
       setError('')
       setIsSaving(false)
+      setIsScanning(false)
+      setScanError('')
+      setScanApplied(false)
     }
   }, [isOpen])
 
@@ -116,6 +178,51 @@ export function AddExpenseModal({
     }
   }
 
+  // Receipt snap pipeline: compress client-side (HEIC conversion + resize
+  // + JPEG), send to the parse-receipt route, then PREFILL the form for
+  // review. Never auto-saves — the user stays on the form.
+  const handleReceiptFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0]
+    // Allow re-picking the same file after an error.
+    e.target.value = ''
+    if (!file || !businessId || isScanning) return
+    setScanError('')
+    setScanApplied(false)
+    setIsScanning(true)
+    try {
+      const image = await compressImage(file)
+      if (!image) {
+        setScanError(t.formatMessage({ id: 'expenses.receipt_error_fallback' }))
+        return
+      }
+      const res = await apiPost<ApiResponse & { data: ReceiptScanResult }>(
+        `/api/businesses/${businessId}/ai/parse-receipt`,
+        { image },
+      )
+      const result = res.data
+      setAmount(String(result.amount))
+      if (result.date) setDate(result.date)
+      // note is the AI's summary line; fall back to the merchant name so
+      // the ledger row stays identifiable either way.
+      const prefillNote = result.note ?? result.merchant
+      if (prefillNote) setNote(prefillNote.slice(0, 2000))
+      const matched = matchCategory(result.categoryName, categories)
+      if (matched) setCategoryId(matched.id)
+      setScanApplied(true)
+    } catch (err) {
+      console.error('Receipt scan failed:', err)
+      setScanError(
+        err instanceof ApiError && err.envelope
+          ? translateApiMessage(err.envelope)
+          : t.formatMessage({ id: 'expenses.receipt_error_fallback' }),
+      )
+    } finally {
+      setIsScanning(false)
+    }
+  }
+
   return (
     <>
       <ModalShell rawContent isOpen={isOpen} onClose={onClose} noSwipeDismiss>
@@ -149,6 +256,51 @@ export function AddExpenseModal({
                 {error}
               </div>
             )}
+
+            {/* Receipt snap — prefills the form below; the user reviews
+                and saves manually. */}
+            <section className="expense-scan">
+              <input
+                ref={receiptInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                onChange={(e) => void handleReceiptFile(e)}
+                className="expense-scan__input"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+              <button
+                type="button"
+                className="expense-scan__button"
+                onClick={() => receiptInputRef.current?.click()}
+                disabled={isScanning || isSaving}
+              >
+                {isScanning ? (
+                  <>
+                    <span
+                      className="order-modal__pill-spinner expense-scan__spinner"
+                      aria-hidden="true"
+                    />
+                    {t.formatMessage({ id: 'expenses.receipt_scanning' })}
+                  </>
+                ) : (
+                  <>
+                    <ScanLine size={16} aria-hidden="true" />
+                    {t.formatMessage({ id: 'expenses.receipt_scan_button' })}
+                  </>
+                )}
+              </button>
+              {scanApplied && !scanError && (
+                <p className="expense-scan__hint">
+                  {t.formatMessage({ id: 'expenses.receipt_prefilled' })}
+                </p>
+              )}
+              {scanError && (
+                <p className="expense-scan__error" role="alert">
+                  {scanError}
+                </p>
+              )}
+            </section>
 
             {/* Amount */}
             <section className="pm-field">

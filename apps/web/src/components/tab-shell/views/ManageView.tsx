@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Clock,
   ImageIcon,
+  Sparkles,
 } from 'lucide-react'
 import { useBusiness } from '@/contexts/business-context'
 import { usePageTransition } from '@/contexts/page-transition-context'
@@ -44,6 +45,10 @@ const EditLogoModal = dynamic(
   () => import('@/components/manage/EditLogoModal').then(m => m.EditLogoModal),
   { ssr: false },
 )
+const ProUpgradeModal = dynamic(
+  () => import('@/components/manage/ProUpgradeModal').then(m => m.ProUpgradeModal),
+  { ssr: false },
+)
 const TransferOwnershipModal = dynamic(
   () => import('@/components/manage/TransferOwnershipModal').then(m => m.TransferOwnershipModal),
   { ssr: false },
@@ -67,7 +72,7 @@ const IncomingTransferModal = dynamic(
 
 export function ManageView() {
   const intl = useIntl()
-  const { business, businessId, isOwner } = useBusiness()
+  const { business, businessId, isOwner, isPro } = useBusiness()
   const { navigate } = usePageTransition()
   const { transfer: pendingTransfer } = usePendingTransferContext()
   const { transfer: incomingTransfer } = useIncomingTransferContext()
@@ -76,6 +81,7 @@ export function ManageView() {
   const [locationOpen, setLocationOpen] = useState(false)
   const [taxOpen, setTaxOpen] = useState(false)
   const [logoOpen, setLogoOpen] = useState(false)
+  const [proOpen, setProOpen] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
   const [cancelTransferOpen, setCancelTransferOpen] = useState(false)
   const [leaveOpen, setLeaveOpen] = useState(false)
@@ -278,6 +284,23 @@ export function ManageView() {
           />
         </div>
 
+        <GroupLabel>
+          {intl.formatMessage({ id: 'manage.section_subscription' })}
+        </GroupLabel>
+        <IonList inset lines="full" className="account-list">
+          <IonItem button detail onClick={() => setProOpen(true)}>
+            <Sparkles slot="start" className="text-text-secondary w-5 h-5" />
+            <IonLabel>
+              <h3>{intl.formatMessage({ id: 'manage.row_plan' })}</h3>
+            </IonLabel>
+            <IonNote slot="end">
+              {isPro
+                ? intl.formatMessage({ id: 'manage.pro_plan_pro' })
+                : intl.formatMessage({ id: 'manage.pro_plan_free' })}
+            </IonNote>
+          </IonItem>
+        </IonList>
+
         <GroupLabel tone="danger">
           {intl.formatMessage({ id: 'manage.section_danger' })}
         </GroupLabel>
@@ -318,6 +341,7 @@ export function ManageView() {
       <EditLocationModal isOpen={locationOpen} onClose={() => setLocationOpen(false)} />
       <EditTaxModal isOpen={taxOpen} onClose={() => setTaxOpen(false)} />
       <EditLogoModal isOpen={logoOpen} onClose={() => setLogoOpen(false)} />
+      <ProUpgradeModal isOpen={proOpen} onClose={() => setProOpen(false)} />
       <TransferOwnershipModal isOpen={transferOpen} onClose={() => setTransferOpen(false)} />
       <CancelTransferModal isOpen={cancelTransferOpen} onClose={() => setCancelTransferOpen(false)} />
       <LeaveBusinessModal isOpen={leaveOpen} onClose={() => setLeaveOpen(false)} />

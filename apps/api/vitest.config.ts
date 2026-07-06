@@ -11,7 +11,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
+    // The second pattern runs the co-located unit tests in
+    // packages/shared (pure helpers, no runtime deps). The shared
+    // package has no test runner of its own; without this pattern
+    // those tests never execute anywhere.
+    include: ['src/**/*.test.{ts,tsx}', '../../packages/shared/src/**/*.test.ts'],
   },
   resolve: {
     alias: {

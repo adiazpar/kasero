@@ -38,6 +38,9 @@ interface Business {
   // Optional so pre-tax-feature sessionStorage caches still parse.
   taxRate?: number
   taxMode?: 'none' | 'inclusive' | 'exclusive'
+  // Optional so pre-Pro sessionStorage caches still parse.
+  plan?: 'free' | 'pro'
+  planExpiresAt?: string | null
 }
 
 const hubBusinessesCache = createSessionCache<Business[]>(CACHE_KEYS.HUB_BUSINESSES)
@@ -287,7 +290,7 @@ function HubHomeBody() {
               <GroupLabel count={ownedBusinesses.length}>
                 {intl.formatMessage({ id: 'hub.section_owned' })}
               </GroupLabel>
-              <div>
+              <div className="stagger-children">
                 {ownedBusinesses.map((b) => (
                   <BusinessRow
                     key={b.id}
@@ -304,7 +307,7 @@ function HubHomeBody() {
               <GroupLabel count={joinedBusinesses.length}>
                 {intl.formatMessage({ id: 'hub.section_joined' })}
               </GroupLabel>
-              <div>
+              <div className="stagger-children">
                 {joinedBusinesses.map((b) => (
                   <BusinessRow
                     key={b.id}

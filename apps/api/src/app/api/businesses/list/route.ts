@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
         businessCurrency: businesses.currency,
         businessTaxRate: businesses.taxRate,
         businessTaxMode: businesses.taxMode,
+        plan: businesses.plan,
+        planExpiresAt: businesses.planExpiresAt,
         memberCount: sql<number>`(SELECT COUNT(*) FROM ${businessUsers} AS ${memberRows} WHERE ${memberRows.businessId} = ${businessUsers.businessId} AND ${memberRows.status} = 'active')`,
       })
       .from(businessUsers)
@@ -68,6 +70,11 @@ export async function GET(request: NextRequest) {
         currency: m.businessCurrency ?? 'USD',
         taxRate: m.businessTaxRate ?? 0,
         taxMode: m.businessTaxMode ?? 'none',
+        // Raw tier — clients derive entitlement via isPro() from
+        // @kasero/shared/entitlements. Seeds the business shell cache so
+        // a cache-hit entry into a business doesn't lose the plan.
+        plan: m.plan ?? 'free',
+        planExpiresAt: m.planExpiresAt,
       })),
     })
   } catch (error) {

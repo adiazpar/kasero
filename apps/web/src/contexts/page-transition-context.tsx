@@ -18,6 +18,11 @@ interface CachedBusiness {
   // shipped still parse — readers default to 0 / 'none'.
   taxRate?: number
   taxMode?: 'none' | 'inclusive' | 'exclusive'
+  // Optional for the same persisted-entry reason — readers default to
+  // 'free' / null. planExpiresAt is the ISO string from the access
+  // endpoint (Dates don't survive JSON round-trips).
+  plan?: 'free' | 'pro'
+  planExpiresAt?: string | null
   icon: string | null
 }
 
@@ -38,7 +43,7 @@ interface PageTransitionContextValue {
   // Business cache for instant display and access validation
   getCachedBusiness: (businessId: string) => CachedBusiness | null
   setCachedBusiness: (businessId: string, data: CachedBusiness) => void
-  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; icon: string | null }>) => void
+  setCachedBusinesses: (businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; plan?: 'free' | 'pro'; planExpiresAt?: string | null; icon: string | null }>) => void
   clearCachedBusiness: (businessId: string) => void
 }
 
@@ -130,7 +135,7 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
     }
   }, [])
 
-  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; icon: string | null }>) => {
+  const setCachedBusinesses = useCallback((businesses: Array<{ id: string; name: string; role: string; isOwner: boolean; locale: string; currency: string; taxRate?: number; taxMode?: 'none' | 'inclusive' | 'exclusive'; plan?: 'free' | 'pro'; planExpiresAt?: string | null; icon: string | null }>) => {
     businesses.forEach(b => {
       businessCacheRef.current[b.id] = {
         name: b.name,
@@ -140,6 +145,8 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
         currency: b.currency,
         taxRate: b.taxRate ?? 0,
         taxMode: b.taxMode ?? 'none',
+        plan: b.plan ?? 'free',
+        planExpiresAt: b.planExpiresAt ?? null,
         icon: b.icon ?? null,
       }
     })

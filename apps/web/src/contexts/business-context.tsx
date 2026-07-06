@@ -14,6 +14,7 @@ import { useRouter } from '@/lib/next-navigation-shim'
 import { useAuth } from './auth-context'
 import { usePageTransition } from './page-transition-context'
 import type { BusinessRole } from '@kasero/shared/business-role'
+import { isPro as computeIsPro } from '@kasero/shared/entitlements'
 import { ApiError, apiRequest } from '@/lib/api-client'
 import { registerRefetch } from '@/lib/realtime/refetch-registry'
 import { useRealtime } from '@/contexts/realtime-context'
@@ -34,6 +35,14 @@ export interface Business {
   /** Percent, e.g. 12 = 12%. 0 when the business collects no tax. */
   taxRate: number
   taxMode: 'none' | 'inclusive' | 'exclusive'
+  /**
+   * Raw subscription tier. Never gate a feature on `plan === 'pro'`
+   * directly — read `isPro` from the context, which routes through the
+   * shared entitlement helper so an expired pro row never grants Pro.
+   */
+  plan: 'free' | 'pro'
+  /** ISO string from the access endpoint; null = free or non-expiring. */
+  planExpiresAt: string | null
 }
 
 interface BusinessContextType {
@@ -45,6 +54,8 @@ interface BusinessContextType {
   // Helpers
   canManage: boolean  // owner or partner
   isOwner: boolean
+  /** Kasero Pro entitlement (expiry-aware, via shared isPro helper). */
+  isPro: boolean
   refreshBusiness: () => Promise<void>
 }
 
@@ -86,6 +97,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         businessCurrency?: string
         businessTaxRate?: number
         businessTaxMode?: 'none' | 'inclusive' | 'exclusive'
+        plan?: 'free' | 'pro'
+        planExpiresAt?: string | null
         role: BusinessRole
       }>(`/api/businesses/${businessId}/access`)
       setBusiness({
@@ -96,6 +109,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         currency: data.businessCurrency ?? 'USD',
         taxRate: data.businessTaxRate ?? 0,
         taxMode: data.businessTaxMode ?? 'none',
+        plan: data.plan ?? 'free',
+        planExpiresAt: data.planExpiresAt ?? null,
       })
       setRole(data.role as BusinessRole)
       setCachedBusiness(data.businessId, {
@@ -105,6 +120,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         currency: data.businessCurrency ?? 'USD',
         taxRate: data.businessTaxRate ?? 0,
         taxMode: data.businessTaxMode ?? 'none',
+        plan: data.plan ?? 'free',
+        planExpiresAt: data.planExpiresAt ?? null,
         role: data.role,
         isOwner: data.role === 'owner',
       })
@@ -165,6 +182,8 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
         currency: cached.currency,
         taxRate: cached.taxRate ?? 0,
         taxMode: cached.taxMode ?? 'none',
+        plan: cached.plan ?? 'free',
+        planExpiresAt: cached.planExpiresAt ?? null,
       })
       setRole(cached.role as BusinessRole)
       setIsLoading(false)
@@ -197,6 +216,10 @@ export function BusinessProvider({ children, businessId }: BusinessProviderProps
     error,
     canManage: role === 'owner' || role === 'partner',
     isOwner: role === 'owner',
+    // Expiry-aware: an expired pro row reads as free. Recomputed on
+    // every provider render, which is enough — plan mutations refetch
+    // access (business.updated realtime -> validateAccess) and re-render.
+    isPro: business ? computeIsPro(business.plan, business.planExpiresAt) : false,
     refreshBusiness: validateAccess,
   }), [business, role, isLoading, authLoading, error, validateAccess])
 

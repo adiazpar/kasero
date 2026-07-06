@@ -13,12 +13,11 @@ import {
   roundToCurrencyDecimals,
   computeSubtotal,
   computeSaleTotals,
-  startOfUtcDay,
-  startOfPrevUtcDay,
 } from '@kasero/shared/sales-helpers'
 import { applyStockDeltas } from '@/lib/sales-stock'
 import { publishToBusiness, getOriginDeviceId } from '@/lib/realtime'
 import { postSaleSchema } from './schema'
+import { computeStats, type StatsResult } from './stats'
 
 // 64KB easily covers 100 lines + 1000-char notes.
 const POST_MAX_BODY_BYTES = 64 * 1024
@@ -394,55 +393,3 @@ export const GET = withBusinessAuth(async (request, access) => {
     ...(stats !== undefined ? { stats } : {}),
   })
 })
-
-interface StatsResult {
-  todayRevenue: number
-  todayCount: number
-  todayAvgTicket: number | null
-  yesterdayRevenue: number
-  vsYesterdayPct: number | null
-}
-
-async function computeStats(businessId: string): Promise<StatsResult> {
-  const now = new Date()
-  const todayStart = startOfUtcDay(now)
-  const yesterdayStart = startOfPrevUtcDay(now)
-
-  // One conditional-aggregate query replaces the two row-pulling selects
-  // + JS reduce (same pattern as sales-sessions/close). The outer WHERE
-  // narrows to rows since yesterdayStart; the CASEs bucket them into
-  // today vs yesterday. Voided sales are excluded — a void is a reversal,
-  // not revenue.
-  const row = await db
-    .select({
-      todayRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${gte(sales.date, todayStart)} THEN ${sales.total} END), 0)`,
-      todayCount: sql<number>`COUNT(CASE WHEN ${gte(sales.date, todayStart)} THEN 1 END)`,
-      yesterdayRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${lt(sales.date, todayStart)} THEN ${sales.total} END), 0)`,
-    })
-    .from(sales)
-    .where(
-      and(
-        eq(sales.businessId, businessId),
-        gte(sales.date, yesterdayStart),
-        eq(sales.status, 'completed'),
-      ),
-    )
-    .get()
-
-  const todayRevenue = Number(row?.todayRevenue ?? 0)
-  const todayCount = Number(row?.todayCount ?? 0)
-  const yesterdayRevenue = Number(row?.yesterdayRevenue ?? 0)
-  const todayAvgTicket = todayCount > 0 ? todayRevenue / todayCount : null
-  const vsYesterdayPct =
-    yesterdayRevenue > 0
-      ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100
-      : null
-
-  return {
-    todayRevenue,
-    todayCount,
-    todayAvgTicket,
-    yesterdayRevenue,
-    vsYesterdayPct,
-  }
-}

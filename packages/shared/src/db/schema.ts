@@ -35,6 +35,18 @@ export const businesses = sqliteTable('businesses', {
   taxMode: text('tax_mode', { enum: ['none', 'inclusive', 'exclusive'] })
     .notNull()
     .default('none'),
+  // Kasero Pro subscription (per business, not per user). `plan` is the
+  // raw tier; entitlement checks must go through isPro() in
+  // packages/shared/src/entitlements.ts so an expired 'pro' row never
+  // grants Pro features. planExpiresAt: null on free; on pro, null means
+  // a non-expiring grant. planSource records who granted the tier —
+  // store subscriptions ('apple' / 'google') manage their own renewal,
+  // 'promo' rows carry an explicit expiry set at redeem time.
+  plan: text('plan', { enum: ['free', 'pro'] }).notNull().default('free'),
+  planExpiresAt: integer('plan_expires_at', { mode: 'timestamp' }),
+  planSource: text('plan_source', { enum: ['none', 'apple', 'google', 'promo'] })
+    .notNull()
+    .default('none'),
 })
 
 // ===========================================

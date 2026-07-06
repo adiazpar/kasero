@@ -32,7 +32,7 @@ export type BusinessRealtimeEvent =
   | ({ type: 'team.invite.deleted'; inviteId: string } & WithOrigin)
   | ({
       type: 'business.updated'
-      fields: Array<'name' | 'locale' | 'currency' | 'iconUrl' | 'taxRate' | 'taxMode'>
+      fields: Array<'name' | 'locale' | 'currency' | 'iconUrl' | 'taxRate' | 'taxMode' | 'plan'>
     } & WithOrigin)
   // Product catalog events. Inventory ("stock") is not a separate domain
   // in this codebase — it's the `products.stock` column adjusted by the

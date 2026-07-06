@@ -19,6 +19,15 @@ export interface BusinessAccess {
   /** Percent, e.g. 12 = 12%. 0 when the business collects no tax. */
   businessTaxRate: number
   businessTaxMode: 'none' | 'inclusive' | 'exclusive'
+  /**
+   * Raw subscription tier. NEVER gate a feature on `plan === 'pro'`
+   * directly — an expired pro row must not grant Pro. Use
+   * isPro(access.plan, access.planExpiresAt) from
+   * `@kasero/shared/entitlements`. Rides the 60s access cache; routes
+   * that mutate the plan must call invalidateAccessCacheForBusiness.
+   */
+  plan: 'free' | 'pro'
+  planExpiresAt: Date | null
   role: BusinessRole
 }
 
@@ -154,6 +163,8 @@ export async function requireBusinessAccess(
       businessCurrency: businesses.currency,
       businessTaxRate: businesses.taxRate,
       businessTaxMode: businesses.taxMode,
+      plan: businesses.plan,
+      planExpiresAt: businesses.planExpiresAt,
     })
     .from(businessUsers)
     .innerJoin(businesses, eq(businessUsers.businessId, businesses.id))
@@ -181,6 +192,8 @@ export async function requireBusinessAccess(
     businessCurrency: membership.businessCurrency ?? 'USD',
     businessTaxRate: membership.businessTaxRate ?? 0,
     businessTaxMode: membership.businessTaxMode ?? 'none',
+    plan: membership.plan ?? 'free',
+    planExpiresAt: membership.planExpiresAt ?? null,
     role: membership.role as BusinessRole,
   }
 

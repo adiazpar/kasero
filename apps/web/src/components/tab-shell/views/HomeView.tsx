@@ -23,6 +23,7 @@ import {
   WeekTrendCard,
   AlertsSection,
   MonthlySummaryCard,
+  PulseCard,
 } from '@/components/home'
 
 export function HomeView() {
@@ -165,7 +166,7 @@ export function HomeView() {
       <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
         <IonRefresherContent />
       </IonRefresher>
-      <div className="home-body">
+      <div className="home-body stagger-children">
       <HomeHero />
       <MonthlySummaryCard />
       <RevenueCard
@@ -173,6 +174,7 @@ export function HomeView() {
         amount={stats?.todayRevenue ?? null}
         vsYesterdayPct={stats?.vsYesterdayPct ?? null}
       />
+      <PulseCard />
       <div className="home-mini-row">
         <button
           type="button"

@@ -287,6 +287,15 @@ export const RateLimits = {
    */
   aiDaily: { limit: 100, windowSeconds: 24 * 60 * 60, failClosed: true },
   /**
+   * AI per-user DAILY ceiling for Kasero Pro members: 400 calls per user
+   * per 24 hours. Same failClosed rationale as aiDaily. IMPORTANT: use a
+   * DISTINCT identifier prefix (`ai-daily-pro:` vs `ai-daily:`) at the
+   * call site — the Upstash limiter instance is keyed on (limit, window),
+   * so reusing the `ai-daily:` key with this config would silently share
+   * a sliding window between the two tiers.
+   */
+  aiDailyPro: { limit: 400, windowSeconds: 24 * 60 * 60, failClosed: true },
+  /**
    * GLOBAL AI daily kill-switch: 10000 calls per day across the whole
    * deployment. Single counter for ALL users; trips a circuit
    * breaker if attack traffic somehow saturates user-level limits
@@ -305,6 +314,25 @@ export const RateLimits = {
    * account enumeration via the recipient-email lookup.
    */
   transferInitiate: { limit: 5, windowSeconds: 15 * 60 },
+  /**
+   * Kasero Pulse free-tier sample: 1 per ~35 days per business. The call
+   * site stamps the key with the calendar month (`pulse-free:{biz}:{YYYY-MM}`)
+   * so the sample actually resets on month boundaries regardless of the
+   * sliding-window math — the 35-day window just guarantees the counter
+   * outlives the longest month. failClosed: this is the paywall boundary,
+   * and a fail-open fallback during an Upstash brownout would hand out
+   * unmetered model calls on the free tier.
+   */
+  pulseFreeSample: { limit: 1, windowSeconds: 35 * 24 * 60 * 60, failClosed: true },
+  /**
+   * Promo-code redemption (Kasero Pro): 5 per hour per user. Brute-force
+   * protection on the PRO_PROMO_CODES namespace — codes are short,
+   * human-shareable strings, so the budget must stay tight. failClosed:
+   * during an Upstash brownout the per-Lambda in-memory fallback would
+   * effectively disable brute-force protection, and unlike AI routes a
+   * blocked redeem attempt has no user-visible cost beyond a retry.
+   */
+  promoRedeem: { limit: 5, windowSeconds: 60 * 60, failClosed: true },
   /**
    * Business-scoped mutations (POST/PATCH/DELETE under
    * /api/businesses/[businessId]/**): 200 per minute per (user, business).

@@ -1,0 +1,177 @@
+/* ==========================================================================
+   ProUpgradeModal — Kasero Pro (Manage tab)
+   ==========================================================================
+   Follows the manage-modals.css vocabulary: shared `.modal-hero` /
+   `.modal-error` primitives from account-modals.css, `.manage-edit__note`
+   for the mono eyebrow above the promo field, `.manage-seal` for the
+   chromeless success step. Everything here is the Pro-specific body:
+   the active-plan status card, the pillar list, the price line, and the
+   promo-code redemption row. */
+
+
+/* Active-plan status card — quiet plate above the pillar list when the
+   business is already Pro. Brand-tinted so the tier reads at a glance. */
+
+.pro-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-brand-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-brand-tint);
+}
+
+.pro-status__badge {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-text-brand);
+  padding: 3px 8px;
+  border: 1px solid var(--color-brand-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  margin-bottom: var(--space-1);
+}
+
+.pro-status__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pro-status__label {
+  font-size: var(--text-sm, 13px);
+  color: var(--color-text-secondary);
+}
+
+.pro-status__value {
+  font-size: var(--text-sm, 13px);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+
+/* Pillar list — the four reasons Pro exists. */
+
+.pro-pillars {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pro-pillar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-1);
+}
+
+.pro-pillar + .pro-pillar {
+  border-top: 1px solid var(--color-hair-soft);
+}
+
+.pro-pillar__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-brand-tint);
+  color: var(--color-text-brand);
+}
+
+.pro-pillar__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pro-pillar__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pro-pillar__title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pro-pillar__desc {
+  font-size: var(--text-sm, 13px);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+
+
+/* Price line — reference pricing above the (store-pending) purchase
+   button in the footer. */
+
+.pro-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-1) 0;
+  border-top: 1px solid var(--color-hair-soft);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pro-price__note {
+  font-size: var(--text-xs, 11.5px);
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
+
+/* Promo-code redemption row — owner-only. Input + inline redeem button
+   sharing one baseline; error line below, same voice as the tax-rate
+   error. */
+
+.pro-promo {
+  margin-top: var(--space-2);
+}
+
+.pro-promo__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pro-promo__input {
+  flex: 1;
+  min-width: 0;
+  --background: var(--color-bg-muted);
+  --color: var(--color-text-primary);
+  --placeholder-color: var(--color-text-tertiary);
+  --padding-start: var(--space-3);
+  --padding-end: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pro-promo__button {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.pro-promo__error {
+  margin: var(--space-2) var(--space-1) 0;
+  font-size: var(--text-sm, 13px);
+  color: var(--color-error);
+}
