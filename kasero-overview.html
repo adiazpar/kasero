@@ -213,14 +213,14 @@
       </div>
       <div class="cell">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18M5 7h9a3 3 0 010 6H7a3 3 0 000 6h10"/></svg>
-        <h3>Expenses</h3><p>Log costs against categories and see the month's spend at a glance, in the business's own currency.</p>
+        <h3>Expenses</h3><p>Log costs against categories — or photograph the supplier receipt and let AI prefill the entry. The month's spend at a glance, in the business's own currency.</p>
       </div>
       <div class="cell">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0113 0M16 5.5a3 3 0 010 5.8M15 20a6.5 6.5 0 016.5-.5"/></svg>
         <h3>Team &amp; ownership</h3><p>Invite partners and employees with role-based access — and hand over the whole business with an atomic ownership transfer.</p>
       </div>
     </div>
-    <p class="note reveal">Installable as a PWA, it keeps working when the venue Wi-Fi drops — the thing a market stall actually needs at the worst possible moment.</p>
+    <p class="note reveal">Installable as a PWA, it keeps working when the venue Wi-Fi drops — the thing a market stall actually needs at the worst possible moment. It now also ships as a Capacitor-wrapped iOS and Android app: branded icons and splash screens generated from the K-mark masters, a marketing landing page, and the privacy and account-deletion pages the stores require — only the store accounts stand between it and the App Store. A recent pass quieted the chrome too: self-hosted fonts, a one-step-smaller type scale with the serif reserved for brand moments, and a motion system gated behind <code>prefers-reduced-motion</code>.</p>
   </div>
 </section>
 
@@ -249,7 +249,7 @@
           </div>
           <div class="node">
             <div class="lbl">apps/api</div><h3>Next.js (API-only)</h3>
-            <p>54 route handlers. Auth, validation, rate limiting, realtime.</p>
+            <p>63 route handlers. Auth, validation, rate limiting, realtime.</p>
           </div>
           <div class="node" style="display:flex;flex-direction:column;justify-content:center">
             <div class="lbl">data</div><h3>SQLite → Turso</h3>
@@ -279,7 +279,7 @@
     <div class="twocol">
       <div>
         <h2 class="reveal">The load-bearing beams.</h2>
-        <p class="reveal d1 muted">Built this session, a knowledge graph of the codebase (490 files, ~8,000 nodes) ranks every symbol by how connected it is. The most-connected nodes are the ones you touch and the whole app feels it — a handful of hooks and helpers that everything else leans on. They aren't an accident; they're the deliberate seams the product is organized around.</p>
+        <p class="reveal d1 muted">A knowledge graph of the codebase (490 files, ~8,000 nodes at the June snapshot) ranks every symbol by how connected it is. The most-connected nodes are the ones you touch and the whole app feels it — a handful of hooks and helpers that everything else leans on. They aren't an accident; they're the deliberate seams the product is organized around.</p>
         <p class="reveal d2 muted">Two of them — the API envelope (<code>errorResponse</code> / <code>successResponse</code>) and its <code>ApiMessageCode</code> vocabulary — show up below. Every route speaks them, which is what makes the next section's disciplines possible at all.</p>
       </div>
       <div>
@@ -295,7 +295,7 @@
           <div class="bar" style="--w:58%"><div class="nm">ModalShell<span>()</span></div><div class="track"><div class="fill"></div></div><div class="dg">40</div></div>
           <div class="bar" style="--w:55%"><div class="nm">validationError<span>()</span></div><div class="track"><div class="fill"></div></div><div class="dg">38</div></div>
         </div>
-        <p style="font-family:var(--mono);font-size:11px;color:var(--ink-4);margin-top:12px">node degree — graph built with graphify, this session</p>
+        <p style="font-family:var(--mono);font-size:11px;color:var(--ink-4);margin-top:12px">node degree — graph built with graphify, 2026-06-08 snapshot</p>
       </div>
     </div>
 
@@ -472,27 +472,109 @@
   </div>
 </section>
 
+<!-- ============ PAYING ITS WAY ============ -->
+<section id="pro">
+  <div class="wrap">
+    <div class="eyebrow reveal">06 — Paying its way</div>
+    <h2 class="reveal">Free forever, and honest about what costs money.</h2>
+    <p class="lede reveal">The category's deepest wound is the paywall that arrives later — incumbents cap free history at 31 days, gate exports behind add-ons, charge per employee. Kasero's public promise is the opposite: sales history, exports, inventory, barcode, and team roles are never taken away.</p>
+    <p class="reveal" style="max-width:56ch;margin-top:14px;color:var(--ink-2)">The one thing metered is the one thing with real marginal cost: AI volume. Every business gets <strong>100 photo-scans a day free</strong>; <strong>Kasero Pro</strong> raises it to 400, per business, at a reference $7.99/month or $79.99/year — the stores price it regionally. Promo-code redemption works end-to-end today; the App Store and Play billing adapters are a deliberate seam that answers <code>SUBSCRIPTION_NOT_CONFIGURED</code> until store credentials exist, because an unverified receipt is never trusted. The paywall itself is just another <code>ModalShell</code> — the house modal system, no special case.</p>
+
+    <div class="code reveal d1" style="margin-top:26px">
+      <div class="tab"><span class="dots"><i></i><i></i><i></i></span><span class="path">packages/shared/src/entitlements.ts</span></div>
+<pre><span class="k">export function</span> <span class="f">isPro</span>(plan, planExpiresAt, now = <span class="k">new</span> <span class="t">Date</span>()): <span class="t">boolean</span> {
+  <span class="k">if</span> (plan !== <span class="s">'pro'</span>) <span class="k">return false</span>
+  <span class="k">if</span> (planExpiresAt === <span class="k">null</span> || planExpiresAt === <span class="k">undefined</span>) <span class="k">return true</span>
+  <span class="k">const</span> expiry =
+    planExpiresAt <span class="k">instanceof</span> <span class="t">Date</span> ? planExpiresAt : <span class="k">new</span> <span class="t">Date</span>(planExpiresAt)
+  <span class="c">// An unparsable expiry is treated as expired — fail toward free</span>
+  <span class="c">// rather than granting Pro on corrupt data.</span>
+  <span class="k">if</span> (<span class="t">Number</span>.<span class="f">isNaN</span>(expiry.<span class="f">getTime</span>())) <span class="k">return false</span>
+  <span class="k">return</span> expiry.<span class="f">getTime</span>() &gt; now.<span class="f">getTime</span>()
+}</pre>
+    </div>
+    <div class="triad reveal">
+      <div class="decision"><div class="k">Decision</div><p>Plan columns live on the business row; one shared <code>isPro()</code> in <code>packages/shared</code>; entitlements ride the existing access cache.</p></div>
+      <div class="why"><div class="k">Why</div><p>Feature code reading <code>plan === 'pro'</code> directly would keep granting Pro after a grant expires. One helper, one truth, imported by both apps.</p></div>
+      <div class="impact"><div class="k">Impact</div><p>No new query on any hot path — and corrupt expiry data fails toward free, never toward Pro.</p></div>
+    </div>
+
+    <!-- 6.1 Pulse -->
+    <div class="feature reveal">
+      <div class="ftitle"><span class="num">6.1</span><h3>Kasero Pulse — a digest in your language, about their money</h3></div>
+      <p class="muted">Pulse reads the week's sales, expenses, and low-stock aggregates and writes a short owner's digest — headline, sections, watchouts. The trick is the split: the server pre-formats every amount in the <em>business's</em> locale and currency, then gpt-4o-mini writes the prose in the <em>user's</em> UI language — any of the 11. The model never touches a number. Structured JSON contract, hand-validated, exactly one retry on malformed output. Pro feature; free businesses get one full sample a month.</p>
+      <div class="code">
+        <div class="tab"><span class="dots"><i></i><i></i><i></i></span><span class="path">apps/api/src/app/api/businesses/[businessId]/pulse/data.ts</span></div>
+<pre><span class="c">// Every monetary amount is formatted HERE with Intl.NumberFormat using</span>
+<span class="c">// the business locale/currency before it reaches the model — the model</span>
+<span class="c">// must never do arithmetic or number formatting.</span>
+<span class="k">function</span> <span class="f">buildCurrencyFormatter</span>(locale: <span class="t">string</span>, currency: <span class="t">string</span>) {
+  <span class="k">try</span> {
+    <span class="k">const</span> fmt = <span class="k">new</span> <span class="t">Intl.NumberFormat</span>(locale, { style: <span class="s">'currency'</span>, currency })
+    <span class="k">return</span> (value) =&gt; fmt.<span class="f">format</span>(value)
+  } <span class="k">catch</span> {
+    <span class="c">// Corrupt locale/currency on the row must not take the digest down —</span>
+    <span class="c">// fall back to the app defaults.</span>
+    <span class="k">const</span> fmt = <span class="k">new</span> <span class="t">Intl.NumberFormat</span>(<span class="s">'en-US'</span>, { style: <span class="s">'currency'</span>, currency: <span class="s">'USD'</span> })
+    <span class="k">return</span> (value) =&gt; fmt.<span class="f">format</span>(value)
+  }
+}</pre>
+      </div>
+      <div class="triad">
+        <div class="decision"><div class="k">Decision</div><p>The server does the math and the formatting; the model only writes prose — in whichever of the 11 languages the reader speaks.</p></div>
+        <div class="why"><div class="k">Why</div><p>LLMs are unreliable at arithmetic and currency, but prose in eleven languages is nearly free. Split the job along that line.</p></div>
+        <div class="impact"><div class="k">Impact</div><p>A Japanese-speaking accountant reads a digest in Japanese about a Lima stall's soles — every number exact. Competitors' AI speaks two or three languages, behind a hard paywall.</p></div>
+      </div>
+    </div>
+
+    <!-- 6.2 receipt snap -->
+    <div class="feature reveal">
+      <div class="ftitle"><span class="num">6.2</span><h3>Receipt snap-to-expense — the AI types, the operator decides</h3></div>
+      <p class="muted">Photograph a supplier receipt and gpt-4o-mini vision extracts the total, date, merchant, and a category guess, prefilling the expense form. The prompt carries the business locale so a Peruvian receipt's <code>12,50</code> comma decimal and <code>1.250,00</code> thousands parse correctly; the category guess is fuzzy-matched against the business's own expense categories, never invented into them. The result only <em>prefills</em> — the form opens in an editable review state, and nothing saves without the operator. Metered like the other AI features, not hard-gated: it feeds the anti-paywall story, and Pro simply raises the quota.</p>
+      <div class="code">
+        <div class="tab"><span class="dots"><i></i><i></i><i></i></span><span class="path">apps/api/src/app/api/businesses/[businessId]/ai/parse-receipt/route.ts</span></div>
+<pre><span class="c">// From the vision prompt — locale-aware by construction:</span>
+<span class="s">`The business operates with locale ${locale} and currency ${currency}.
+Receipts may be printed in the language and number format of that
+region — for example, some locales write decimals with a comma
+("12,50") and thousands with a dot ("1.250,00"). Interpret amounts
+accordingly.
+...
+- Extract only what is visible. Never invent an amount, date, or
+  merchant.
+- The photo may not be a receipt at all (a menu, a product, a blurry
+  frame). In that case return every field as null.`</span></pre>
+      </div>
+      <div class="triad">
+        <div class="decision"><div class="k">Decision</div><p>The model prefills; the human saves. The response is hand-validated, with the amount as the one hard requirement.</p></div>
+        <div class="why"><div class="k">Why</div><p>A vision model reading a crumpled thermal receipt is a great assistant and a terrible authority.</p></div>
+        <div class="impact"><div class="k">Impact</div><p>An expense entry drops from a minute of squinting to a photo and a glance — and a hallucinated total can never reach the books.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ BY THE NUMBERS ============ -->
 <section id="numbers">
   <div class="wrap">
-    <div class="eyebrow reveal">06 — By the numbers</div>
+    <div class="eyebrow reveal">07 — By the numbers</div>
     <h2 class="reveal">The shape, counted.</h2>
     <div class="stats reveal d1">
       <div class="stat"><div class="v" data-to="3">0</div><div class="l">npm workspaces</div><div class="s">web · api · shared</div></div>
-      <div class="stat"><div class="v" data-to="54">0</div><div class="l">API route handlers</div><div class="s">Next.js, API-only</div></div>
+      <div class="stat"><div class="v" data-to="63">0</div><div class="l">API route handlers</div><div class="s">Next.js, API-only</div></div>
       <div class="stat"><div class="v" data-to="11">0</div><div class="l">languages shipped</div><div class="s">one locale registry</div></div>
-      <div class="stat"><div class="v" data-to="490">0</div><div class="l">source files</div><div class="s">TypeScript, strict</div></div>
+      <div class="stat"><div class="v" data-to="504">0</div><div class="l">source files</div><div class="s">TypeScript, strict</div></div>
       <div class="stat"><div class="v" data-to="7968" data-suffix="">0</div><div class="l">nodes in the code graph</div><div class="s">~8k symbols mapped</div></div>
       <div class="stat"><div class="v" data-to="153">0</div><div class="l">modules detected</div><div class="s">by graph clustering</div></div>
     </div>
-    <p class="note reveal">Counts verified against source this session — the code graph was built with <a href="https://github.com/safishamsi/graphify">graphify</a>; the interactive map lives alongside this file at <code>graphify-out/graph.html</code>.</p>
+    <p class="note reveal">Route and file counts re-verified against source 2026-07-06; the code-graph figures are the 2026-06-08 snapshot, built with <a href="https://github.com/safishamsi/graphify">graphify</a> — the interactive map lives alongside this file at <code>graphify-out/graph.html</code>.</p>
   </div>
 </section>
 
 <!-- ============ CLOSE ============ -->
 <section id="close" class="close">
   <div class="wrap">
-    <div class="eyebrow reveal">07 — In closing</div>
+    <div class="eyebrow reveal">08 — In closing</div>
     <h2 class="reveal">How it's built is the point.</h2>
     <p class="big reveal d1">A market stall doesn't care about your architecture — until the Wi-Fi drops, the currency is wrong, or a session that should be dead is still alive. Kasero is engineered for those moments: <em>offline-first, locale-correct, fail-closed where it counts.</em></p>
     <p class="reveal d2 muted" style="margin-top:26px;max-width:54ch">Distributed teams, transparent process, production-grade software — the same standard, applied to a product real people run their livelihoods on.</p>
@@ -502,7 +584,7 @@
 <footer>
   <div class="wrap">
     <span>Kasero — internal overview</span>
-    <span>Built for a walkthrough · 2026-06-08</span>
+    <span>Built for a walkthrough · 2026-06-08 · revised 2026-07-06</span>
   </div>
 </footer>
 

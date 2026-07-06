@@ -481,7 +481,9 @@ if (rateLimited) return rateLimited
 |--------|-------|--------|----------|
 | `RateLimits.codeValidation` | 10 | 15 min | Invite / transfer code validation (per IP) |
 | `RateLimits.ai` | 20 | 1 min | AI routes, shared per user (wallet protection) |
-| `RateLimits.aiDaily` | 100 | 24 hr | Per-user daily AI ceiling |
+| `RateLimits.aiDaily` | 100 | 24 hr | Per-user daily AI ceiling (free tier) |
+| `RateLimits.aiDailyPro` | 400 | 24 hr | Per-user daily AI ceiling for Pro members (use the distinct `ai-daily-pro:` key prefix) |
+| `RateLimits.promoRedeem` | 5 | 1 hr | Promo-code redemption brute-force guard (fail-closed) |
 | `RateLimits.aiGlobalDaily` | 10_000 | 24 hr | Global AI daily ceiling (cost circuit-breaker) |
 | `RateLimits.heic` | 30 | 1 min | HEIC conversion per user |
 | `RateLimits.transferInitiate` | 5 | 15 min | Enumeration protection on transfer/initiate |
@@ -649,8 +651,16 @@ The `/api/auth/*` surface is owned by better-auth's `[...all]` catch-all route (
 | `/api/businesses/[businessId]` | GET | Read full business record (any member) |
 | `/api/businesses/[businessId]` | PATCH | Update business metadata + logo (manager) |
 | `/api/businesses/[businessId]` | DELETE | Delete a business (owner only) |
-| `/api/businesses/[businessId]/access` | GET | Validate user access to business |
+| `/api/businesses/[businessId]/access` | GET | Validate user access to business (includes `plan`/`planExpiresAt`) |
 | `/api/businesses/[businessId]/leave` | POST | Leave a business (non-owner) |
+
+### Subscription (Kasero Pro)
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/businesses/[businessId]/subscription` | GET | Current plan state `{plan, expiresAt, source}` (any member) |
+| `/api/businesses/[businessId]/subscription/redeem` | POST | Redeem a `PRO_PROMO_CODES` promo code (owner only; `RateLimits.promoRedeem` 5/hr/user, fail-closed; extends expiry when already pro) |
+| `/api/businesses/[businessId]/subscription/verify-purchase` | POST | Grant Pro from a store receipt via the billing adapter seam (`apps/api/src/lib/billing/`); 503 `SUBSCRIPTION_NOT_CONFIGURED` until store credentials are wired |
 
 ### Invite Codes (Global)
 
@@ -684,6 +694,13 @@ All AI and HEIC routes require authentication (`withAuth` wrapper) and share a p
 | `/api/ai/generate-icon` | POST | Generate emoji icon from image (`RateLimits.ai`) |
 | `/api/ai/remove-background` | POST | Remove image background (`RateLimits.ai`) |
 | `/api/convert-heic` | POST | Convert HEIC to JPEG (`RateLimits.heic`, 30/min/user) |
+
+Business-scoped AI surfaces (under `/api/businesses/[businessId]/`, `withBusinessAuth` so the entitlement tier is resolvable). The per-user daily bucket is tier-selected: Pro (via `isPro(access.plan, access.planExpiresAt)`) uses `RateLimits.aiDailyPro` under the distinct `ai-daily-pro:` key prefix; free uses `RateLimits.aiDaily` under `ai-daily:`. Both share the `ai:` per-minute and `ai-global:` daily layers with the routes above.
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/ai/parse-receipt` | POST | Extract `{amount, date, merchant, note, categoryName}` from a receipt photo (gpt-4o-mini vision; prefills the add-expense form — never writes) |
+| `/pulse` | POST | Kasero Pulse AI digest (any member). Pro: within AI quota; free: 1 sample per calendar month via `RateLimits.pulseFreeSample` on `pulse-free:{businessId}:{YYYY-MM}`, then 403 `PULSE_FREE_LIMIT_REACHED` |
 
 ---
 

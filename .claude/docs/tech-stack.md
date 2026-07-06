@@ -456,7 +456,7 @@ Schema defined in `packages/shared/src/db/schema.ts`. Both apps import row types
 
 | Table | Description |
 |-------|-------------|
-| `businesses` | Business entities (includes product settings + `nextSaleNumber`, `nextProductNumber`, `nextExpenseNumber` monotonic counters inline) |
+| `businesses` | Business entities (includes product settings + `nextSaleNumber`, `nextProductNumber`, `nextExpenseNumber` monotonic counters inline; tax settings `taxRate`/`taxMode`; Kasero Pro tier `plan`/`planExpiresAt`/`planSource` — entitlement checks go through `isPro()` in `packages/shared/src/entitlements.ts`) |
 | `users` | User accounts (id, email, name, avatar, language, `emailVerified`, `emailVerifiedAt`, `phoneNumber`, `phoneNumberVerified`, `createdAt`, `updatedAt`). Identity-only: no credential material on this row. |
 | `session` | better-auth session rows (id, token, userId, expiresAt, ipAddress, userAgent, createdAt, updatedAt). Cookie is an opaque token referencing this row. |
 | `account` | better-auth account rows — one row per linked sign-in method. For passwordless email sign-in the row pairs the user with `providerId='credential'` (no password column — auth is fully passwordless); for OAuth the row stores `providerId='google'` or `providerId='apple'` plus the access/refresh tokens. |

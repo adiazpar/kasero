@@ -1,6 +1,6 @@
 # Kasero — Owner Action Guide (what you need to do on your end)
 
-Date: 2026-07-02. This is your checklist for everything that requires **your** hands — accounts, secrets, Apple/Google tooling, device builds, and the go-to-market. All code changes from this session are on the `main` working tree, **not committed** (see §0). Sibling docs: `2026-07-02-app-store-launch-plan.md` (strategy/positioning/monetization) and `.claude/docs/capacitor-native.md` (native architecture reference).
+Date: 2026-07-02. **Updated 2026-07-06 — §0 is done (that work is committed); see §9 for the new session's owner items (monetization, landing page, native assets).** This is your checklist for everything that requires **your** hands — accounts, secrets, Apple/Google tooling, device builds, and the go-to-market. All code changes from this session are on the `main` working tree, **not committed** (see §0). Sibling docs: `2026-07-02-app-store-launch-plan.md` (strategy/positioning/monetization) and `.claude/docs/capacitor-native.md` (native architecture reference).
 
 ---
 
@@ -126,3 +126,42 @@ The automated suite (530 tests), a high-effort multi-agent code review (all conf
 - **Native**: Capacitor 8 iOS+Android, configurable API origin, bearer-token native auth with **PKCE-bound** OAuth + **single-use SSE tickets** (no credentials in URLs/logs), distinctive WebView host, SW gated off native.
 - **Compliance**: static-OTP reviewer account, Apple token revocation on account deletion.
 - **Review fixes**: duplicate-line oversell guard, client/server rounding unified in a shared `computeSubtotal`, locale-decimal input parsing, modal-reset-on-onClose, shared origin/stock-delta helpers, cart-reset race fixed, comped ($0) sales allowed, a 44px touch target, and the app-wide React `key` warning on rich-text i18n eliminated (42 sites).
+
+---
+
+## 9. Addendum — 2026-07-06 session (monetization + UI overhaul + launch-prep execution)
+
+What landed: Kasero Pro (per-business subscription: schema, entitlements, promo-code redemption, paywall modal, store-billing adapter seam), AI receipt snap-to-expense, Kasero Pulse (localized AI digest), typography overhaul (self-hosted fonts, smaller/cleaner scale), app-wide motion pass, marketing/compliance pages, branded native icons + splash. Full detail in `.claude/docs/plans/2026-07-06-monetization-ui-overhaul-plan.md` and `POSTMORTEM.md` ("Reopened" chapter).
+
+### 9.1 New environment variables (add to Bitwarden notes in the same session you set them)
+
+| Var | Where | Purpose |
+|---|---|---|
+| `PRO_PROMO_CODES` | `apps/api/.env.local` + Vercel | Promo grants, format `CODE:months,CODE2:months` (e.g. `LAUNCHCREW:12`). These are marketing/beta grants — never sell codes outside the stores (Apple 3.1.1). Unset = redemption disabled (returns invalid-code). |
+| `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID`, `APPLE_IAP_PRIVATE_KEY`, `APPLE_IAP_BUNDLE_ID` | api env | App Store Server API for receipt verification — wire when IAP products exist. Until then verify-purchase answers 503 by design. |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `GOOGLE_PLAY_PACKAGE_NAME` | api env | Play Developer API equivalent. |
+
+### 9.2 Monetization go-live steps (store side — only you can do these)
+
+1. After Apple/Play enrollment, create the subscription products (suggested ids `pro_monthly`, `pro_annual`; reference $7.99/$79.99, set regional prices per the strategy doc — LatAm/SEA roughly half US).
+2. Enroll the **App Store Small Business Program** (15% rate) once the account exists.
+3. Wire receipt verification: TODO(owner) steps are written in `apps/api/src/lib/billing/apple.ts` and `google.ts`; native purchase flow TODO in `apps/web/src/lib/billing/index.ts` (RevenueCat is the low-effort path; StoreKit 2 + Play Billing direct is the no-dependency path).
+4. Until then, monetization still works via promo codes (owner-granted Pro) — the paywall's purchase button correctly shows a "coming to the stores" state.
+
+### 9.3 Landing/compliance pages — placeholders you must replace
+
+All under `apps/api/public/` (served at the deployment root; assumed domain `kasero.app` — fix canonical/og URLs in both welcome pages if different):
+
+1. `.well-known/apple-app-site-association`: replace `TEAMID` with your Apple Team ID (both `appIDs` and `webcredentials`).
+2. `.well-known/assetlinks.json`: replace `REPLACE_WITH_RELEASE_KEYSTORE_SHA256` with the release-cert SHA-256 (from Play Console → App signing if using Play App Signing).
+3. `welcome/index.html` + `welcome/es/index.html`: store badge links carry `href="#"` + `data-todo` — swap in real product URLs post-approval; an `apple-itunes-app` Smart App Banner meta is present as a comment (needs the numeric app id).
+4. `legal/privacy.html`: confirm `support@kasero.app` mailbox exists; have counsel review before submission.
+5. Google Play data-safety form: the public deletion URL is `https://<domain>/legal/delete-account.html`.
+
+### 9.4 Native assets — done, one manual step left
+
+Branded icons + splash (light/dark) are generated for both platforms from `apps/web/assets/` masters (`npx @capacitor/assets generate` — rerun after any logo change). Remaining: your signing team in Xcode and the Android release keystore (§3 above still applies).
+
+### 9.5 Database
+
+New additive columns this session: `businesses.plan`, `businesses.plan_expires_at`, `businesses.plan_source` (defaults `'free'`/null/`'none'`). Local dev is pushed. `npm run db:push:prod --workspace=apps/api` covers these plus the 07-02 tax/void columns in one pass (status recorded in the session postmortem — if it ran, this is done; verify with `db:studio`).

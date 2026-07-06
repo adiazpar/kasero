@@ -20,6 +20,7 @@
 | Sales / sessions | sales (POST), sales/[id]/void (POST), sales-sessions/{open,close} | `sales`, `sales-sessions` | `sale`, `sales-session` |
 | Inventory adjustments | products/[id]/stock (PATCH) | `inventory-adjustments` | — |
 | Expenses | expenses (POST/PATCH/DELETE), expense-categories (POST/PATCH/DELETE) | `expenses`, `expense-categories` | `expense`, `expense-category` |
+| Subscription (Kasero Pro) | businesses/[id]/subscription/redeem (POST), subscription/verify-purchase (POST) — both publish `business.updated fields:['plan']`, no new event type | `business` (also refreshes `useSubscription` via the same key) | — |
 
 ### Detail modals wired with `useDismissOnDelete` / `useResyncOnUpdate`
 
