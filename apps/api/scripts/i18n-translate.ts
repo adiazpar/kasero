@@ -70,7 +70,7 @@ function parseArgs(argv: string[]): Args {
     only: null,
     force: false,
     batchSize: 50,
-    model: 'claude-sonnet-4-5',
+    model: 'claude-opus-4-8',
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -118,7 +118,7 @@ Flags:
   --only <namespace>   Translate only one top-level namespace (e.g. "orders")
   --force              Retranslate every key, overwriting existing translations
   --batch-size <n>     Keys per API request (default: 50)
-  --model <id>         Model override (default: claude-sonnet-4-5)
+  --model <id>         Model override (default: claude-opus-4-8)
   --help, -h           Show this message
 `)
 }
@@ -325,13 +325,26 @@ async function translateBatch(
   const userContent = JSON.stringify(batch, null, 2)
   const batchKeys = Object.keys(batch)
 
+  // Structured outputs replace the old assistant-turn `{` prefill, which
+  // current models (Opus 4.6+, Sonnet 4.6/5) reject with a 400. The
+  // schema is built per batch: every source key is a required string
+  // property, so the API guarantees a complete, valid JSON object.
+  const outputSchema = {
+    type: 'object' as const,
+    properties: Object.fromEntries(
+      batchKeys.map((k) => [k, { type: 'string' as const }]),
+    ),
+    required: batchKeys,
+    additionalProperties: false as const,
+  }
+
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await anthropic.messages.create({
         model,
-        max_tokens: 4096,
+        max_tokens: 16000,
         system: [
           {
             type: 'text',
@@ -339,16 +352,10 @@ async function translateBatch(
             cache_control: { type: 'ephemeral' },
           },
         ],
-        messages: [
-          { role: 'user', content: userContent },
-          // Prefill the assistant turn with `{` so the model is forced
-          // to continue with JSON content rather than a prose preamble
-          // ("Here is the translation:", "Sure! ..."). The response
-          // text picks up AFTER the prefill, so we re-add the leading
-          // `{` before parsing. This is Anthropic's recommended
-          // technique for constraining responses to structured JSON.
-          { role: 'assistant', content: '{' },
-        ],
+        output_config: {
+          format: { type: 'json_schema', schema: outputSchema },
+        },
+        messages: [{ role: 'user', content: userContent }],
       })
 
       const firstBlock = response.content[0]
@@ -356,7 +363,9 @@ async function translateBatch(
         throw new Error('Unexpected response: no text block')
       }
 
-      const parsed = extractJsonFromResponse('{' + firstBlock.text)
+      // With structured outputs the text block is guaranteed JSON, but
+      // keep the tolerant extractor as a safety net for edge cases.
+      const parsed = extractJsonFromResponse(firstBlock.text)
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
         throw new Error('Response is not a JSON object')
       }

@@ -5,14 +5,16 @@ A multi-business management system for small businesses. Built for speed, simpli
 ## Features
 
 - **Multi-Business** - Manage multiple businesses from one account
-- **Product Catalog** - AI-powered product icons, categories, stock tracking, barcode scanning and generation
-- **Inventory** - Track stock levels and supplier orders
-- **Sales Register** - Open/close sales sessions, ring up sales, daily aggregates
-- **Team Management** - Invite partners/employees with role-based access
-- **Ownership Transfer** - Transfer business ownership to another user
+- **Product Catalog** - AI snap-to-add (photo to product), AI-generated icons, categories, stock tracking, barcode scanning and generation
+- **Sales Register** - Open/close sessions with cash reconciliation, cart discounts, per-business tax, sale voiding with stock restoration, shareable receipts
+- **Expenses** - Expense tracking with AI receipt capture (photograph a receipt to prefill the entry)
+- **Kasero Pulse** - AI digest of weekly sales/expenses/stock, written in the user's language with amounts in the business locale
+- **Kasero Pro** - Per-business subscription (higher AI quota, Pulse); promo-code redemption live, store billing adapter awaiting App Store / Play products
+- **Team Management** - Invite partners/employees with role-based access, ownership transfer
+- **Realtime** - Multi-device sync over SSE (sales, products, team, plan changes)
 - **Passwordless Auth** - Email one-time-code plus Google and Apple sign-in (better-auth, database-backed sessions)
-- **PWA** - Works offline, installable on mobile
-- **i18n** - 11 languages (de, en-US, es, fil, fr, it, ja, ko, pt, vi, zh) driven by a single locale registry
+- **PWA + Native** - Works offline, installable on mobile; Capacitor iOS/Android apps with bearer auth (`apps/web/ios`, `apps/web/android`)
+- **i18n** - 11 languages (de, en-US, es, fil, fr, it, ja, ko, pt, vi, zh) driven by a single locale registry; self-hosted fonts
 
 ## Tech Stack
 
@@ -75,8 +77,9 @@ Production only:
 - `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`
 
 Optional:
-- `OPENAI_API_KEY`, `FAL_KEY` — AI features
+- `OPENAI_API_KEY`, `FAL_KEY` — AI features (snap-to-add, receipt capture, Pulse)
 - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` — distributed rate limiting in prod
+- `PRO_PROMO_CODES` — Kasero Pro promo grants, `CODE:months` comma-separated
 - `ANTHROPIC_API_KEY` — used by `npm run i18n:translate --workspace=apps/api` (dev-only)
 
 Local dev uses `apps/api/data/local.db` automatically — no Turso CLI or account needed.
@@ -86,8 +89,8 @@ Local dev uses `apps/api/data/local.db` automatically — no Turso CLI or accoun
 ```
 kasero/
 ├── apps/
-│   ├── api/        # Next.js (API-only); 54 routes; serves SPA from public/ in prod
-│   └── web/        # Vite SPA (Ionic React Router shell)
+│   ├── api/        # Next.js (API-only); 63 routes; serves SPA + marketing/compliance pages from public/ in prod
+│   └── web/        # Vite SPA (Ionic React Router shell) + Capacitor iOS/Android projects
 └── packages/
     └── shared/     # Drizzle schema, types, ApiMessageCode, locale registry,
                     # business-role helpers, barcode utilities, sales helpers
