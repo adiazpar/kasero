@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.kasero.app"],
+        "components": [
+          { "/": "/join/*" },
+          { "/": "/r/*" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.kasero.app"]
+  }
+}

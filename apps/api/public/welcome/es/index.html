@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kasero — Maneja todos tus negocios desde una sola app</title>
+<meta name="description" content="Kasero es una app gratuita de punto de venta e inventario para pequeños negocios. Cambia entre todos tus negocios con una sola cuenta, agrega productos con una foto usando IA, y conserva tu historial de ventas para siempre — las exportaciones nunca se cobran.">
+<link rel="canonical" href="https://kasero.app/welcome/es/">
+<link rel="alternate" hreflang="en" href="https://kasero.app/welcome/">
+<link rel="alternate" hreflang="es" href="https://kasero.app/welcome/es/">
+<link rel="alternate" hreflang="x-default" href="https://kasero.app/welcome/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Kasero">
+<meta property="og:title" content="Kasero — Maneja todos tus negocios desde una sola app">
+<meta property="og:description" content="Punto de venta e inventario gratis para pequeños negocios: varios negocios en una cuenta, productos desde una foto con IA, escáner de código de barras, roles de equipo. Tu historial de ventas y tus exportaciones nunca te serán quitados.">
+<meta property="og:url" content="https://kasero.app/welcome/es/">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary">
+<!-- TODO tras la aprobacion en el App Store: agregar Smart App Banner
+     <meta name="apple-itunes-app" content="app-id=APP_STORE_ID"> -->
+<style>
+  :root {
+    --paper: #F6EFDF;
+    --paper-warm: #F2EAD6;
+    --paper-deep: #ECE2C9;
+    --surface: #FFFCF5;
+    --ink: #1B1815;
+    --ink-2: #514B40;
+    --ink-3: #8B8475;
+    --hair: #DCD2BB;
+    --brand: #B5471F;
+    --brand-hover: #98381A;
+    --brand-subtle: #F7E5DA;
+    --moss: #4F6B36;
+    --saffron: #C8881C;
+    --indigo: #2C334D;
+    --radius: 14px;
+    --shadow: 0 1px 0 rgba(27, 24, 21, 0.04), 0 8px 28px -16px rgba(91, 67, 40, 0.18);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  header.hero {
+    text-align: center;
+    padding: 64px 0 48px;
+    border-bottom: 1px solid var(--hair);
+    background: linear-gradient(var(--paper-warm), var(--paper));
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 22px; letter-spacing: 0.02em;
+    color: var(--brand); margin-bottom: 28px;
+  }
+  .logo svg { display: block; }
+  h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(2rem, 7vw, 3.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .hero p.sub {
+    font-size: 18px; color: var(--ink-2);
+    max-width: 34em; margin: 0 auto 32px;
+  }
+  .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--ink); color: var(--paper);
+    text-decoration: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 15px; font-weight: 600;
+  }
+  .badge small { display: block; font-weight: 400; font-size: 11px; opacity: 0.8; }
+  .badge span { text-align: left; line-height: 1.25; }
+  .badge:hover { background: #3a352e; }
+  main section { padding: 48px 0; }
+  h2 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.5rem, 4.5vw, 2rem);
+    margin-bottom: 24px; text-align: center;
+  }
+  .pillars { display: grid; gap: 16px; }
+  @media (min-width: 640px) { .pillars { grid-template-columns: 1fr 1fr; } }
+  .pillar {
+    background: var(--surface); border: 1px solid var(--hair);
+    border-radius: var(--radius); padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .pillar .icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--brand-subtle); margin-bottom: 14px;
+  }
+  .pillar h3 { font-size: 17px; margin-bottom: 8px; }
+  .pillar p { font-size: 15px; color: var(--ink-2); }
+  .pillar .promise {
+    display: block; margin-top: 10px; font-weight: 600;
+    color: var(--moss); font-size: 15px;
+  }
+  .faq details {
+    background: var(--surface); border: 1px solid var(--hair);
+    border-radius: var(--radius); margin-bottom: 12px;
+    padding: 16px 20px;
+  }
+  .faq summary { font-weight: 600; cursor: pointer; font-size: 16px; }
+  .faq details p { margin-top: 10px; color: var(--ink-2); font-size: 15px; }
+  footer {
+    border-top: 1px solid var(--hair);
+    background: var(--paper-deep);
+    padding: 32px 0; text-align: center;
+    font-size: 14px; color: var(--ink-3);
+  }
+  footer a { color: var(--ink-2); text-decoration: underline; }
+  footer nav { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="26" height="26" rx="7" fill="#B5471F"/>
+        <path d="M9 7v14M9 14l4.5-5.5M9 14l5 7" stroke="#F6EFDF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="19.5" cy="9" r="2" fill="#F6EFDF"/>
+      </svg>
+      Kasero
+    </div>
+    <h1>Maneja todos tus negocios desde una sola app</h1>
+    <p class="sub">Punto de venta e inventario gratis para vendedores de comida, artesanos y tiendas pequeñas. Registra ventas en segundos, escanea códigos de barras, agrega productos con una foto usando IA — y cambia entre todos tus negocios sin cerrar sesión. Funciona sin conexión, en 11 idiomas.</p>
+    <div class="badges">
+      <a class="badge" href="#" data-todo="Reemplazar con la URL de la pagina de producto del App Store tras la aprobacion" aria-label="Descargar en el App Store">
+        <svg width="20" height="24" viewBox="0 0 20 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.7c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2-1.6-.2-3.1 1-3.9 1-.8 0-2.1-1-3.4-1-1.8 0-3.4 1-4.3 2.6-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.8 3.4-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.8-1.1-2.8-4.2zM13.7 4.6c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.2-.6 3-1.5z"/></svg>
+        <span><small>Descárgala en el</small>App Store</span>
+      </a>
+      <a class="badge" href="#" data-todo="Reemplazar con la URL de la pagina de producto de Google Play tras la aprobacion" aria-label="Disponible en Google Play">
+        <svg width="20" height="22" viewBox="0 0 20 22" fill="currentColor" aria-hidden="true"><path d="M1.5.9C1.2 1.2 1 1.7 1 2.3v17.4c0 .6.2 1.1.5 1.4l.1.1 9.7-9.7v-.2L1.6.8l-.1.1zM14.6 14.8l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zM11.3 11.4l3.3 3.4-9.9 5.6c-.4.2-.7.2-1 0l7.6-9zM11.3 10.5l-7.6-9c.3-.2.6-.2 1 0l9.9 5.6-3.3 3.4z"/></svg>
+        <span><small>Disponible en</small>Google Play</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="wrap">
+      <h2>Hecha para quienes manejan más de un negocio</h2>
+      <div class="pillars">
+        <article class="pillar">
+          <div class="icon">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="2" stroke="#B5471F" stroke-width="1.8"/><rect x="12" y="2" width="8" height="8" rx="2" stroke="#B5471F" stroke-width="1.8"/><rect x="2" y="12" width="8" height="8" rx="2" stroke="#B5471F" stroke-width="1.8"/><rect x="12" y="12" width="8" height="8" rx="2" stroke="#B5471F" stroke-width="1.8"/></svg>
+          </div>
+          <h3>Todos tus negocios, una sola cuenta</h3>
+          <p>El puesto del mercado, la panadería de fin de semana, la tienda en línea — manéjalos todos desde un solo lugar y cambia con un toque. Sin cerrar sesión, sin cuentas separadas.</p>
+        </article>
+        <article class="pillar">
+          <div class="icon">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M3 8V6a3 3 0 0 1 3-3h2M14 3h2a3 3 0 0 1 3 3v2M19 14v2a3 3 0 0 1-3 3h-2M8 19H6a3 3 0 0 1-3-3v-2" stroke="#B5471F" stroke-width="1.8" stroke-linecap="round"/><circle cx="11" cy="11" r="3" stroke="#B5471F" stroke-width="1.8"/></svg>
+          </div>
+          <h3>Toma una foto y listo: producto creado</h3>
+          <p>Apunta la cámara a un producto y la IA completa el nombre, la categoría y los detalles por ti. Registra un estante entero en minutos — sin teclear, sin pagar extra.</p>
+        </article>
+        <article class="pillar">
+          <div class="icon">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 3v16M8 3v16M12 3v16M15 3v16M18 3v16" stroke="#B5471F" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/></svg>
+          </div>
+          <h3>Tus datos son tuyos. Siempre.</h3>
+          <p>Otras apps te atraen con lo gratis y luego encierran tu propio historial de ventas detrás de una suscripción. Nosotros no. Inventario, escáner de código de barras, roles de equipo y exportación completa en CSV son gratis.</p>
+          <strong class="promise">Tu historial de ventas y tus exportaciones nunca te serán quitados.</strong>
+        </article>
+        <article class="pillar">
+          <div class="icon">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M11 2 3.5 5.5v5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5v-5L11 2z" stroke="#B5471F" stroke-width="1.8" stroke-linejoin="round"/><path d="M7.8 11l2.3 2.3 4.1-4.1" stroke="#B5471F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3>Tu dinero nunca pasa por nosotros</h3>
+          <p>Kasero registra tus ventas — nunca procesa tus pagos. Sin fondos congelados, sin retenciones, sin comisión por cada transacción. Efectivo, tarjeta o transferencia: tú mantienes el control.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <div class="wrap">
+      <h2>Preguntas frecuentes</h2>
+      <details>
+        <summary>¿Kasero es realmente gratis?</summary>
+        <p>Sí. El registro de ventas, el inventario, el escáner de código de barras, los roles de equipo y la exportación de datos son gratis. Si algún día agregamos planes de pago, nada de lo que hoy es gratis te será quitado — esa es nuestra promesa pública.</p>
+      </details>
+      <details>
+        <summary>¿Puedo manejar más de un negocio?</summary>
+        <p>Sí — para eso está hecha Kasero. Crea todos los negocios que manejes bajo una sola cuenta y cambia entre ellos al instante, cada uno con sus propios productos, ventas, equipo y moneda.</p>
+      </details>
+      <details>
+        <summary>¿Funciona sin conexión?</summary>
+        <p>Sí. Kasero está diseñada para funcionar primero sin conexión: sigue vendiendo sin señal en el mercado o en la calle, y todo se sincroniza cuando vuelves a tener internet.</p>
+      </details>
+      <details>
+        <summary>¿Kasero procesa pagos?</summary>
+        <p>No. Kasero registra las ventas con el método de pago que tú aceptes, pero tu dinero nunca pasa por nosotros. No hay comisiones de procesamiento ni riesgo de fondos congelados.</p>
+      </details>
+      <details>
+        <summary>¿Qué idiomas soporta Kasero?</summary>
+        <p>Once: español, inglés, portugués, filipino, vietnamita, francés, alemán, italiano, japonés, coreano y chino. Además, cada negocio configura su propia moneda y formato de números.</p>
+      </details>
+      <details>
+        <summary>¿Puedo exportar mis datos?</summary>
+        <p>Siempre. Puedes exportar tu historial de ventas, tus gastos y tu inventario en cualquier momento, y esto nunca quedará detrás de un plan de pago.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <nav>
+      <a href="/legal/privacy.html">Política de Privacidad</a>
+      <a href="/legal/delete-account.html">Eliminar tu cuenta</a>
+      <a href="/welcome/">English</a>
+    </nav>
+    <p>Kasero — punto de venta e inventario para pequeños negocios.</p>
+  </div>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "es",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "¿Kasero es realmente gratis?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. El registro de ventas, el inventario, el escáner de código de barras, los roles de equipo y la exportación de datos son gratis. Si algún día agregamos planes de pago, nada de lo que hoy es gratis te será quitado — esa es nuestra promesa pública."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo manejar más de un negocio?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí — para eso está hecha Kasero. Crea todos los negocios que manejes bajo una sola cuenta y cambia entre ellos al instante, cada uno con sus propios productos, ventas, equipo y moneda."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Funciona sin conexión?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Kasero está diseñada para funcionar primero sin conexión: sigue vendiendo sin señal en el mercado o en la calle, y todo se sincroniza cuando vuelves a tener internet."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Kasero procesa pagos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Kasero registra las ventas con el método de pago que tú aceptes, pero tu dinero nunca pasa por nosotros. No hay comisiones de procesamiento ni riesgo de fondos congelados."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué idiomas soporta Kasero?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Once: español, inglés, portugués, filipino, vietnamita, francés, alemán, italiano, japonés, coreano y chino. Además, cada negocio configura su propia moneda y formato de números."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo exportar mis datos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Siempre. Puedes exportar tu historial de ventas, tus gastos y tu inventario en cualquier momento, y esto nunca quedará detrás de un plan de pago."
+      }
+    }
+  ]
+}
+</script>
+
+</body>
+</html>

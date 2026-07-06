@@ -131,15 +131,13 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline'",
-              // fonts.googleapis.com hosts the Fraunces/Geist/JetBrains
-              // Mono stylesheet linked from index.html.
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              // Fonts are self-hosted (Fontsource variable builds bundled
+              // by Vite) — no Google Fonts origins needed anymore.
+              "style-src 'self' 'unsafe-inline'",
               // lh3.googleusercontent.com hosts Google OAuth profile
               // pictures attached via better-auth account linking.
               "img-src 'self' data: blob: https://lh3.googleusercontent.com",
-              // fonts.gstatic.com serves the .woff2 files referenced by
-              // the Google Fonts stylesheet above.
-              "font-src 'self' data: https://fonts.gstatic.com",
+              "font-src 'self' data:",
               "connect-src 'self'",
               "frame-ancestors 'none'",
               "base-uri 'none'",
@@ -150,6 +148,19 @@ const nextConfig = {
               // layer. Re-add this directive if/when this header is
               // flipped from -Report-Only to enforcing.
             ].join('; '),
+          },
+        ],
+      },
+      {
+        // apple-app-site-association has no file extension, so it would
+        // otherwise be served as application/octet-stream. Apple's CDN
+        // tolerates that in practice, but application/json is the
+        // documented requirement for Universal Links validation.
+        source: '/.well-known/apple-app-site-association',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/json',
           },
         ],
       },
