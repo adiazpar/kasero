@@ -2,6 +2,17 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
 
+// 0. Self-hosted fonts (Fontsource variable builds). Registered as
+//    'Fraunces Variable' / 'Geist Variable' / 'JetBrains Mono Variable';
+//    base.css font tokens reference those names. Self-hosting keeps the
+//    CSP free of Google Fonts origins, works offline, and ships inside
+//    the native bundle. Fraunces needs the `full` build for the SOFT
+//    axis used by headings; italic covers rich-text <em> chunks.
+import '@fontsource-variable/fraunces/full.css'
+import '@fontsource-variable/fraunces/full-italic.css'
+import '@fontsource-variable/geist/index.css'
+import '@fontsource-variable/jetbrains-mono/index.css'
+
 // Order matters:
 // 1. Ionic core CSS (resets, structure, typography utilities) FIRST so the
 //    brand layer can override Ionic defaults via --ion-* variables.
@@ -35,6 +46,7 @@ import './styles/app.css'
 import './styles/account-modals.css'
 import './styles/hub-modals.css'
 import './styles/manage-modals.css'
+import './styles/manage-modal-pro.css'
 import './styles/sales-tab.css'
 import './styles/expenses-tab.css'
 import './styles/inventory-tab.css'
@@ -43,6 +55,7 @@ import './styles/sales-modal-close.css'
 import './styles/sales-modal-history.css'
 import './styles/sales-modal-cart.css'
 import './styles/home-tab.css'
+import './styles/home-pulse.css'
 import './styles/price-keypad.css'
 import './styles/products-tab.css'
 import './styles/products-modal-add-edit.css'

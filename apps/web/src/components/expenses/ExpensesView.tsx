@@ -70,7 +70,7 @@ export function ExpensesView() {
           </button>
         </div>
       ) : (
-        <div className="expenses-list-card">
+        <div className="expenses-list-card stagger-children">
           {expenses.map((expense) => (
             <ExpenseListItem
               key={expense.id}

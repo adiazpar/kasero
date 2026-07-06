@@ -4,6 +4,7 @@ import { useIntl } from 'react-intl'
 import { useMemo } from 'react'
 import { useBusiness } from '@/contexts/business-context'
 import { useBusinessFormat } from '@/hooks/useBusinessFormat'
+import { useCountUp } from '@/hooks/useCountUp'
 
 interface RevenueCardProps {
   isLoading: boolean
@@ -15,6 +16,11 @@ export function RevenueCard({ isLoading, amount, vsYesterdayPct }: RevenueCardPr
   const intl = useIntl()
   const { business } = useBusiness()
   const { formatCurrency } = useBusinessFormat()
+
+  // Count-up on the hero number: first load rises from zero, later
+  // updates (refresh, realtime) tick from the displayed value. Null
+  // while loading so the skeleton owns the empty state.
+  const animatedAmount = useCountUp(isLoading ? null : amount)
 
   // Mono date stamp in the eyebrow row — mirrors the Sales stats card
   // ("TODAY · MAY 12"). Uses the business locale so the calendar
@@ -42,10 +48,10 @@ export function RevenueCard({ isLoading, amount, vsYesterdayPct }: RevenueCardPr
           <DeltaChip percent={vsYesterdayPct} />
         ) : null}
       </div>
-      {isLoading || amount === null ? (
+      {isLoading || animatedAmount === null ? (
         <div className="home-revenue__skeleton" aria-hidden="true" />
       ) : (
-        <p className="home-revenue__amount">{formatCurrency(amount)}</p>
+        <p className="home-revenue__amount">{formatCurrency(animatedAmount)}</p>
       )}
     </div>
   )

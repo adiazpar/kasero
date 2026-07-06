@@ -67,3 +67,55 @@
 
 
 
+
+/* ===== Motion primitives — native-feel pass ===== */
+
+/* Press feedback for custom tappable surfaces that lack their own
+   :active treatment. Pair with -webkit-tap-highlight-color: transparent
+   on the consumer. */
+.pressable {
+  transition:
+    transform var(--duration-instant) ease-out,
+    opacity var(--duration-instant) ease-out;
+}
+
+.pressable:active {
+  transform: scale(var(--press-scale));
+}
+
+/* Staggered entrance — apply to a list/grid wrapper; direct children
+   rise in with a per-row delay. Capped at the 8th child so long lists
+   never feel slow; `backwards` fill keeps delayed rows invisible until
+   their turn. Runs once per element insertion (IonTabs keeps pages
+   mounted, so tab switches do not replay it). */
+@keyframes list-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stagger-children > * {
+  animation: list-item-in var(--duration-medium) var(--ease-out-expo) backwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 35ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 70ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 105ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 140ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 175ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 210ms; }
+.stagger-children > *:nth-child(n + 8) { animation-delay: 245ms; }
+
+/* Selected-tab icon spring. Applied in ionic-theme.css to the active
+   IonTabButton's icon. */
+@keyframes tab-icon-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}

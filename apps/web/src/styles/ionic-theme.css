@@ -227,10 +227,13 @@ ion-modal {
  * font-family from the body. The shadow part `.toolbar-title` is the
  * actual text node we need to target — Ionic exposes its inner part. */
 ion-title {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--text-xl);
-  letter-spacing: -0.01em;
+  /* Quiet-chrome revision: toolbar titles use the clean sans at native
+     iOS headline metrics (17/600) instead of the display serif — the
+     serif is reserved for in-page hero moments. */
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  letter-spacing: var(--tracking-normal);
   color: var(--color-text-primary);
 }
 
@@ -330,6 +333,14 @@ ion-tab-button > svg {
   flex-shrink: 0;
   color: inherit;
   stroke: currentColor;
+}
+
+/* Native-feel pass: the newly selected tab's icon springs once.
+ * Ionic stamps `.tab-selected` on the active IonTabButton; keyframe
+ * lives in animations.css. Covers both Ionicons and Lucide SVGs. */
+ion-tab-button.tab-selected ion-icon,
+ion-tab-button.tab-selected > svg {
+  animation: tab-icon-pop var(--duration-medium) var(--ease-spring);
 }
 
 /* ===== IonButton pill shape =====

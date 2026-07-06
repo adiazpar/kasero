@@ -165,7 +165,7 @@ export function ProductPicker({ cart }: ProductPickerProps) {
         </div>
 
         {hasResults ? (
-          <div className="product-grid">
+          <div className="product-grid stagger-children">
             {visibleProducts.map((product) => (
               <ProductTile
                 key={product.id}
